@@ -5,8 +5,8 @@ require_relative 'location'
 module JsonPath2
   WHITESPACE = " \t"
   ONE_CHAR_LEX = '$[]()?@:*,'
-  ONE_OR_TWO_CHAR_LEX = %w[. =]
-  KEYWORD = [] # not used FIXME
+  ONE_OR_TWO_CHAR_LEX = %w[. =].freeze
+  KEYWORD = [].freeze # not used FIXME
 
   class Lexer
     attr_reader :source, :tokens
@@ -57,7 +57,7 @@ module JsonPath2
           identifier
         end
 
-      raise('Unknown character: ' + c.inspect ) unless token
+      raise("Unknown character: #{c.inspect}") unless token
 
       tokens << token
     end
@@ -99,6 +99,10 @@ module JsonPath2
       c
     end
 
+    def consume_digits
+      consume while digit?(lookahead)
+    end
+
     def string
       while lookahead != '"' && source_uncompleted?
         self.line += 1 if lookahead == "\n"
@@ -120,20 +124,17 @@ module JsonPath2
       consume_digits
 
       # Look for a fractional part.
-      if lookahead == '.' && digit?(lookahead(2))
-        consume # consuming the '.' character.
-        consume_digits
+      if lookahead == '.'
+        raise "Decimal digits are not handled: #{lexeme}#{lookahead}"
       end
 
       lexeme = source[lexeme_start_p..(next_p - 1)]
-      Token.new(:number, lexeme, lexeme.to_f, current_location)
+      Token.new(:number, lexeme, lexeme.to_i, current_location)
     end
 
     # Consume an alphanumeric string
     def identifier
-      while alpha_numeric?(lookahead)
-        consume
-      end
+      consume while alpha_numeric?(lookahead)
 
       identifier = source[lexeme_start_p..(next_p - 1)]
       type =

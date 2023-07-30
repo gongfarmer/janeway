@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module JsonPath2
   module AST
     module Shared

@@ -1,16 +1,22 @@
-class JsonPath2::AST::UnaryOperator < JsonPath2::AST::Expression
-  attr_accessor :operator, :operand
+# frozen_string_literal: true
 
-  def initialize(operator, operand = nil)
-    @operator = operator
-    @operand = operand
-  end
+module JsonPath2
+  module AST
+    class UnaryOperator < JsonPath2::AST::Expression
+      attr_accessor :operator, :operand
 
-  def ==(other)
-    operator == other&.operator && children == other&.children
-  end
+      def initialize(operator, operand = nil)
+        @operator = operator
+        @operand = operand
+      end
 
-  def children
-    [operand]
+      def ==(other)
+        operator == other&.operator && children == other&.children
+      end
+
+      def children
+        [operand]
+      end
+    end
   end
 end

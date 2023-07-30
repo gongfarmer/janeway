@@ -1,15 +1,21 @@
-class JsonPath2::AST::Root < JsonPath2::AST::Expression
-  attr_accessor :expression
+# frozen_string_literal: true
 
-  def initialize(expr)
-    @expression = expr
-  end
+module JsonPath2
+  module AST
+    class Root < JsonPath2::AST::Expression
+      attr_accessor :expression
 
-  def ==(other)
-    children == other&.children
-  end
+      def initialize(expr)
+        @expression = expr
+      end
 
-  def children
-    [expression]
+      def ==(other)
+        children == other&.children
+      end
+
+      def children
+        [expression]
+      end
+    end
   end
 end

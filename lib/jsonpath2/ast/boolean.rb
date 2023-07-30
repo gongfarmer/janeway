@@ -1,13 +1,15 @@
-class JsonPath2::AST::Boolean < JsonPath2::AST::Expression
-  def initialize(val)
-    super(val)
-  end
+# frozen_string_literal: true
 
-  def ==(other)
-    value == other&.value
-  end
+module JsonPath2
+  module AST
+    class Boolean < JsonPath2::AST::Expression
+      def ==(other)
+        value == other&.value
+      end
 
-  def children
-    []
+      def children
+        []
+      end
+    end
   end
 end

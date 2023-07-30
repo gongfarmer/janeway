@@ -1,16 +1,22 @@
-class JsonPath2::AST::Repetition < JsonPath2::AST::Expression
-  attr_accessor :condition, :block
+# frozen_string_literal: true
 
-  def initialize(cond_expr = nil, repetition_block = nil)
-    @condition = cond_expr
-    @block = repetition_block
-  end
+module JsonPath2
+  module AST
+    class Repetition < JsonPath2::AST::Expression
+      attr_accessor :condition, :block
 
-  def ==(other)
-    children == other&.children
-  end
+      def initialize(cond_expr = nil, repetition_block = nil)
+        @condition = cond_expr
+        @block = repetition_block
+      end
 
-  def children
-    [condition, block]
+      def ==(other)
+        children == other&.children
+      end
+
+      def children
+        [condition, block]
+      end
+    end
   end
 end

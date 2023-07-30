@@ -1,17 +1,23 @@
-class JsonPath2::AST::BinaryOperator < JsonPath2::AST::Expression
-  attr_accessor :operator, :left, :right
+# frozen_string_literal: true
 
-  def initialize(operator, left = nil, right = nil)
-    @operator = operator
-    @left = left
-    @right = right
-  end
+module JsonPath2
+  module AST
+    class BinaryOperator < JsonPath2::AST::Expression
+      attr_accessor :operator, :left, :right
 
-  def ==(other)
-    operator == other&.operator && children == other&.children
-  end
+      def initialize(operator, left = nil, right = nil)
+        @operator = operator
+        @left = left
+        @right = right
+      end
 
-  def children
-    [left, right]
+      def ==(other)
+        operator == other&.operator && children == other&.children
+      end
+
+      def children
+        [left, right]
+      end
+    end
   end
 end

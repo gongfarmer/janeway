@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'English'
 
 # JsonPath2 jsonpath parsing library
@@ -15,11 +17,10 @@ def require_libs(dir)
   raise "No such dir: #{dir.inspect}" unless File.directory?(absolute_path)
 
   Dir.children(absolute_path).sort.each do |filename|
-    abs_path = File.join(absolute_path, filename)
-    next if File.directory?(abs_path)
+    next if File.directory?(File.join(absolute_path, filename))
 
     rel_path = File.join(dir, filename)
-    require_relative(rel_path[0..-4])
+    require_relative(rel_path[0..-4]) # omits ".rb" extension
   end
 end
 
@@ -32,3 +33,4 @@ require_relative 'jsonpath2/ast/expression'
 require_libs('jsonpath2/ast')
 require_libs('jsonpath2/error/runtime')
 require_libs('jsonpath2/error/syntax')
+require_libs('jsonpath2')

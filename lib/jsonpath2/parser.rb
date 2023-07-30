@@ -1,4 +1,7 @@
+# frozen_string_literal: true
+
 module JsonPath2
+  # Parse the tokens to create an Abstract Syntax Tree
   class Parser
     attr_accessor :tokens, :ast, :errors
 
@@ -10,24 +13,24 @@ module JsonPath2
     LOWEST_PRECEDENCE = 0
     PREFIX_PRECEDENCE = 7
     OPERATOR_PRECEDENCE = {
-      '||':   1,
-      '&&':  2,
+      '||': 1,
+      '&&': 2,
       '==': 3,
       '!=': 3,
-      '>':  4,
-      '<':  4,
+      '>': 4,
+      '<': 4,
       '>=': 4,
       '<=': 4,
-      '+':  5,
-      '-':  5,
-      '*':  6,
-      '/':  6,
-      '(':  8
+      '+': 5,
+      '-': 5,
+      '*': 6,
+      '/': 6,
+      '(': 8
     }.freeze
 
     def initialize(tokens)
       @tokens = tokens
-      @ast = AST::Program.new
+      @ast = AST::Query.new
       @next_p = 0
       @errors = []
     end
@@ -36,7 +39,7 @@ module JsonPath2
       while pending_tokens?
         consume
         node = parse_expr_recursively
-        ast << node if node != nil
+        ast << node if node
       end
 
       ast
@@ -44,14 +47,12 @@ module JsonPath2
 
     private
 
-    attr_accessor :next_p
-
     def build_token(type, lexeme = nil)
       Token.new(type, lexeme, nil, nil)
     end
 
     def pending_tokens?
-      next_p < tokens.length
+      @next_p < tokens.length
     end
 
     def nxt_not_terminator?
@@ -60,7 +61,7 @@ module JsonPath2
 
     def consume(offset = 1)
       t = lookahead(offset)
-      @next_p += offset # FIXME changed this
+      @next_p += offset # FIXME: changed this
       t
     end
 
@@ -87,8 +88,8 @@ module JsonPath2
     end
 
     def lookahead(offset = 1)
-      lookahead_p = (next_p - 1) + offset
-      return nil if lookahead_p < 0 || lookahead_p >= tokens.length
+      lookahead_p = (@next_p - 1) + offset
+      return nil if lookahead_p.negative? || lookahead_p >= tokens.length
 
       tokens[lookahead_p]
     end
@@ -111,22 +112,22 @@ module JsonPath2
 
     def check_syntax_compliance(ast_node)
       return if ast_node.expects?(nxt)
+
       unexpected_token_error
     end
 
     def determine_parsing_function
-      parse_methods =
-        %I[return identifier number string true false nil fn if while]
+      parse_methods = %I[return identifier number string true false nil fn if while]
       if parse_methods.include?(current.type)
         "parse_#{current.type}".to_sym
       elsif current.type == :'('
         :parse_grouped_expr
-      elsif [:"\n", :eof].include?(current.type)
+      elsif %I[\n eof].include?(current.type)
         :parse_terminator
       elsif UNARY_OPERATORS.include?(current.type)
         :parse_unary_operator
       elsif current.type == :'['
-        :parse_brackets
+        :parse_selector
       elsif current.type == ROOT_OPERATOR
         :parse_root
       end
@@ -168,6 +169,7 @@ module JsonPath2
 
     def parse_function_definition
       return unless consume_if_nxt_is(build_token(:identifier))
+
       fn = AST::FunctionDefinition.new(AST::Identifier.new(current.lexeme))
 
       if nxt.type != :"\n" && nxt.type != :':'
@@ -178,6 +180,7 @@ module JsonPath2
       fn.params = parse_function_params if nxt.type == :':'
 
       return unless consume_if_nxt_is(build_token(:"\n", "\n"))
+
       fn.body = parse_block
 
       fn
@@ -193,6 +196,7 @@ module JsonPath2
       while nxt.type == :','
         consume
         return unless consume_if_nxt_is(build_token(:identifier))
+
         identifiers << AST::Identifier.new(current.lexeme)
       end
 
@@ -221,6 +225,7 @@ module JsonPath2
       end
 
       return unless consume_if_nxt_is(build_token(:')', ')'))
+
       args
     end
 
@@ -235,6 +240,7 @@ module JsonPath2
       # TODO: Probably is best to use nxt and check directly; ELSE is optional and should not result in errors being added to the parsing. Besides that: think of some sanity checks (e.g., no parser errors) that maybe should be done in EVERY parser test.
       if consume_if_nxt_is(build_token(:else, 'else'))
         return unless consume_if_nxt_is(build_token(:"\n", "\n"))
+
         conditional.when_false = parse_block
       end
 
@@ -273,7 +279,7 @@ module JsonPath2
       expr
     end
 
-    # TODO Temporary impl; reflect more deeply about the appropriate way of parsing a terminator.
+    # TODO: Temporary impl; reflect more deeply about the appropriate way of parsing a terminator.
     def parse_terminator
       nil
     end
@@ -295,18 +301,85 @@ module JsonPath2
       AST::Root.new(parse_expr_recursively)
     end
 
-    def parse_brackets
-      consume
-      op = AST::Selector.new(current.type)
-      consume
-      op.operand = parse_expr_recursively(PREFIX_PRECEDENCE)
+    # Parse one of these:
+    #
+    # A name selector, e.g. 'name', selects a named child of an object.
+    #
+    # An index selector, e.g. 3, selects an indexed child of an array.
+    #
+    # A wildcard * ({{wildcard-selector}}) in the expression [*] selects all
+    # children of a node and in the expression ..[*] selects all descendants of a
+    # node.
+    #
+    # An array slice start:end:step ({{slice}}) selects a series of elements from
+    # an array, giving a start position, an end position, and an optional step
+    # value that moves the position from the start to the end.
+    #
+    # Filter expressions ?<logical-expr> select certain children of an object or array, as in:
+    def parse_selector
+      consume # '['
 
-      # consume closing bracket
-      c = lookahead(1)
-      raise('Unexpected character (expected "]"): ' + c.inspect ) unless c == ']'
-      consume
+      puts "Parse selector starting with #{current.inspect}"
 
-      op
+      selector =
+        case current.type
+        when :':' then parse_array_slice_selector
+        when :number
+          if lookahead.type == :':'
+            parse_array_slice_selector
+          else
+            AST::IndexSelector.new(current.literal)
+          end
+        when :string
+          if current.literal.start_with?('?')
+            AST::FilterExpressionSelector.new(current.literal)
+          else
+            AST::NameSelector.new(current.literal)
+          end
+        when :'*' then AST::WildcardSelector.new
+        else raise "Unhandled selector: #{current.inspect}"
+        end
+
+      consume_if_nxt_is(build_token(:']', ']'))
+      selector
+    end
+
+    # An array slice start:end:step ({{slice}}) selects a series of elements from
+    # an array, giving a start position, an end position, and an optional step
+    # value that moves the position from the start to the end.
+    #
+    # @example
+    #   $[1:3]
+    #   $[5:]
+    #   $[1:5:2]
+    #   $[5:1:-2]
+    #   $[::-1]
+    # @return [AST::ArraySliceSelector]
+    def parse_array_slice_selector
+      start, end_, step = 3.times.map { parse_array_slice_component }
+      AST::ArraySliceSelector.new(start, end_, step)
+    end
+
+    # Extract the number from an array slice selector.
+    # Consume up to and including the next : token.
+    # If no number is found, return nil.
+    # @return [Number, nil] nil if the start is implicit
+    def parse_array_slice_component
+      token =
+        case current.type
+        when :']' then return nil
+        when :':' then nil
+        when :number then current
+        else raise "Unexpected token in array slice selector: #{current}"
+        end
+      consume if current.type == :number
+      consume if current.type == :':'
+      token
+    end
+
+    def array_slice_selector?(str)
+      components = str.split(':')
+      return false unless [1, 2].include?(components.size)
     end
 
     def parse_unary_operator
@@ -329,11 +402,13 @@ module JsonPath2
 
     def parse_expr_recursively(precedence = LOWEST_PRECEDENCE)
       parsing_function = determine_parsing_function
-      puts "parsing #{current} with #{parsing_function}"
       return unrecognized_token_error unless parsing_function
 
+      tk = current
+      puts "begin parse #{tk} with #{parsing_function}"
       expr = send(parsing_function)
-      return if expr.nil? # When expr is nil, it means we have reached a \n or a eof.
+      puts "end   parse #{tk} with #{parsing_function}"
+      return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.
       while nxt_not_terminator? && precedence < nxt_precedence
@@ -348,10 +423,10 @@ module JsonPath2
       expr
     end
 
-    alias_method :parse_true, :parse_boolean
-    alias_method :parse_false, :parse_boolean
-    alias_method :parse_fn, :parse_function_definition
-    alias_method :parse_if, :parse_conditional
-    alias_method :parse_while, :parse_repetition
+    alias parse_true parse_boolean
+    alias parse_false parse_boolean
+    alias parse_fn parse_function_definition
+    alias parse_if parse_conditional
+    alias parse_while parse_repetition
   end
 end
