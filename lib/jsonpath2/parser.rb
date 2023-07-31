@@ -5,7 +5,7 @@ module JsonPath2
   class Parser
     attr_accessor :tokens, :ast, :errors
 
-    UNARY_OPERATORS = %I[! - .].freeze
+    UNARY_OPERATORS = %I[! -].freeze
     BINARY_OPERATORS = %I[+ - * / == != > < >= <=].freeze
     LOGICAL_OPERATORS = %I[&& ||].freeze
     ROOT_OPERATOR = :'$'
@@ -38,6 +38,7 @@ module JsonPath2
     def parse
       while pending_tokens?
         consume
+        puts "CONSUME at top level, now current=#{current}"
         node = parse_expr_recursively
         ast << node if node
       end
@@ -129,6 +130,8 @@ module JsonPath2
         :parse_unary_operator
       elsif current.type == :'['
         :parse_bracketed_selector
+      elsif current.type == :'.'
+        :parse_dot_notation
       elsif current.type == :'..'
         :parse_descendant_segment
       elsif current.type == ROOT_OPERATOR
@@ -205,6 +208,19 @@ module JsonPath2
       AST::DescendantSegment.new(selector)
     end
 
+    # Dot notation is an alternate representation of a bracketed name selector.
+    #
+    # The IETF doc does not explicitly define whether other selector types
+    # (eg. IndexSelector) but the examples suggest that only
+    # NameSelector can be used with dot notation.
+    def parse_dot_notation
+      consume
+
+      raise "Expect name to follow dot in dot notation, got #{current}" unless current.type == :identifier
+
+      AST::NameSelector.new(current.lexeme)
+    end
+
     def parse_conditional
       conditional = AST::Conditional.new
       consume
@@ -251,20 +267,7 @@ module JsonPath2
       nil
     end
 
-    def parse_var_binding
-      identifier = AST::Identifier.new(current.lexeme)
-      consume(2)
-
-      AST::VarBinding.new(identifier, parse_expr_recursively)
-    end
-
-    def parse_return
-      consume
-      AST::Return.new(parse_expr_recursively)
-    end
-
     def parse_root
-      consume
       AST::Root.new
     end
 
@@ -285,16 +288,14 @@ module JsonPath2
     # Filter expressions ?<logical-expr> select certain children of an object or array, as in:
     def parse_bracketed_selector
       raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :'['
+
       consume
       selector = parse_selector
-
-      raise "Expect token ], got #{current.lexeme.inspect}" unless current.type == :']'
-
-      puts "#parse_bracketed_selector, at end, current=#{current}"
+      consume
       selector
     end
 
-    # Consume selector which is not surrounded by brackets
+    # Parse selector which is not surrounded by brackets
     def parse_selector
       case current.type
       when :':' then parse_array_slice_selector
@@ -306,17 +307,10 @@ module JsonPath2
           consume
           AST::IndexSelector.new(index)
         end
-      when :string
-        if current.literal.start_with?('?')
-          parse_filter_expression
-        else
-          name = current.literal
-          consume
-          AST::NameSelector.new(name)
-        end
+      when :identifier
+        AST::NameSelector.new(current.lexeme)
       when :'*'
-        consume
-        AST::WildcardSelector.new(current)
+        AST::WildcardSelector.new(current.lexeme)
       else
         raise "Unhandled selector: #{current.inspect}"
       end

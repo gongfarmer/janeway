@@ -6,7 +6,7 @@ module JsonPath2
   WHITESPACE = " \t"
   ONE_CHAR_LEX = '$[]()?@:*,'
   ONE_OR_TWO_CHAR_LEX = %w[. =].freeze
-  KEYWORD = [].freeze # not used FIXME
+  KEYWORD = [].freeze # FIXME reuse this for function extensions?
 
   class Lexer
     attr_reader :source, :tokens
@@ -90,34 +90,6 @@ module JsonPath2
       if nxt == lexeme
         consume
         Token.new((lexeme + nxt).to_sym, lexeme + nxt, nil, current_location)
-      else
-        token_from_one_char_lex(lexeme)
-      end
-    end
-
-    # Parse a one-or-two char token starting with '='
-    # @return [Token]
-    def token_from_equals(lexeme)
-      raise 'not an =' unless lexeme == '='
-
-      n = lookahead
-      if n == '='
-        consume
-        Token.new((lexeme + n).to_sym, lexeme + n, nil, current_location)
-      else
-        token_from_one_char_lex(lexeme)
-      end
-    end
-
-    # Parse a one-or-two char token starting with '.'
-    # @return [Token]
-    def token_from_dot(lexeme)
-      raise 'not a dot' unless lexeme == '.'
-
-      n = lookahead
-      if n == '='
-        consume
-        Token.new((lexeme + n).to_sym, lexeme + n, nil, current_location)
       else
         token_from_one_char_lex(lexeme)
       end

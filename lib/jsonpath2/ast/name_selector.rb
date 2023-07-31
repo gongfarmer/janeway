@@ -14,6 +14,10 @@ module JsonPath2
 
         super
       end
+
+      def to_s
+        "#<JsonPath2::AST::NameSelector:#{object_id} name=#{@value.inspect}>"
+      end
     end
   end
 end
