@@ -56,7 +56,7 @@ module JsonPath2
     end
 
     def nxt_not_terminator?
-      nxt.type != :"\n" && nxt.type != :eof
+      nxt && nxt.type != :"\n" && nxt.type != :eof
     end
 
     def consume(offset = 1)
@@ -205,68 +205,6 @@ module JsonPath2
       AST::DescendantSegment.new(selector)
     end
 
-    def parse_function_definition
-      return unless consume_if_nxt_is(build_token(:identifier))
-
-      fn = AST::FunctionDefinition.new(AST::Identifier.new(current.lexeme))
-
-      if nxt.type != :"\n" && nxt.type != :':'
-        unexpected_token_error
-        return
-      end
-
-      fn.params = parse_function_params if nxt.type == :':'
-
-      return unless consume_if_nxt_is(build_token(:"\n", "\n"))
-
-      fn.body = parse_block
-
-      fn
-    end
-
-    def parse_function_params
-      consume
-      return unless consume_if_nxt_is(build_token(:identifier))
-
-      identifiers = []
-      identifiers << AST::Identifier.new(current.lexeme)
-
-      while nxt.type == :','
-        consume
-        return unless consume_if_nxt_is(build_token(:identifier))
-
-        identifiers << AST::Identifier.new(current.lexeme)
-      end
-
-      identifiers
-    end
-
-    def parse_function_call(identifier)
-      AST::FunctionCall.new(identifier, parse_function_call_args)
-    end
-
-    def parse_function_call_args
-      args = []
-
-      # Function call without arguments.
-      if nxt.type == :')'
-        consume
-        return args
-      end
-
-      consume
-      args << parse_expr_recursively
-
-      while nxt.type == :','
-        consume(2)
-        args << parse_expr_recursively
-      end
-
-      return unless consume_if_nxt_is(build_token(:')', ')'))
-
-      args
-    end
-
     def parse_conditional
       conditional = AST::Conditional.new
       consume
@@ -285,16 +223,7 @@ module JsonPath2
       conditional
     end
 
-    def parse_repetition
-      repetition = AST::Repetition.new
-      consume
-      repetition.condition = parse_expr_recursively
-      return unless consume_if_nxt_is(build_token(:"\n", "\n"))
-
-      repetition.block = parse_block
-      repetition
-    end
-
+    # FIXME: remove, but consider parsing root this way
     def parse_block
       consume
       block = AST::Block.new
@@ -336,7 +265,7 @@ module JsonPath2
 
     def parse_root
       consume
-      AST::Root.new(parse_expr_recursively)
+      AST::Root.new
     end
 
     # Parse one of these:
@@ -480,8 +409,6 @@ module JsonPath2
 
     alias parse_true parse_boolean
     alias parse_false parse_boolean
-    alias parse_fn parse_function_definition
     alias parse_if parse_conditional
-    alias parse_while parse_repetition
   end
 end
