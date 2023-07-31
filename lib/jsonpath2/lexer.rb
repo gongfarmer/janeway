@@ -11,6 +11,15 @@ module JsonPath2
   class Lexer
     attr_reader :source, :tokens
 
+    # Tokenize and return the token list.
+    # @param query [String] jsonpath query
+    # @return [Array<Token>]
+    def self.lex(query)
+      lexer = new(query)
+      lexer.start_tokenization
+      lexer.tokens
+    end
+
     def initialize(source)
       @source = source
       @tokens = []
@@ -146,7 +155,7 @@ module JsonPath2
           :identifier
         end
 
-      Token.new(type, identifier, nil, current_location)
+      Token.new(type, identifier, identifier, current_location)
     end
 
     def source_completed?

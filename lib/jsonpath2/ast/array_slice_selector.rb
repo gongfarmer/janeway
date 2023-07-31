@@ -35,6 +35,10 @@ module JsonPath2
         # eg. 0 start? end < start with positive step? ...
       end
 
+      def to_s
+        format('#<JsonPath2::AST::ArraySliceSelector start=%s, end=%s, step=%s>', @start, @end, @step)
+      end
+
       def inspect
         format('#<JsonPath2::AST::ArraySliceSelector:%s start=%s, end=%s, step=%s>',
           object_id, @start, @end, @step)

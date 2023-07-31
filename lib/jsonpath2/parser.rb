@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'logger'
+
 module JsonPath2
   # Parse the tokens to create an Abstract Syntax Tree
   class Parser
@@ -28,17 +30,18 @@ module JsonPath2
       '(': 8
     }.freeze
 
-    def initialize(tokens)
+    def initialize(tokens, logger = Logger.new(IO::NULL))
       @tokens = tokens
       @ast = AST::Query.new
       @next_p = 0
       @errors = []
+      @log = logger
     end
 
     def parse
       while pending_tokens?
         consume
-        puts "CONSUME at top level, now current=#{current}"
+        @log.debug "CONSUME at top level, current=#{current}"
         node = parse_expr_recursively
         ast << node if node
       end
@@ -64,6 +67,12 @@ module JsonPath2
       t = lookahead(offset)
       @next_p += offset # FIXME: changed this
       t
+    end
+
+    # Return lexeme of current token. Consume.
+    # @return [String, Integer] literal value of token that is `current` when function is called.
+    def current_literal_and_consume
+      current.literal.tap { consume }
     end
 
     def consume_if_nxt_is(expected)
@@ -118,7 +127,7 @@ module JsonPath2
     end
 
     def determine_parsing_function
-      puts "PARSE THIS: #{current.type}"
+      @log.debug "PARSE: #{current.type}"
       parse_methods = %I[identifier number string true false nil fn if while]
       if parse_methods.include?(current.type)
         "parse_#{current.type}".to_sym
@@ -199,12 +208,13 @@ module JsonPath2
       consume # '..' token
       selector  =
         case current.type
-        when :'*' then AST::WildcardSelector.new(current)
+        when :'*' then AST::WildcardSelector.new(current_literal_and_consume)
         when :'[' then parse_bracketed_selector
-        when :string then parse_selector
+        when :string, :identifier then parse_selector
         else
-          raise "Invalid token follows descendant segment: ..#{current.lexeme}"
+          raise "Invalid query: descendant segment must have selector, got ..#{current.lexeme}"
         end
+
       AST::DescendantSegment.new(selector)
     end
 
@@ -291,26 +301,26 @@ module JsonPath2
 
       consume
       selector = parse_selector
-      consume
+
+      @log.debug "#parse_bracketed_selector: got selector #{selector}, current=#{current}"
       selector
     end
 
     # Parse selector which is not surrounded by brackets
     def parse_selector
+      @log.debug "#parse_selector(current=#{current})"
       case current.type
       when :':' then parse_array_slice_selector
       when :number
         if lookahead.type == :':'
           parse_array_slice_selector
         else
-          index = current.literal
-          consume
-          AST::IndexSelector.new(index)
+          AST::IndexSelector.new(current_literal_and_consume)
         end
-      when :identifier
-        AST::NameSelector.new(current.lexeme)
+      when :identifier, :string
+        AST::NameSelector.new(current_literal_and_consume)
       when :'*'
-        AST::WildcardSelector.new(current.lexeme)
+        AST::WildcardSelector.new(current_literal_and_consume)
       else
         raise "Unhandled selector: #{current.inspect}"
       end
@@ -329,6 +339,9 @@ module JsonPath2
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       start, end_, step = 3.times.map { parse_array_slice_component }
+      @log.debug "#parse_array_slice_component end [#{start.lexeme},#{end_.lexeme},#{step.lexeme}] (current=#{current})"
+      raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :']'
+
       AST::ArraySliceSelector.new(start, end_, step)
     end
 
@@ -383,9 +396,9 @@ module JsonPath2
       return unrecognized_token_error unless parsing_function
 
       tk = current
-      puts "begin parse #{tk} with #{parsing_function}"
+      @log.debug "#parse_expr_recursively start #{tk} with #{parsing_function}"
       expr = send(parsing_function)
-      puts "end   parse #{tk} with #{parsing_function}, current #{current}, got #{expr}"
+      @log.debug "#parse_expr_recursively end   #{tk} with #{parsing_function}, current #{current}, got #{expr}"
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.

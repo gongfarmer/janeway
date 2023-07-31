@@ -7,6 +7,11 @@ module JsonPath2
     # query argument, followed by a possibly empty sequence of segments.
     class Query
       include JsonPath2::AST::Shared::ExpressionCollection
+
+      # Represent AST as basic ruby types, for comparison
+      def tree
+        children.map(&:tree)
+      end
     end
   end
 end
