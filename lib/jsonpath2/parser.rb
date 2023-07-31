@@ -117,7 +117,8 @@ module JsonPath2
     end
 
     def determine_parsing_function
-      parse_methods = %I[return identifier number string true false nil fn if while]
+      puts "PARSE THIS: #{current.type}"
+      parse_methods = %I[identifier number string true false nil fn if while]
       if parse_methods.include?(current.type)
         "parse_#{current.type}".to_sym
       elsif current.type == :'('
@@ -127,9 +128,13 @@ module JsonPath2
       elsif UNARY_OPERATORS.include?(current.type)
         :parse_unary_operator
       elsif current.type == :'['
-        :parse_selector
+        :parse_bracketed_selector
+      elsif current.type == :'..'
+        :parse_descendant_segment
       elsif current.type == ROOT_OPERATOR
         :parse_root
+      else
+        raise "Don't know how to parse #{current.inspect}"
       end
     end
 
@@ -165,6 +170,39 @@ module JsonPath2
 
     def parse_nil
       AST::Nil.new
+    end
+
+    # Parse a descendant segment.
+    #
+    # The descendant segment consists of a double dot "..", followed by
+    # a child segment (using bracket notation).
+    #
+    #  Shorthand notations are also provided that correspond to the shorthand forms of the child segment.
+    #
+    #    descendant-segment  = ".." (bracketed-selection /
+    #                                wildcard-selector /
+    #                                member-name-shorthand)
+    #  ..*, the descendant-segment directly built from a
+    #  wildcard-selector, is shorthand for ..[*].
+    #
+    #  ..<member-name>, a descendant-segment built from a
+    #  member-name-shorthand, is shorthand for ..['<member-name>'].
+    #  Note: as with the similar shorthand of a child-segment, this can
+    #  only be used with member names that are composed of certain
+    #  characters, as specified in the ABNF rule member-name-shorthand.
+    #
+    #  Note: .. on its own is not a valid segment.
+    def parse_descendant_segment
+      consume # '..' token
+      selector  =
+        case current.type
+        when :'*' then AST::WildcardSelector.new(current)
+        when :'[' then parse_bracketed_selector
+        when :string then parse_selector
+        else
+          raise "Invalid token follows descendant segment: ..#{current.lexeme}"
+        end
+      AST::DescendantSegment.new(selector)
     end
 
     def parse_function_definition
@@ -316,32 +354,43 @@ module JsonPath2
     # value that moves the position from the start to the end.
     #
     # Filter expressions ?<logical-expr> select certain children of an object or array, as in:
-    def parse_selector
-      consume # '['
+    def parse_bracketed_selector
+      raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :'['
+      consume
+      selector = parse_selector
 
-      puts "Parse selector starting with #{current.inspect}"
+      raise "Expect token ], got #{current.lexeme.inspect}" unless current.type == :']'
 
-      selector =
-        case current.type
-        when :':' then parse_array_slice_selector
-        when :number
-          if lookahead.type == :':'
-            parse_array_slice_selector
-          else
-            AST::IndexSelector.new(current.literal)
-          end
-        when :string
-          if current.literal.start_with?('?')
-            AST::FilterExpressionSelector.new(current.literal)
-          else
-            AST::NameSelector.new(current.literal)
-          end
-        when :'*' then AST::WildcardSelector.new
-        else raise "Unhandled selector: #{current.inspect}"
-        end
-
-      consume_if_nxt_is(build_token(:']', ']'))
+      puts "#parse_bracketed_selector, at end, current=#{current}"
       selector
+    end
+
+    # Consume selector which is not surrounded by brackets
+    def parse_selector
+      case current.type
+      when :':' then parse_array_slice_selector
+      when :number
+        if lookahead.type == :':'
+          parse_array_slice_selector
+        else
+          index = current.literal
+          consume
+          AST::IndexSelector.new(index)
+        end
+      when :string
+        if current.literal.start_with?('?')
+          parse_filter_expression
+        else
+          name = current.literal
+          consume
+          AST::NameSelector.new(name)
+        end
+      when :'*'
+        consume
+        AST::WildcardSelector.new(current)
+      else
+        raise "Unhandled selector: #{current.inspect}"
+      end
     end
 
     # An array slice start:end:step ({{slice}}) selects a series of elements from
@@ -382,6 +431,12 @@ module JsonPath2
       return false unless [1, 2].include?(components.size)
     end
 
+    def parse_filter_expression
+      # AST::FilterExpressionSelector.new
+
+      raise NotImplementedError
+    end
+
     def parse_unary_operator
       op = AST::UnaryOperator.new(current.type)
       consume
@@ -407,7 +462,7 @@ module JsonPath2
       tk = current
       puts "begin parse #{tk} with #{parsing_function}"
       expr = send(parsing_function)
-      puts "end   parse #{tk} with #{parsing_function}"
+      puts "end   parse #{tk} with #{parsing_function}, current #{current}, got #{expr}"
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.

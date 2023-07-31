@@ -83,7 +83,37 @@ module JsonPath2
       Token.new(lexeme.to_sym, lexeme, nil, current_location)
     end
 
+    # Consumes =, ==, . or ..
+    # @return [Token]
     def token_from_one_or_two_char_lex(lexeme)
+      nxt = lookahead
+      if nxt == lexeme
+        consume
+        Token.new((lexeme + nxt).to_sym, lexeme + nxt, nil, current_location)
+      else
+        token_from_one_char_lex(lexeme)
+      end
+    end
+
+    # Parse a one-or-two char token starting with '='
+    # @return [Token]
+    def token_from_equals(lexeme)
+      raise 'not an =' unless lexeme == '='
+
+      n = lookahead
+      if n == '='
+        consume
+        Token.new((lexeme + n).to_sym, lexeme + n, nil, current_location)
+      else
+        token_from_one_char_lex(lexeme)
+      end
+    end
+
+    # Parse a one-or-two char token starting with '.'
+    # @return [Token]
+    def token_from_dot(lexeme)
+      raise 'not a dot' unless lexeme == '.'
+
       n = lookahead
       if n == '='
         consume

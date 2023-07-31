@@ -12,6 +12,10 @@ module JsonPath2
 
         super
       end
+
+      def to_s
+        "<IndexSelector index=#{@value}>"
+      end
     end
   end
 end
