@@ -4,11 +4,7 @@ module JsonPath2
   module AST
     class Root < JsonPath2::AST::Expression
       def ==(other)
-        children == other&.children
-      end
-
-      def children
-        [expression]
+        self.class == other.class
       end
     end
   end

@@ -11,7 +11,7 @@ module JsonPath2
 
       # TODO: Both implementations below are temporary. Expression SHOULD NOT have a concrete implementation of these methods.
       def ==(other)
-        self.class == other.class
+        raise NotImplementedError
       end
 
       def children

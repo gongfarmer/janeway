@@ -6,7 +6,10 @@ module JsonPath2
   class Token
     extend Forwardable
 
-    attr_reader :type, :lexeme, :literal, :location
+    attr_reader :type, :lexeme, :location
+
+    # write-access so - operator can modify number value
+    attr_accessor :literal
 
     def_delegators :@location, :line, :col, :length
 

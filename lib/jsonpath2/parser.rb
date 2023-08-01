@@ -30,6 +30,13 @@ module JsonPath2
       '(': 8
     }.freeze
 
+    # @param query [String] jsonpath query to lex and parse
+    # @return [AST]
+    def self.parse(query)
+      tokens = JsonPath2::Lexer.lex(query)
+      new(tokens).parse
+    end
+
     def initialize(tokens, logger = Logger.new(IO::NULL))
       @tokens = tokens
       @ast = AST::Query.new
@@ -176,6 +183,21 @@ module JsonPath2
       AST::Number.new(current.literal)
     end
 
+    # Consume to the (expected) number token following this operator.
+    # Then modify its value.
+    def parse_minus_operator
+      @log.debug "#parse_minus_operator(#{current})"
+      raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :'-'
+
+      # '-' must be followed by a number token.
+      # Parse number and apply - sign to its literal value
+      consume
+      parse_number
+      current.literal = 0 - current.literal
+      current
+    end
+
+
     def parse_boolean
       AST::Boolean.new(current.lexeme == 'true')
     end
@@ -311,6 +333,10 @@ module JsonPath2
       @log.debug "#parse_selector(current=#{current})"
       case current.type
       when :':' then parse_array_slice_selector
+      when :'-'
+        # apply the - sign to the following number and retry
+        parse_minus_operator
+        parse_selector
       when :number
         if lookahead.type == :':'
           parse_array_slice_selector
@@ -338,8 +364,10 @@ module JsonPath2
     #   $[::-1]
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
+      @log.debug "#parse_array_slice_selector start (current=#{current})"
       start, end_, step = 3.times.map { parse_array_slice_component }
-      @log.debug "#parse_array_slice_component end [#{start.lexeme},#{end_.lexeme},#{step.lexeme}] (current=#{current})"
+      @log.debug "#parse_array_slice_selector got [#{start&.lexeme},#{end_&.lexeme},#{step&.lexeme}] (current=#{current})"
+
       raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :']'
 
       AST::ArraySliceSelector.new(start, end_, step)
@@ -350,10 +378,14 @@ module JsonPath2
     # If no number is found, return nil.
     # @return [Number, nil] nil if the start is implicit
     def parse_array_slice_component
+      @log.debug "#parse_array_slice_component(#{current})"
       token =
         case current.type
         when :']' then return nil
         when :':' then nil
+        when :'-' # apply - sign to number and retry
+          parse_minus_operator
+          parse_array_slice_component
         when :number then current
         else raise "Unexpected token in array slice selector: #{current}"
         end

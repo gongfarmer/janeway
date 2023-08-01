@@ -1,11 +1,23 @@
 # frozen_string_literal: true
 
 require 'English'
+require 'active_support'
+require 'active_support/core_ext/string/inflections'
 
 # JsonPath2 jsonpath parsing library
 module JsonPath2
   # JsonPath2 Abstract Syntax Tree
   module AST
+  end
+
+  # @param input [Object] ruby object to be indexed
+  # @param query [String] jsonpath query
+  # @return [Object] result of applying query to input
+  def self.on(input, query, logger: nil)
+    logger ||= Logger.new(IO::NULL)
+    tokens = JsonPath2::Lexer.lex(query)
+    ast = JsonPath2::Parser.new(tokens, logger).parse
+    JsonPath2::Interpreter.new(input).interpret(ast)
   end
 end
 

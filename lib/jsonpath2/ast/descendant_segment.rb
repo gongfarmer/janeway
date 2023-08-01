@@ -20,6 +20,11 @@ module JsonPath2
         format('#<JsonPath2::AST::DescendantSegment:%s selector=%s>',
           object_id, @value)
       end
+
+      # @return [AST::Selector]
+      def selector
+        value
+      end
     end
   end
 end

@@ -4,7 +4,7 @@ require_relative 'location'
 
 module JsonPath2
   WHITESPACE = " \t"
-  ONE_CHAR_LEX = '$[]()?@:*,'
+  ONE_CHAR_LEX = '$[]()?@:*,-'
   ONE_OR_TWO_CHAR_LEX = %w[. =].freeze
   KEYWORD = [].freeze # FIXME reuse this for function extensions?
 
