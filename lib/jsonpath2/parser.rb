@@ -3,7 +3,7 @@
 require 'logger'
 
 module JsonPath2
-  # Parse the tokens to create an Abstract Syntax Tree
+  # Transform tokens into an Abstract Syntax Tree
   class Parser
     attr_accessor :tokens, :ast, :errors
 
@@ -33,6 +33,8 @@ module JsonPath2
     # @param query [String] jsonpath query to lex and parse
     # @return [AST]
     def self.parse(query)
+      raise ArgumentError.new("expect string, got #{query.inspect}") unless query.is_a?(String)
+
       tokens = JsonPath2::Lexer.lex(query)
       new(tokens).parse
     end

@@ -8,6 +8,7 @@ module JsonPath2
   ONE_OR_TWO_CHAR_LEX = %w[. =].freeze
   KEYWORD = [].freeze # FIXME reuse this for function extensions?
 
+  # Transforms source code into tokens
   class Lexer
     attr_reader :source, :tokens
 
@@ -15,6 +16,8 @@ module JsonPath2
     # @param query [String] jsonpath query
     # @return [Array<Token>]
     def self.lex(query)
+      raise ArgumentError.new("expect string, got #{query.inspect}") unless query.is_a?(String)
+
       lexer = new(query)
       lexer.start_tokenization
       lexer.tokens
