@@ -7,7 +7,7 @@ module JsonPath2
   WHITESPACE = " \t"
   ONE_CHAR_LEX = '$[]()?@:*,-'
   ONE_OR_TWO_CHAR_LEX = %w[. =].freeze
-  KEYWORD = [].freeze # FIXME reuse this for function extensions?
+  KEYWORD = [].freeze # FIXME: reuse this for function extensions?
 
   # Transforms source code into tokens
   class Lexer
@@ -17,7 +17,7 @@ module JsonPath2
     # @param query [String] jsonpath query
     # @return [Array<Token>]
     def self.lex(query)
-      raise ArgumentError.new("expect string, got #{query.inspect}") unless query.is_a?(String)
+      raise ArgumentError, "expect string, got #{query.inspect}" unless query.is_a?(String)
 
       lexer = new(query)
       lexer.start_tokenization
@@ -76,12 +76,12 @@ module JsonPath2
 
     DIGITS = '0123456789'
     def digit?(lexeme)
-      return true if DIGITS.include?(lexeme)
+      DIGITS.include?(lexeme)
     end
 
     ALPHA = ('a'..'z').to_a.concat(('A'..'Z').to_a)
     def alpha_numeric?(lexeme)
-      return true if ALPHA.include?(lexeme)
+      ALPHA.include?(lexeme)
     end
 
     def lookahead(offset = 1)
@@ -118,34 +118,83 @@ module JsonPath2
     end
 
     # @param delimiter [String] eg. ' or "
-    # @return [String]
+    # @return [Token] string token
     def delimited_string(delimiter)
+      literal_chars = []
       while lookahead != delimiter && source_uncompleted?
-        self.line += 1 if lookahead == "\n"
-        consume
+        self.line += 1 if lookahead == "\n" # FIXME: do jsonpath queries have lines? Find out when implementing functions
+
+        # Transform escaped representation to literal chars
+        literal_chars <<
+          if lookahead == '\\'
+            consume_escape_sequence # consumes multiple chars
+          else
+            consume
+          end
       end
-      raise 'Unterminated string error.' if source_completed?
+      raise "Unterminated string error: #{literal_chars.join.inspect}" if source_completed?
 
-      consume # consuming the closing delimiter
-      lexeme = source[(lexeme_start_p)..(next_p - 1)]
+      consume # closing delimiter
 
-      # the literal value omits the delimiters
-      literal = source[(lexeme_start_p + 1)..(next_p - 2)]
+      # literal value omits delimiters and includes un-escaped values
+      literal = literal_chars.join
+
+      # lexeme value includes delimiters and literal escape characters
+      lexeme = source[lexeme_start_p..(next_p - 1)]
 
       Token.new(:string, lexeme, literal, current_location)
+    end
+
+    # Read escape char literals, and transform them into the described character
+    # @return [String] single character (possibly multi-byte)
+    def consume_escape_sequence
+      raise 'not an escape sequence' unless consume == '\\'
+
+      char = consume
+      case char
+      when 'b' then "\b"
+      when 't' then "\t"
+      when 'n' then "\n"
+      when 'f' then "\f"
+      when 'r' then "\r"
+      when '"', "'", '\\' then char
+      when 'u' then consume_unicode_escape_sequence
+      else
+        raise "unknown escape sequence: \\#{char}"
+      end
+    end
+
+    # Read unicode escape sequence consisting of 4 hex digits.
+    # Both lower and uppercase are allowed.
+    # The `\u` prefix has already been consumed
+    #
+    # @return [String] single character (possibly multi-byte)
+    def consume_unicode_escape_sequence
+      hex_digits = []
+      4.times do
+        hex_digits << consume
+        case hex_digits.last.ord
+        when 0x30..0x39 then next # '0'..'1'
+        when 0x40..0x46 then next # 'A'..'F'
+        when 0x61..0x66 then next # 'a'..'f'
+        else
+          raise "invalid unicode escape sequence: \\u#{hex_digits.join}"
+        end
+      end
+      raise "incomplete unicode escape sequence: \\u#{hex_digits.join}" if hex_digits.size < 4
+
+      hex_digits.join.hex.chr('UTF-8')
     end
 
     # Consume a numeric string
     # FIXME handle negative... here or in parser?
     def number
       consume_digits
+      lexeme = source[lexeme_start_p..(next_p - 1)]
 
       # Look for a fractional part.
-      if lookahead == '.'
-        raise "Decimal digits are not handled: #{lexeme}#{lookahead}"
-      end
+      raise "Decimal digits are not handled: #{lexeme}#{lookahead}" if lookahead == '.'
 
-      lexeme = source[lexeme_start_p..(next_p - 1)]
       Token.new(:number, lexeme, lexeme.to_i, current_location)
     end
 

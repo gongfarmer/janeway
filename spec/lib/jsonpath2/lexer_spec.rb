@@ -20,6 +20,38 @@ module JsonPath2
       it 'accepts name with . in quotes' do
         expect(Lexer.lex('$.["a.b"]')).to eq([:'$', :'.', :'[', 'a.b', :']', :eof])
       end
+      # Escaping rules are defined here:
+      # https://ietf-wg-jsonpath.github.io/draft-ietf-jsonpath-base/draft-ietf-jsonpath-base.html#name-semantics-3
+      it 'converts chars \b to backspace' do
+        expect(Lexer.lex('$.["\b"]')).to eq([:'$', :'.', :'[', "\b", :']', :eof])
+      end
+      it 'converts chars \t to tab' do
+        expect(Lexer.lex('$.["\t"]')).to eq([:'$', :'.', :'[', "\t", :']', :eof])
+      end
+      it 'converts chars \n to line feed' do
+        expect(Lexer.lex('$.["\n"]')).to eq([:'$', :'.', :'[', "\n", :']', :eof])
+      end
+      it 'converts chars \f to form feed' do
+        expect(Lexer.lex('$.["\f"]')).to eq([:'$', :'.', :'[', "\f", :']', :eof])
+      end
+      it 'converts chars \r to carriage return' do
+        expect(Lexer.lex('$.["\r"]')).to eq([:'$', :'.', :'[', "\r", :']', :eof])
+      end
+      it 'converts chars \" to double quote, inside double quotes' do
+        expect(Lexer.lex('$.["\""]')).to eq([:'$', :'.', :'[', '"', :']', :eof])
+      end
+      it "converts chars \' to apostrophe, inside single quotes" do
+        expect(Lexer.lex("$.['\\'']")).to eq([:'$', :'.', :'[', "'", :']', :eof])
+      end
+      it 'converts chars \\ to backslash' do
+        expect(Lexer.lex('$.["\\\\"]')).to eq([:'$', :'.', :'[', '\\', :']', :eof])
+      end
+      it 'converts hexadecimal escape in uppercase to unicode' do
+        expect(Lexer.lex('$.["\u263A"]')).to eq([:'$', :'.', :'[', '☺', :']', :eof])
+      end
+      it 'converts hexadecimal escape in lowercase to unicode' do
+        expect(Lexer.lex('$.["\u263a"]')).to eq([:'$', :'.', :'[', '☺', :']', :eof])
+      end
     end
     context 'when tokenizing index selector' do
       it 'tokenizes index selector' do
