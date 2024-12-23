@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'location'
+require_relative 'token'
 
 module JsonPath2
   WHITESPACE = " \t"
@@ -47,7 +48,6 @@ module JsonPath2
       c = consume
 
       return if WHITESPACE.include?(c)
-      return ignore_comment_line if c == '#'
 
       if c == "\n"
         self.line += 1
@@ -61,8 +61,8 @@ module JsonPath2
           token_from_one_char_lex(c)
         elsif ONE_OR_TWO_CHAR_LEX.include?(c)
           token_from_one_or_two_char_lex(c)
-        elsif c == '"'
-          string
+        elsif %w[" '].include?(c)
+          delimited_string(c)
         elsif digit?(c)
           number
         elsif alpha_numeric?(c)
@@ -117,23 +117,26 @@ module JsonPath2
       consume while digit?(lookahead)
     end
 
-    def string
-      while lookahead != '"' && source_uncompleted?
+    # @param delimiter [String] eg. ' or "
+    # @return [String]
+    def delimited_string(delimiter)
+      while lookahead != delimiter && source_uncompleted?
         self.line += 1 if lookahead == "\n"
         consume
       end
       raise 'Unterminated string error.' if source_completed?
 
-      consume # consuming the closing '"'.
+      consume # consuming the closing delimiter
       lexeme = source[(lexeme_start_p)..(next_p - 1)]
-      # the actual value of the string is the content between the double quotes.
+
+      # the literal value omits the delimiters
       literal = source[(lexeme_start_p + 1)..(next_p - 2)]
 
       Token.new(:string, lexeme, literal, current_location)
     end
 
     # Consume a numeric string
-    # FIXME handle negative
+    # FIXME handle negative... here or in parser?
     def number
       consume_digits
 

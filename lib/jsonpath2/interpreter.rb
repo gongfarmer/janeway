@@ -130,7 +130,6 @@ module JsonPath2
         else
           selector.end == -1 ? 0 : selector.end + 1
         end
-      puts "step from #{selector.start} to #{last_index} by #{selector.step}"
       # Collect values from target indices
       selector
         .start
@@ -179,7 +178,7 @@ module JsonPath2
 
       nodes.each do |node|
         last_value = interpret_node(node, last_value)
-        puts "LAST_VALUE is #{last_value}"
+        #puts "LAST_VALUE is #{last_value}"
 
         if return_detected?(node)
           raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length > 0

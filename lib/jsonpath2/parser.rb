@@ -33,7 +33,7 @@ module JsonPath2
     # @param query [String] jsonpath query to lex and parse
     # @return [AST]
     def self.parse(query)
-      raise ArgumentError.new("expect string, got #{query.inspect}") unless query.is_a?(String)
+      raise ArgumentError, "expect string, got #{query.inspect}" unless query.is_a?(String)
 
       tokens = JsonPath2::Lexer.lex(query)
       new(tokens).parse
@@ -198,7 +198,6 @@ module JsonPath2
       current.literal = 0 - current.literal
       current
     end
-
 
     def parse_boolean
       AST::Boolean.new(current.lexeme == 'true')
