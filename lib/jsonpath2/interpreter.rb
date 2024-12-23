@@ -5,6 +5,17 @@ module JsonPath2
   class Interpreter
     attr_reader :query, :output, :env, :call_stack, :unwind_call_stack
 
+    # Interpret a query on the given input, return result
+    # @param input [Hash, Array]
+    # @param query [String]
+    def self.interpret(input, query)
+      raise ArgumentError, "expect query string, got #{query.inspect}" unless query.is_a?(String)
+
+      tokens = Lexer.lex(query)
+      ast = Parser.new(tokens).parse
+      new(input).interpret(ast)
+    end
+
     # @param input [Array,Hash] tree of data which the jsonpath query is addressing
     def initialize(input)
       raise ArgumentError, "expect ruby composite type, got #{input.inspect}" unless input.is_a?(Hash) || input.is_a?(Array)
@@ -104,7 +115,10 @@ module JsonPath2
     end
 
     # Filter the input by applying the array slice selector.
+    # Returns at most 1 element.
+    #
     # @param selector [ArraySliceSelector]
+    # @return [Object, nil] nil if no matching index
     def interpret_array_slice_selector(selector, input)
       return nil unless input.is_a?(Array)
       return [] if selector.step.zero? # IETF: When step is 0, no elements are selected.
@@ -164,7 +178,6 @@ module JsonPath2
       last_value = nil
 
       nodes.each do |node|
-        puts "INTERPRET #{node}"
         last_value = interpret_node(node, last_value)
         puts "LAST_VALUE is #{last_value}"
 
