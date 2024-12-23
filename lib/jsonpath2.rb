@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 require 'English'
-require 'active_support'
-require 'active_support/core_ext/string/inflections'
 
 # JsonPath2 jsonpath parsing library
 module JsonPath2
