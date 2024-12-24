@@ -8,26 +8,21 @@ module JsonPath2
     attr_accessor :tokens, :ast, :errors
 
     UNARY_OPERATORS = %I[! -].freeze
-    BINARY_OPERATORS = %I[+ - * / == != > < >= <=].freeze
+    BINARY_OPERATORS = %I[== != > < >= <=].freeze
     LOGICAL_OPERATORS = %I[&& ||].freeze
-    ROOT_OPERATOR = :'$'
 
     LOWEST_PRECEDENCE = 0
     PREFIX_PRECEDENCE = 7
     OPERATOR_PRECEDENCE = {
-      '||': 1,
-      '&&': 2,
-      '==': 3,
-      '!=': 3,
-      '>': 4,
-      '<': 4,
-      '>=': 4,
-      '<=': 4,
-      '+': 5,
-      '-': 5,
-      '*': 6,
-      '/': 6,
-      '(': 8
+      '||' => 1,
+      '&&' => 2,
+      '==' => 3,
+      '!=' => 3,
+      '>' => 4,
+      '<' => 4,
+      '>=' => 4,
+      '<=' => 4,
+      '(' => 8,
     }.freeze
 
     # @param query [String] jsonpath query to lex and parse
@@ -114,11 +109,11 @@ module JsonPath2
     end
 
     def current_precedence
-      OPERATOR_PRECEDENCE[current.type] || LOWEST_PRECEDENCE
+      OPERATOR_PRECEDENCE[current.lexeme] || LOWEST_PRECEDENCE
     end
 
     def nxt_precedence
-      OPERATOR_PRECEDENCE[nxt.type] || LOWEST_PRECEDENCE
+      OPERATOR_PRECEDENCE[nxt.lexeme] || LOWEST_PRECEDENCE
     end
 
     def unrecognized_token_error
@@ -140,19 +135,19 @@ module JsonPath2
       parse_methods = %I[identifier number string true false nil fn if while]
       if parse_methods.include?(current.type)
         "parse_#{current.type}".to_sym
-      elsif current.type == :'('
+      elsif current.type == :group_start # (
         :parse_grouped_expr
       elsif %I[\n eof].include?(current.type)
         :parse_terminator
-      elsif UNARY_OPERATORS.include?(current.type)
+      elsif UNARY_OPERATORS.include?(current.lexeme)
         :parse_unary_operator
-      elsif current.type == :'['
+      elsif current.type == :child_start # [
         :parse_bracketed_selector
-      elsif current.type == :'.'
+      elsif current.type == :dot # .
         :parse_dot_notation
-      elsif current.type == :'..'
+      elsif current.type == :descendants # ..
         :parse_descendant_segment
-      elsif current.type == ROOT_OPERATOR
+      elsif current.type == :root # $
         :parse_root
       else
         raise "Don't know how to parse #{current.inspect}"
@@ -162,19 +157,15 @@ module JsonPath2
     def determine_infix_function(token = current)
       if (BINARY_OPERATORS + LOGICAL_OPERATORS).include?(token.type)
         :parse_binary_operator
-      elsif token.type == :'('
+      elsif token.type == :group_start # (
         :parse_function_call
       end
     end
 
     def parse_identifier
-      if lookahead.type == :'='
-        parse_var_binding
-      else
-        ident = AST::Identifier.new(current.lexeme)
-        check_syntax_compliance(ident)
-        ident
-      end
+      ident = AST::Identifier.new(current.lexeme)
+      check_syntax_compliance(ident)
+      ident
     end
 
     def parse_string
@@ -189,7 +180,7 @@ module JsonPath2
     # Then modify its value.
     def parse_minus_operator
       @log.debug "#parse_minus_operator(#{current})"
-      raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :'-'
+      raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :minus
 
       # '-' must be followed by a number token.
       # Parse number and apply - sign to its literal value
@@ -232,8 +223,8 @@ module JsonPath2
       @log.debug "#parse_descendant_segment: current=#{current}"
       selector =
         case current.type
-        when :'*' then AST::WildcardSelector.new(current_literal_and_consume)
-        when :'[' then parse_bracketed_selector
+        when :wildcard then AST::WildcardSelector.new(current_literal_and_consume)
+        when :child_start then parse_bracketed_selector
         when :string, :identifier then parse_selector
         else
           raise "Invalid query: descendant segment must have selector, got ..#{current.lexeme}"
@@ -291,7 +282,7 @@ module JsonPath2
       consume
 
       expr = parse_expr_recursively
-      return unless consume_if_nxt_is(build_token(:')', ')'))
+      return unless consume_if_nxt_is(build_token(:group_end, ')'))
 
       expr
     end
@@ -322,7 +313,7 @@ module JsonPath2
     #
     # @return [AST::Shared::ExpressionCollection]
     def parse_bracketed_selector
-      raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :'['
+      raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :child_start
 
       consume # [
 
@@ -344,20 +335,20 @@ module JsonPath2
     def parse_selector
       @log.debug "#parse_selector(current=#{current})"
       case current.type
-      when :':' then parse_array_slice_selector
-      when :'-'
+      when :array_slice_separator then parse_array_slice_selector
+      when :minus
         # apply the - sign to the following number and retry
         parse_minus_operator
         parse_selector
       when :number
-        if lookahead.type == :':'
+        if lookahead.type == :array_slice_separator
           parse_array_slice_selector
         else
           AST::IndexSelector.new(current_literal_and_consume)
         end
       when :identifier, :string
         AST::NameSelector.new(current_literal_and_consume)
-      when :'*'
+      when :wildcard
         AST::WildcardSelector.new(current_literal_and_consume)
       else
         raise "Unhandled selector: #{current.inspect}"
@@ -380,7 +371,7 @@ module JsonPath2
       start, end_, step = 3.times.map { parse_array_slice_component }
       @log.debug "#parse_array_slice_selector got [#{start&.lexeme},#{end_&.lexeme},#{step&.lexeme}] (current=#{current})"
 
-      raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :']'
+      raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
 
       AST::ArraySliceSelector.new(start, end_, step)
     end
@@ -393,22 +384,22 @@ module JsonPath2
       @log.debug "#parse_array_slice_component(#{current})"
       token =
         case current.type
-        when :']' then return nil
-        when :':' then nil
-        when :'-' # apply - sign to number and retry
+        when :child_end then return nil
+        when :array_slice_separator then nil
+        when :minus # apply - sign to number and retry
           parse_minus_operator
           parse_array_slice_component
         when :number then current
         else raise "Unexpected token in array slice selector: #{current}"
         end
       consume if current.type == :number
-      consume if current.type == :':'
+      consume if current.type == :array_slice_separator
       token
     end
 
     def array_slice_selector?(str)
       components = str.split(':')
-      return false unless [1, 2].include?(components.size)
+      [1, 2].include?(components.size)
     end
 
     def parse_filter_expression

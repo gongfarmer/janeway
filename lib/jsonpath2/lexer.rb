@@ -4,10 +4,37 @@ require_relative 'location'
 require_relative 'token'
 
 module JsonPath2
+  OPERATORS = {
+    and: '&&',
+    array_slice_separator: ':',
+    child_end: ']',
+    child_start: '[',
+    current_node: '@',
+    descendants: '..',
+    dot: '.',
+    equal: '==',
+    filter: '?',
+    greater_than: '>',
+    greater_than_or_equal: '>=',
+    group_end: ')',
+    group_start: '(',
+    less_than: '<',
+    less_than_or_equal: '<=',
+    minus: '-',
+    not: '!',
+    not_equal: '!=',
+    or: '||',
+    root: '$',
+    union: ',',
+    wildcard: '*',
+  }.freeze
+  ONE_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 1 }
+  TWO_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 2 }
+  TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.uniq
+  ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.uniq
+
   WHITESPACE = " \t"
-  ONE_CHAR_LEX = '$[]()?@:*,-'
-  ONE_OR_TWO_CHAR_LEX = %w[. =].freeze
-  KEYWORD = [].freeze # FIXME: reuse this for function extensions?
+  KEYWORD = %w[true false null].freeze
 
   # Transforms source code into tokens
   class Lexer
@@ -57,10 +84,12 @@ module JsonPath2
       end
 
       token =
-        if ONE_CHAR_LEX.include?(c)
-          token_from_one_char_lex(c)
-        elsif ONE_OR_TWO_CHAR_LEX.include?(c)
+        if ONE_OR_TWO_CHAR_LEX.include?(c)
           token_from_one_or_two_char_lex(c)
+        elsif ONE_CHAR_LEX.include?(c)
+          token_from_one_char_lex(c)
+        elsif TWO_CHAR_LEX_FIRST.include?(c)
+          token_from_two_char_lex(c)
         elsif %w[" '].include?(c)
           delimited_string(c)
         elsif digit?(c)
@@ -68,6 +97,7 @@ module JsonPath2
         elsif alpha_numeric?(c)
           identifier
         end
+        # FIXME: what about string that starts with unicode?  Seems like #alpha_numeric? does not handl this
 
       raise("Unknown character: #{c.inspect}") unless token
 
@@ -92,19 +122,29 @@ module JsonPath2
     end
 
     def token_from_one_char_lex(lexeme)
-      Token.new(lexeme.to_sym, lexeme, nil, current_location)
+      Token.new(OPERATORS.key(lexeme), lexeme, nil, current_location)
     end
 
-    # Consumes =, ==, . or ..
+    # Consumes an operator that could be either 1 or 2 chars in length
     # @return [Token]
     def token_from_one_or_two_char_lex(lexeme)
-      nxt = lookahead
-      if nxt == lexeme
+      next_two_chars = [lexeme, lookahead].join
+      if TWO_CHAR_LEX.include?(next_two_chars)
         consume
-        Token.new((lexeme + nxt).to_sym, lexeme + nxt, nil, current_location)
+        Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
       else
         token_from_one_char_lex(lexeme)
       end
+    end
+
+    # Consumes a 2 char operator
+    # @return [Token]
+    def token_from_two_char_lex(lexeme)
+      next_two_chars = [lexeme, lookahead].join
+      raise "unknown operator: #{next_two_chars.inspect}" unless TWO_CHAR_LEX.include?(next_two_chars)
+
+      consume
+      Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
     end
 
     def consume

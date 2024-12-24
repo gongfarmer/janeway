@@ -16,35 +16,34 @@ module JsonPath2
     # Represent a selector, which is an expression that filters nodes from a list based on a predicate.
     class SelectorList < JsonPath2::AST::Expression
       def initialize
-        super
-        @selectors = []
+        super([])
       end
 
       # Add a selector to the list
       def <<(selector)
         raise ArgumentError, "expect Selector, got #{selector.inspect}" unless selector.is_a?(Selector)
 
-        @selectors << selector
+        @value << selector
       end
 
       # List selectors
       def children
-        @selectors
+        @value
       end
 
       # @return [Integer]
       def size
-        @selectors.size
+        @value.size
       end
 
       # @return [Ast::Selector]
       def first
-        @selectors.first
+        @value.first
       end
 
       def ==(other)
         case other
-        when Array then @selectors == other
+        when Array then @value == other
         when SelectorList then children == other.children
         else
           false

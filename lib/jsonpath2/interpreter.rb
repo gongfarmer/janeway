@@ -67,11 +67,12 @@ module JsonPath2
       results = []
       selector_list.children.each do |selector|
         result = send("interpret_#{selector.type}", selector, input)
-        case result
-        when Array then results.concat(result)
-        when Hash then results.push(result)
+        next unless result
+
+        if result.is_a?(Array)
+          results.concat(result)
         else
-          puts "discarding selector result #{result.inspect}"
+          results.push(result)
         end
       end
       results

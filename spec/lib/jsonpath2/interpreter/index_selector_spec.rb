@@ -25,6 +25,10 @@ module JsonPath2
         expect(Interpreter.interpret(input, '$[3]')).to be(nil)
         expect(Interpreter.interpret(input, '$[-4]')).to be(nil)
       end
+      it 'allows multiple comma-separated index selectors' do
+        expect(Interpreter.interpret(input, '$[0,1,2]')).to eq(input)
+        expect(Interpreter.interpret(input, '$[0,1,2,3,4,5]')).to eq(input)
+      end
     end
   end
 end
