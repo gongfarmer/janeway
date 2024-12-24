@@ -229,7 +229,8 @@ module JsonPath2
     #  Note: .. on its own is not a valid segment.
     def parse_descendant_segment
       consume # '..' token
-      selector  =
+      @log.debug "#parse_descendant_segment: current=#{current}"
+      selector =
         case current.type
         when :'*' then AST::WildcardSelector.new(current_literal_and_consume)
         when :'[' then parse_bracketed_selector
@@ -304,29 +305,39 @@ module JsonPath2
       AST::Root.new
     end
 
-    # Parse one of these:
+    # Parse one or more selectors surrounded by brackets.
     #
-    # A name selector, e.g. 'name', selects a named child of an object.
+    # More than 1 selector may be within the brackets, as long as they are separated by commas.
+    # If multiple selectors are given, then their results are combined (possibly introducing
+    # duplicate elements in the result.)
     #
-    # An index selector, e.g. 3, selects an indexed child of an array.
+    # The selectors may be any of these types:
+    #   * name selector, eg. 'name', selects a named child of an object.
+    #   * index selector, eg. 3, selects an indexed child of an array.
+    #   * wildcard selector, eg. * selects all children of a node and in the expression ..[*]
+    #     selects all descendants of a node.
+    #   * array slice selector selects a series of elements from an array, giving a start position,
+    #     an end position, and an optional step value that moves the position from the start to the end.
+    #   * filter expressions select certain children of an object or array, as in:
     #
-    # A wildcard * ({{wildcard-selector}}) in the expression [*] selects all
-    # children of a node and in the expression ..[*] selects all descendants of a
-    # node.
-    #
-    # An array slice start:end:step ({{slice}}) selects a series of elements from
-    # an array, giving a start position, an end position, and an optional step
-    # value that moves the position from the start to the end.
-    #
-    # Filter expressions ?<logical-expr> select certain children of an object or array, as in:
+    # @return [AST::Shared::ExpressionCollection]
     def parse_bracketed_selector
       raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :'['
 
-      consume
-      selector = parse_selector
+      consume # [
 
-      @log.debug "#parse_bracketed_selector: got selector #{selector}, current=#{current}"
-      selector
+      selector_list = AST::SelectorList.new
+      loop do
+        selector_list << parse_selector
+
+        break unless current.lexeme == ',' # no more selectors in these brackets
+
+        # consume the comma, then move on to the next selector
+        consume # ,
+      end
+
+      @log.debug "#parse_bracketed_selector: got selectors #{selector_list.children.map(&:type).inspect}, current=#{current}"
+      selector_list
     end
 
     # Parse selector which is not surrounded by brackets

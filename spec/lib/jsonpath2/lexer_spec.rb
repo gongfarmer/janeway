@@ -4,6 +4,9 @@ require 'jsonpath2/lexer'
 
 module JsonPath2
   describe Lexer do
+    it 'accepts multiple selectors within brackets, comma-separated' do
+      expect(Lexer.lex('$[1, 2]')).to eq([:'$', :'[', 1, :',', 2, :']', :eof])
+    end
     context 'when tokenizing name selector' do
       it 'tokenizes name selector' do
         expect(Lexer.lex('$.name')).to eq([:'$', :'.', 'name', :eof])

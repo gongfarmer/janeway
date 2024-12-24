@@ -55,6 +55,28 @@ module JsonPath2
       @input
     end
 
+    # Interpret a list of selectors
+    #
+    # @param selector_list[AST::SelectorList]
+    # @param input [Array, Hash] tree of data which the jsonpath query is addressing
+    # @return [Array] results
+    def interpret_selector_list(selector_list, input)
+      return send("interpret_#{selector_list.first.type}", selector_list.first, input) if selector_list.size == 1
+
+      # This is a list of multiple selectors, collect the results in an array
+      results = []
+      selector_list.children.each do |selector|
+        result = send("interpret_#{selector.type}", selector, input)
+        case result
+        when Array then results.concat(result)
+        when Hash then results.push(result)
+        else
+          puts "discarding selector result #{result.inspect}"
+        end
+      end
+      results
+    end
+
     # Filter the input by returning the key that has the given name
     # FIXME: json allows duplicate keys, ruby does not. How to handle this?
     # @param selector [NameSelector]
@@ -80,10 +102,17 @@ module JsonPath2
       input[selector.value]
     end
 
-    # "Filter" the input by returning every array element.
+    # "Filter" the input by returning every value, but no keys.
+    #
     # @param selector [WildcardSelector]
+    # @return [Array] matching values
     def interpret_wildcard_selector(_selector, input)
-      input
+      case input
+      when Array then input
+      when Hash then input.values
+      else
+        raise "don't know how to apply wildcard to #{input.inspect}"
+      end
     end
 
     # Find all descendants of the current input that match the
@@ -140,7 +169,7 @@ module JsonPath2
 
     def fetch_function_definition(fn_name)
       fn_def = env[fn_name]
-      raise JsonPath2::Error::Runtime::UndefinedFunction.new(fn_name) if fn_def.nil?
+      raise JsonPath2::Error::Runtime::UndefinedFunction, fn_name if fn_def.nil?
 
       fn_def
     end
@@ -152,7 +181,7 @@ module JsonPath2
       given = fn_call.args.length
       expected = fn_def.params.length
       if given != expected
-        raise JsonPath2::Error::Runtime::WrongNumArg.new(fn_def.function_name_as_str, given, expected)
+        raise JsonPath2::Error::Runtime::WrongNumArg, fn_def.function_name_as_str, given, expected
       end
 
       # Applying the values passed in this particular function call to the respective defined parameters.
@@ -181,7 +210,7 @@ module JsonPath2
         #puts "LAST_VALUE is #{last_value}"
 
         if return_detected?(node)
-          raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length > 0
+          raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length.positive?
 
           self.unwind_call_stack = call_stack.length # store current stack level to know when to stop returning.
           return last_value
@@ -199,29 +228,30 @@ module JsonPath2
       last_value
     end
 
+    # Interpret a node.
     def interpret_node(node, input)
       interpreter_method = "interpret_#{node.type}"
       send(interpreter_method, node, input)
     end
 
     def interpret_identifier(identifier)
-      if env.has_key?(identifier.name)
+      if env.key?(identifier.name)
         # Global variable.
         env[identifier.name]
-      elsif call_stack.length > 0 && call_stack.last.env.has_key?(identifier.name)
+      elsif call_stack.length.postive? && call_stack.last.env.key?(identifier.name)
         # Local variable.
         call_stack.last.env[identifier.name]
       else
         # Undefined variable.
-        raise JsonPath2::Error::Runtime::UndefinedVariable.new(identifier.name)
+        raise JsonPath2::Error::Runtime::UndefinedVariable, identifier.name
       end
     end
 
     def interpret_var_binding(var_binding)
-      if call_stack.length > 0
+      if call_stack.empty?
         # We are inside a function. If the name points to a global var, we assign the value to it.
         # Otherwise, we create and / or assign to a local var.
-        if env.has_key?(var_binding.var_name_as_str)
+        if env.key?(var_binding.var_name_as_str)
           env[var_binding.var_name_as_str] = interpret_node(var_binding.right)
         else
           call_stack.last.env[var_binding.var_name_as_str] = interpret_node(var_binding.right)
@@ -232,12 +262,12 @@ module JsonPath2
       end
     end
 
-    # TODO Empty blocks are accepted both for the IF and for the ELSE. For the IF, the parser returns a block with an empty collection of expressions. For the else, no block is constructed. The evaluation is already resulting in nil, which is the desired behavior. It would be better, however, if the parser also returned a block with no expressions for an ELSE with an empty block, as is the case in an IF with an empty block. Investigate this nuance of the parser in the future.
+    # TODO: Empty blocks are accepted both for the IF and for the ELSE. For the IF, the parser returns a block with an empty collection of expressions. For the else, no block is constructed. The evaluation is already resulting in nil, which is the desired behavior. It would be better, however, if the parser also returned a block with no expressions for an ELSE with an empty block, as is the case in an IF with an empty block. Investigate this nuance of the parser in the future.
     def interpret_conditional(conditional)
       evaluated_cond = interpret_node(conditional.condition)
 
       # We could implement the line below in a shorter way, but better to be explicit about truthiness in JsonPath2.
-      if evaluated_cond == nil || evaluated_cond == false
+      if [nil, false].include?(evaluated_cond)
         return nil if conditional.when_false.nil?
 
         interpret_nodes(conditional.when_false.expressions)

@@ -9,9 +9,8 @@ module JsonPath2
         @value = val
       end
 
-      # TODO: Both implementations below are temporary. Expression SHOULD NOT have a concrete implementation of these methods.
       def ==(other)
-        raise NotImplementedError
+        raise NotImplementedError # subclass must implement
       end
 
       def children

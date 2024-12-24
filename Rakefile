@@ -11,6 +11,7 @@ rescue Bundler::BundlerError => e
 end
 require 'rake'
 require 'rake/clean'
+require 'rubocop/rake_task'
 require 'rspec/core/rake_task'
 require 'yard'
 
@@ -21,6 +22,7 @@ require 'simplecov' if ENV['COVERAGE']
 CLEAN.include %w[coverage doc *.gem .yardoc]
 
 RSpec::Core::RakeTask.new(:spec)
+RuboCop::RakeTask.new
 
 YARD::Rake::YardocTask.new do |t|
   t.files = ['lib/**/*.rb']

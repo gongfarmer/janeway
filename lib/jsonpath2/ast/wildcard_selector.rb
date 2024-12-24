@@ -4,8 +4,15 @@ require_relative 'selector'
 
 module JsonPath2
   module AST
-    # A wildcard * ({{wildcard-selector}}) in the expression [*] selects all
-    # children of a node and in the expression ..[*] selects all descendants of a node.
+    # A wildcard selector selects the nodes of all children of an object
+    # or array. The order in which the children of an object appear in
+    # the resultant nodelist is not stipulated, since JSON objects are
+    # unordered. Children of an array appear in array order in the
+    # resultant nodelist.
+    #
+    # Note that the children of an object are its member values, not its member names.
+    #
+    # The wildcard selector selects nothing from a primitive JSON value (that is, a number, a string, true, false, or null).
     #
     # It has only one possible value: '*'
     # @example: $.store.book[*]
