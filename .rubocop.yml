@@ -1,7 +1,21 @@
 inherit_from: .rubocop_todo.yml
 
+require:
+  - rubocop-rspec
+  - rubocop-performance
+
 Style/FormatStringToken:
   Enabled: false
 
 Style/TrailingCommaInHashLiteral:
   EnforcedStyleForMultiline: consistent_comma
+
+
+AllCops:
+  DisabledByDefault: false
+  SuggestExtensions: true
+  NewCops: enable
+
+Performance:
+  Exclude:
+    - 'spec/**/*'

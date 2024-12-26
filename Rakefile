@@ -24,6 +24,8 @@ CLEAN.include %w[coverage doc *.gem .yardoc]
 RSpec::Core::RakeTask.new(:spec)
 RuboCop::RakeTask.new
 
+task lint: :rubocop
+
 YARD::Rake::YardocTask.new do |t|
   t.files = ['lib/**/*.rb']
 end
