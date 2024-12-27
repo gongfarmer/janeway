@@ -14,7 +14,7 @@ module JsonPath2
       end
 
       def to_s
-        "<IndexSelector index=#{@value}>"
+        @value.to_s
       end
     end
   end

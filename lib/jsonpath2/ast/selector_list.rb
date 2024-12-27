@@ -49,6 +49,10 @@ module JsonPath2
           false
         end
       end
+
+      def to_s
+        @value.map(&:to_s).join(',')
+      end
     end
   end
 end

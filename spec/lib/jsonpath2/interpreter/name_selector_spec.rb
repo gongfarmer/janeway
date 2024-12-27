@@ -19,19 +19,23 @@ module JsonPath2
       end
 
       it 'finds matching element when name contains single quoted space' do
-        expect(Interpreter.interpret(input, "$.o['j j']")).to eq({ 'k.k' => 3 })
+        expect(described_class.interpret(input, "$.o['j j']")).to eq({ 'k.k' => 3 })
       end
+
       it 'finds matching element when name contains single quoted space, with nesting' do
-        expect(Interpreter.interpret(input, "$.o['j j']['k.k']")).to eq(3)
+        expect(described_class.interpret(input, "$.o['j j']['k.k']")).to eq(3)
       end
+
       it 'finds matching element when name contains double quoted space, with nesting' do
-        expect(Interpreter.interpret(input, '$.o["j j"]["k.k"]')).to eq(3)
+        expect(described_class.interpret(input, '$.o["j j"]["k.k"]')).to eq(3)
       end
+
       it 'finds matching element when name contains single quote' do
-        expect(Interpreter.interpret(input, %q($["'"]))).to eq({ '@' => 2 })
+        expect(described_class.interpret(input, %q($["'"]))).to eq({ '@' => 2 })
       end
-      it 'finds matching element when name contains quoted @' do
-        expect(Interpreter.interpret(input, %q($["'"]["@"]))).to eq(2)
+
+      it 'finds matching element when name contains @ character' do
+        expect(described_class.interpret(input, %q($["'"]["@"]))).to eq(2)
       end
     end
   end

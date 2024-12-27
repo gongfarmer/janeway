@@ -21,7 +21,7 @@ module JsonPath2
     end
 
     def to_s
-      "Token<#{@type.inspect}, #{@lexeme.inspect}>"
+      "Token<#{@type}: #{@lexeme.inspect}>"
     end
 
     def ==(other)

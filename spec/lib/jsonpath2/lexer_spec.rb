@@ -169,6 +169,7 @@ module JsonPath2
         expect(Lexer.lex('$[*]')).to eq(expected)
       end
       it 'tokenizes current_node operator' do
+        # only valid within filter selector
         expected = %I[root child_start filter group_start current_node dot identifier less_than number group_end child_end eof]
         expect(Lexer.lex('$[?(@.price < 10)]')).to eq(expected)
       end

@@ -6,6 +6,9 @@ module JsonPath2
       attr_accessor :operator, :left, :right
 
       def initialize(operator, left = nil, right = nil)
+        super(nil)
+        raise ArgumentError, "expect symbol, got #{operator.inspect}" unless operator.is_a?(Symbol)
+
         @operator = operator
         @left = left
         @right = right

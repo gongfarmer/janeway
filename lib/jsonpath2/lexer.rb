@@ -28,10 +28,10 @@ module JsonPath2
     union: ',',
     wildcard: '*',
   }.freeze
-  ONE_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 1 }
-  TWO_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 2 }
-  TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.uniq
-  ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.uniq
+  ONE_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 1 }.freeze
+  TWO_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 2 }.freeze
+  TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.freeze
+  ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.freeze
 
   WHITESPACE = " \t"
   KEYWORD = %w[true false null].freeze
@@ -227,7 +227,6 @@ module JsonPath2
     end
 
     # Consume a numeric string
-    # FIXME handle negative... here or in parser?
     def number
       consume_digits
       lexeme = source[lexeme_start_p..(next_p - 1)]

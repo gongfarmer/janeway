@@ -7,9 +7,9 @@ module JsonPath2
   class Parser
     attr_accessor :tokens, :ast, :errors
 
-    UNARY_OPERATORS = %I[! -].freeze
-    BINARY_OPERATORS = %I[== != > < >= <=].freeze
-    LOGICAL_OPERATORS = %I[&& ||].freeze
+    UNARY_OPERATORS = %w[! -].freeze
+    BINARY_OPERATORS = %w[== != > < >= <=].freeze
+    LOGICAL_OPERATORS = %w[&& ||].freeze
 
     LOWEST_PRECEDENCE = 0
     PREFIX_PRECEDENCE = 7
@@ -26,12 +26,14 @@ module JsonPath2
     }.freeze
 
     # @param query [String] jsonpath query to lex and parse
+    # @param logger [Logger]
+    #
     # @return [AST]
-    def self.parse(query)
+    def self.parse(query, logger = Logger.new(IO::NULL))
       raise ArgumentError, "expect string, got #{query.inspect}" unless query.is_a?(String)
 
       tokens = JsonPath2::Lexer.lex(query)
-      new(tokens).parse
+      new(tokens, logger).parse
     end
 
     def initialize(tokens, logger = Logger.new(IO::NULL))
@@ -73,7 +75,7 @@ module JsonPath2
       t
     end
 
-    # Return lexeme of current token. Consume.
+    # Return literal of current token. Consume.
     # @return [String, Integer] literal value of token that is `current` when function is called.
     def current_literal_and_consume
       current.literal.tap { consume }
@@ -150,12 +152,12 @@ module JsonPath2
       elsif current.type == :root # $
         :parse_root
       else
-        raise "Don't know how to parse #{current.inspect}"
+        raise "Don't know how to parse #{current}"
       end
     end
 
     def determine_infix_function(token = current)
-      if (BINARY_OPERATORS + LOGICAL_OPERATORS).include?(token.type)
+      if (BINARY_OPERATORS + LOGICAL_OPERATORS).include?(token.lexeme)
         :parse_binary_operator
       elsif token.type == :group_start # (
         :parse_function_call
@@ -176,7 +178,7 @@ module JsonPath2
       AST::Number.new(current.literal)
     end
 
-    # Consume to the (expected) number token following this operator.
+    # Consume minus operator and apply it to the (expected) number token following it.
     # Then modify its value.
     def parse_minus_operator
       @log.debug "#parse_minus_operator(#{current})"
@@ -191,7 +193,7 @@ module JsonPath2
     end
 
     def parse_boolean
-      AST::Boolean.new(current.lexeme == 'true')
+      AST::Boolean.new(current.literal == 'true')
     end
 
     def parse_nil
@@ -236,7 +238,7 @@ module JsonPath2
     # Dot notation is an alternate representation of a bracketed name selector.
     #
     # The IETF doc does not explicitly define whether other selector types
-    # (eg. IndexSelector) but the examples suggest that only
+    # (eg. IndexSelector) are allowed here, but the examples suggest that only
     # NameSelector can be used with dot notation.
     def parse_dot_notation
       consume
@@ -313,29 +315,38 @@ module JsonPath2
     #
     # @return [AST::Shared::ExpressionCollection]
     def parse_bracketed_selector
+      @log.debug "#parse_bracketed_selector: start, current=#{current}"
       raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :child_start
 
-      consume # [
+      consume # "["
 
       selector_list = AST::SelectorList.new
       loop do
         selector_list << parse_selector
 
-        break unless current.lexeme == ',' # no more selectors in these brackets
+        break unless current.type == :union # no more selectors in these brackets
 
-        # consume the comma, then move on to the next selector
-        consume # ,
+        # consume the union operator, then move on to the next selector
+        consume # ","
+      end
+
+      # Do not consume the final ']', the top-level parsing loop will eat that
+      unless current.type == :child_end
+        # developer error, check the parsing function
+        raise "expect current token to be ], got #{current.type.inspect}"
       end
 
       @log.debug "#parse_bracketed_selector: got selectors #{selector_list.children.map(&:type).inspect}, current=#{current}"
+
       selector_list
     end
 
-    # Parse selector which is not surrounded by brackets
+    # Parse a selector.
     def parse_selector
       @log.debug "#parse_selector(current=#{current})"
       case current.type
       when :array_slice_separator then parse_array_slice_selector
+      when :filter then parse_filter_selector
       when :minus
         # apply the - sign to the following number and retry
         parse_minus_operator
@@ -351,11 +362,11 @@ module JsonPath2
       when :wildcard
         AST::WildcardSelector.new(current_literal_and_consume)
       else
-        raise "Unhandled selector: #{current.inspect}"
+        raise "Unhandled selector: #{current}"
       end
     end
 
-    # An array slice start:end:step ({{slice}}) selects a series of elements from
+    # An array slice start:end:step selects a series of elements from
     # an array, giving a start position, an end position, and an optional step
     # value that moves the position from the start to the end.
     #
@@ -365,6 +376,7 @@ module JsonPath2
     #   $[1:5:2]
     #   $[5:1:-2]
     #   $[::-1]
+    #
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       @log.debug "#parse_array_slice_selector start (current=#{current})"
@@ -397,23 +409,23 @@ module JsonPath2
       token
     end
 
-    def array_slice_selector?(str)
-      components = str.split(':')
-      [1, 2].include?(components.size)
+    # Feed tokens to the FilterSelector until hitting a terminator
+    def parse_filter_selector
+      @log.debug "#parse_filter_selector: #{current}"
+      consume # "?"
+      AST::FilterSelector.new.tap do |selector|
+        selector << parse_expr_recursively
+        consume # because #parse_expr_recursively expects its "top-level" loop to consume, it leaves an already-parsed token
+        @log.debug "#parse_filter_selector: finished with #{selector.children}, current #{current}"
+      end
     end
 
-    def parse_filter_expression
-      # AST::FilterExpressionSelector.new
-
-      raise NotImplementedError
-    end
-
+    # @return [AST::UnaryOperator]
     def parse_unary_operator
-      op = AST::UnaryOperator.new(current.type)
-      consume
-      op.operand = parse_expr_recursively(PREFIX_PRECEDENCE)
-
-      op
+      AST::UnaryOperator.new(current.type).tap do |op|
+        consume
+        op.operand = parse_expr_recursively(PREFIX_PRECEDENCE)
+      end
     end
 
     def parse_binary_operator(left)
@@ -431,21 +443,25 @@ module JsonPath2
       return unrecognized_token_error unless parsing_function
 
       tk = current
-      @log.debug "#parse_expr_recursively start #{tk} with #{parsing_function}"
+      @log.debug "#parse_expr_recursively pre-send  #{tk} with #{parsing_function}"
       expr = send(parsing_function)
-      @log.debug "#parse_expr_recursively end   #{tk} with #{parsing_function}, current #{current}, got #{expr}"
+      @log.debug "#parse_expr_recursively post-send #{tk} with #{parsing_function}, current #{current}, expr #{expr.inspect}"
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.
+      @log.debug "#parse_expr_recursively will loop, current:#{current} checking #{nxt}, precedence " + [precedence, nxt_precedence].inspect
       while nxt_not_terminator? && precedence < nxt_precedence
         infix_parsing_function = determine_infix_function(nxt)
+        @log.debug "#parse_expr_recursively next token #{nxt.lexeme}, will parse with #{infix_parsing_function.inspect}(#{expr.inspect})"
 
         return expr if infix_parsing_function.nil?
 
+        @log.debug "#parse_expr_recursively infix current #{current}, send #{infix_parsing_function}(#{expr.inspect})"
         consume
         expr = send(infix_parsing_function, expr)
       end
 
+      @log.debug "#parse_expr_recursively returns #{expr.inspect}, current #{current}"
       expr
     end
 

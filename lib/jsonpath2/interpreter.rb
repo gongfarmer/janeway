@@ -168,6 +168,14 @@ module JsonPath2
         .compact
     end
 
+    def interpret_filter_selector(selector, input)
+      # @see IETF 2.3.5.2
+      # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
+      return nil unless [Array, Hash].include?(input.class)
+
+      raise NotImplementedError
+    end
+
     def fetch_function_definition(fn_name)
       fn_def = env[fn_name]
       raise JsonPath2::Error::Runtime::UndefinedFunction, fn_name if fn_def.nil?

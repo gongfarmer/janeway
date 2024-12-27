@@ -4,6 +4,9 @@ require 'jsonpath2'
 
 module JsonPath2
   describe Parser do
+    let(:query) { '$[1,2]' }
+    let(:tokens) { JsonPath2::Lexer.lex(query) }
+
     it 'supports 2 comma-separated selectors in one pair of square brackets' do
       tokens = Lexer.lex('$[1, 2]')
       ast = JsonPath2::Parser.new(tokens).parse
@@ -21,7 +24,6 @@ module JsonPath2
 
     describe '#parse_array_slice_selector' do
       let(:query) { '$[6:12:2]' }
-      let(:tokens) { JsonPath2::Lexer.lex(query) }
       it 'parses all 3 components' do
         ast = JsonPath2::Parser.new(tokens).parse
         expect(ast.expressions).to eq(
