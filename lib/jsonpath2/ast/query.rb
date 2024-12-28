@@ -12,6 +12,14 @@ module JsonPath2
       def tree
         children.map(&:tree)
       end
+
+      def to_s
+        expressions.map(&:to_s).join
+      end
+
+      def ==(other)
+        to_s == other.to_s
+      end
     end
   end
 end

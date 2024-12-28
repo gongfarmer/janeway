@@ -15,6 +15,10 @@ module JsonPath2
       def children
         []
       end
+
+      def to_s
+        @value ? 'true' : 'false'
+      end
     end
   end
 end

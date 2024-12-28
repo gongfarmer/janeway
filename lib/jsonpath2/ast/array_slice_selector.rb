@@ -55,11 +55,7 @@ module JsonPath2
       end
 
       def to_s
-        format('#<JsonPath2::AST::ArraySliceSelector start=%s, end=%s, step=%s>', @start, @end, @step)
-      end
-
-      def inspect
-        format('#<JsonPath2::AST::ArraySliceSelector:%s start=%s, end=%s, step=%s>', object_id, @start, @end, @step)
+        [@start, @end, @step].map(&:to_s).join(':')
       end
 
       # Get lower and upper array indexes for a particular array

@@ -21,6 +21,22 @@ module JsonPath2
       def children
         [left, right]
       end
+
+      def to_s
+        # Make precedence explicit by adding parentheses
+        "(#{@left} #{operator_to_s} #{@right})"
+      end
+
+      private
+
+      def operator_to_s
+        case operator
+        when :or then '||'
+        when :and then '&&'
+        else
+          raise "unknown binary operator #{operator}"
+        end
+      end
     end
   end
 end

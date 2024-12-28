@@ -413,11 +413,13 @@ module JsonPath2
     def parse_filter_selector
       @log.debug "#parse_filter_selector: #{current}"
       consume # "?"
-      AST::FilterSelector.new.tap do |selector|
-        selector << parse_expr_recursively
-        consume # because #parse_expr_recursively expects its "top-level" loop to consume, it leaves an already-parsed token
-        @log.debug "#parse_filter_selector: finished with #{selector.children}, current #{current}"
-      end
+
+      selector = AST::FilterSelector.new(parse_expr_recursively)
+
+      consume # because #parse_expr_recursively expects its "top-level" loop to consume, it leaves an already-parsed token
+      @log.debug "#parse_filter_selector: finished with #{selector.children}, current #{current}"
+
+      selector
     end
 
     # @return [AST::UnaryOperator]

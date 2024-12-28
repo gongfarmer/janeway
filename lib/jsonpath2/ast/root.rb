@@ -6,6 +6,10 @@ module JsonPath2
       def ==(other)
         self.class == other.class
       end
+
+      def to_s
+        '$'
+      end
     end
   end
 end

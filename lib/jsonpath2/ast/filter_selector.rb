@@ -49,19 +49,15 @@ module JsonPath2
     class FilterSelector < JsonPath2::AST::Selector
       attr_reader :value
 
-      def initialize
-        super([]) # FIXME: should the value be a single root Expression instead of an array?
-      end
-
       # Insert tokens in a hierarchical AST
       # @return [self]
       def <<(token)
-        @value << token
+        @value = token
         self
       end
 
       def to_s
-        "#<JsonPath2::AST::FilterSelector:#{object_id} name=#{@value.inspect}>"
+        "? #{value}"
       end
 
       def ==(other)
