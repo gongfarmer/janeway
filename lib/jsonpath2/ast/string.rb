@@ -7,8 +7,12 @@ module JsonPath2
         value == other&.value
       end
 
-      def children
-        []
+      def to_s
+        if @value.include?("'")
+          %("#{@value}"')
+        else
+          "'#{@value}'"
+        end
       end
     end
   end

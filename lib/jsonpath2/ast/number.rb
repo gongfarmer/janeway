@@ -10,6 +10,10 @@ module JsonPath2
         value == other&.value
       end
 
+      def to_s
+        @value.to_s
+      end
+
       def children
         []
       end

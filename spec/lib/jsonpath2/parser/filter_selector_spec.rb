@@ -63,6 +63,46 @@ module JsonPath2
         ast = described_class.parse('$[? $.absent1 <= $.absent2]')
         expect(ast).to eq('$[? ($.absent1 <= $.absent2)]')
       end
+
+      it 'compares name selector with string literal' do
+        ast = described_class.parse("$[? $.absent == 'g']")
+        expect(ast).to eq("$[? ($.absent == 'g')]")
+      end
+
+      it 'handles non-equality operator with nodelists' do
+        ast = described_class.parse('$[? $.absent1 != $.absent2]')
+        expect(ast).to eq('$[? ($.absent1 != $.absent2)]')
+      end
+
+      it 'handles non-equality operator with node list and string literal' do
+        ast = described_class.parse("$[? $.absent != 'g']")
+        expect(ast).to eq("$[? ($.absent != 'g')]")
+      end
+
+      it 'handles numeric comparison with less-than-or-equal' do
+        ast = described_class.parse('$[? 1 <= 2]')
+        expect(ast).to eq('$[? (1 <= 2)]')
+      end
+
+      it 'handles numeric comparison with greater-than' do
+        ast = described_class.parse('$[? 1 > 2]')
+        expect(ast).to eq('$[? (1 > 2)]')
+      end
+
+      it 'handles comparison of string and numeric types' do
+        ast = described_class.parse("$[? 13 == '13']")
+        expect(ast).to eq("$[? (13 == '13')]")
+      end
+
+      it 'handles comparison of number and name selector on root' do
+        ast = described_class.parse('$[? 1 <= $.arr]')
+        expect(ast).to eq('$[? (1 <= $.arr)]')
+      end
+
+      it 'handles comparison of booleans' do
+        ast = described_class.parse('$[? true <= true]')
+        expect(ast).to eq('$[? (true <= true)]')
+      end
     end
   end
 end
