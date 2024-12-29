@@ -17,6 +17,9 @@ module JsonPath2
     # It has only one possible value: '*'
     # @example: $.store.book[*]
     class WildcardSelector < JsonPath2::AST::Selector
+      def to_s
+        '*'
+      end
     end
   end
 end

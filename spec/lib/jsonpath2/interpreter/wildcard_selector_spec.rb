@@ -15,21 +15,25 @@ module JsonPath2
         }
       JSON_STRING
     end
-    it 'selects values, and excludes keys' do
+
+    it 'selects values, and excludes keys when applied to root node' do
       expected = [input['o'], input['a']]
-      expect(Interpreter.interpret(input, '$[*]')).to eq(expected)
+      expect(described_class.interpret(input, '$[*]')).to eq(expected)
     end
-    it 'selects values, and excludes keys' do
+
+    it 'selects values when applied to a hash' do
       expected = [1, 2] # order is not deterministic
-      expect(Interpreter.interpret(input, '$.o[*]')).to match_array(expected)
+      expect(described_class.interpret(input, '$.o[*]')).to match_array(expected)
     end
+
+    it 'selects values when applied to an array' do
+      expected = [5, 3] # order is not deterministic
+      expect(described_class.interpret(input, '$.a[*]')).to match_array(expected)
+    end
+
     it 'may be used in a comma-separated list' do
       expected = [1, 2, 2, 1] # order is not deterministic
-      expect(Interpreter.interpret(input, '$.o[*, *]')).to match_array(expected)
-    end
-    it 'selects values, and excludes keys' do
-      expected = [5, 3] # order is not deterministic
-      expect(Interpreter.interpret(input, '$.a[*]')).to match_array(expected)
+      expect(described_class.interpret(input, '$.o[*, *]')).to match_array(expected)
     end
   end
 end

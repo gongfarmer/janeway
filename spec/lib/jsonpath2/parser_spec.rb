@@ -8,7 +8,7 @@ module JsonPath2
       tokens = Lexer.lex('$[1, 2]')
       ast = described_class.new(tokens).parse
       expect(ast.expressions).to eq(
-        [AST::Root.new, [AST::IndexSelector.new(1), AST::IndexSelector.new(2)]]
+        [AST::Root.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2)])]
       )
     end
 
@@ -16,7 +16,7 @@ module JsonPath2
       tokens = Lexer.lex('$[1, 2, 3]')
       ast = described_class.new(tokens).parse
       expect(ast.expressions).to eq(
-        [AST::Root.new, [AST::IndexSelector.new(1), AST::IndexSelector.new(2), AST::IndexSelector.new(3)]]
+        [AST::Root.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2), AST::IndexSelector.new(3)])]
       )
     end
   end

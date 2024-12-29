@@ -51,8 +51,18 @@ module JsonPath2
     end
 
     # Interpret AST::Root, which returns the input
-    def interpret_root(_node, _input)
-      @input
+    def interpret_root(node, _input)
+      # Ignore the given _input from the current interpretation state.
+      # Root node starts from the top-level un-modified input.
+      return @input unless node.value
+
+      # If there is a selector list that modifies this node, then apply it
+      case node.value
+      when AST::SelectorList then interpret_selector_list(node.value, @input)
+      when AST::NameSelector then interpret_name_selector(node.value, @input)
+      else
+        raise "don't know how to interpret #{node.value.class}"
+      end
     end
 
     # Interpret a list of selectors

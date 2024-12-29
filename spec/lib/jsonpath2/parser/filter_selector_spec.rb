@@ -55,9 +55,13 @@ module JsonPath2
       ### Examples from https://www.rfc-editor.org/rfc/rfc9535.html#name-examples-6
 
       it 'handles equality operator with nodelists' do
-        ast = described_class.parse('$.absent1 == $.absent2', LOG)
-        pp ast.to_s
-        expect(ast).to eq('$.absent1 == $.absent2')
+        ast = described_class.parse('$[? $.absent1 == $.absent2]')
+        expect(ast).to eq('$[? ($.absent1 == $.absent2)]')
+      end
+
+      it 'handles less than or equal to operator' do
+        ast = described_class.parse('$[? $.absent1 <= $.absent2]')
+        expect(ast).to eq('$[? ($.absent1 <= $.absent2)]')
       end
     end
   end

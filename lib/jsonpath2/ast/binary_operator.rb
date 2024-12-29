@@ -31,12 +31,14 @@ module JsonPath2
 
       def operator_to_s
         case operator
-        when :or then '||'
         when :and then '&&'
-        when :less_than then '<='
-        when :greater_than then '>='
         when :equal then '=='
+        when :greater_than then '>'
+        when :greater_than_or_equal then '>='
+        when :less_than then '<'
+        when :less_than_or_equal then '<='
         when :not_equal then '!='
+        when :or then '||'
         else
           raise "unknown binary operator #{operator}"
         end

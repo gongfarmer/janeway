@@ -297,13 +297,26 @@ module JsonPath2
     end
 
     def parse_root
-      AST::Root.new
+      @log.debug "#parse_root: next=#{nxt}"
+
+      # detect optional following selector, using dot or bracket notation
+      selector =
+        if nxt.type == :dot
+          consume
+          parse_dot_notation
+        elsif nxt.type == :child_start
+          consume
+          parse_bracketed_selector
+        end
+
+      AST::Root.new(selector)
     end
 
     # Parse the current node operator "@", and optionally a selector which is applied to it
     def parse_current_node
-      @log.debug "#parse_current_node: , next=#{nxt}"
-      # detect following selector which uses dot or bracket notation
+      @log.debug "#parse_current_node: next=#{nxt}"
+
+      # detect optional following selector, using dot or bracket notation
       selector =
         if nxt.type == :dot
           consume
