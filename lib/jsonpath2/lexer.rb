@@ -95,9 +95,9 @@ module JsonPath2
         elsif digit?(c)
           number
         elsif alpha_numeric?(c)
-          identifier
+          identifier(ignore_keywords: tokens.last.type == :dot)
         end
-        # FIXME: what about string that starts with unicode?  Seems like #alpha_numeric? does not handl this
+        # FIXME: what about string that starts with unicode?  Seems like #alpha_numeric? does not handle this
 
       raise("Unknown character: #{c.inspect}") unless token
 
@@ -238,12 +238,12 @@ module JsonPath2
     end
 
     # Consume an alphanumeric string
-    def identifier
+    def identifier(ignore_keywords: false)
       consume while alpha_numeric?(lookahead)
 
       identifier = source[lexeme_start_p..(next_p - 1)]
       type =
-        if KEYWORD.include?(identifier)
+        if KEYWORD.include?(identifier) && !ignore_keywords
           identifier.to_sym
         else
           :identifier

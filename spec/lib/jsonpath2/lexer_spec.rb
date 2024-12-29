@@ -222,6 +222,24 @@ module JsonPath2
         expect(described_class.lex('$[? null]')).to eq(expected)
       end
 
+      # null is officially allowed to be a name by the IETF standard:
+      # https://www.rfc-editor.org/rfc/rfc9535.html#section-2.6.1-3
+      it 'accepts null as a name in a name selector' do
+        expected = %I[root dot identifier eof]
+        expect(described_class.lex('$.null')).to eq(expected)
+      end
+
+      # Since null is allowed to be a name, presumably true/false are allowed too
+      it 'accepts true as a name in a name selector' do
+        expected = %I[root dot identifier eof]
+        expect(described_class.lex('$.true')).to eq(expected)
+      end
+
+      it 'accepts false as a name in a name selector' do
+        expected = %I[root dot identifier eof]
+        expect(described_class.lex('$.false')).to eq(expected)
+      end
+
       it 'tokenizes wildcard' do
         expected = %I[root child_start wildcard child_end eof]
         expect(described_class.lex('$[*]')).to eq(expected)
