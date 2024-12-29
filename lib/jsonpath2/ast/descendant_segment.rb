@@ -18,7 +18,7 @@ module JsonPath2
     class DescendantSegment < JsonPath2::AST::Selector
       def inspect
         format('#<JsonPath2::AST::DescendantSegment:%s selector=%s>',
-          object_id, @value)
+               object_id, @value)
       end
 
       # @return [AST::Selector]

@@ -18,7 +18,9 @@ module JsonPath2
 
     # @param input [Array,Hash] tree of data which the jsonpath query is addressing
     def initialize(input)
-      raise ArgumentError, "expect ruby composite type, got #{input.inspect}" unless input.is_a?(Hash) || input.is_a?(Array)
+      unless input.is_a?(Hash) || input.is_a?(Array)
+        raise ArgumentError, "expect ruby composite type, got #{input.inspect}"
+      end
 
       @input = input
       @output = []
@@ -71,12 +73,12 @@ module JsonPath2
     # @param input [Array, Hash] tree of data which the jsonpath query is addressing
     # @return [Array] results
     def interpret_selector_list(selector_list, input)
-      return send("interpret_#{selector_list.first.type}", selector_list.first, input) if selector_list.size == 1
+      return send(:"interpret_#{selector_list.first.type}", selector_list.first, input) if selector_list.size == 1
 
       # This is a list of multiple selectors, collect the results in an array
       results = []
       selector_list.children.each do |selector|
-        result = send("interpret_#{selector.type}", selector, input)
+        result = send(:"interpret_#{selector.type}", selector, input)
         next unless result
 
         if result.is_a?(Array)
@@ -97,9 +99,9 @@ module JsonPath2
       key = selector.value
       case input
       when Hash then input[key]
-        # FIXME: commented out because this adds extra results to DescendantSelector
-#      when Array
-#        input.select { |elt| elt.is_a?(Hash) }.map { |hash| hash[key] }.compact
+      # FIXME: commented out because this adds extra results to DescendantSelector
+      #      when Array
+      #        input.select { |elt| elt.is_a?(Hash) }.map { |hash| hash[key] }.compact
       else [] # can't apply NameSelector to this input, empty result
       end
     end
@@ -126,11 +128,12 @@ module JsonPath2
       end
     end
 
-    # Find all descendants of the current input that match the
+    # Find all descendants of the current input that match the selector in the DescendantSegment
+    #
     # @param ds [DescendantSegment]
     # @param input [Object] ruby object to be indexed
-    def interpret_descendant_segment(ds, input)
-      visit(input) { |node| interpret_node(ds.selector, node) }
+    def interpret_descendant_segment(descendant_segment, input)
+      visit(input) { |node| interpret_node(descendant_segment.selector, node) }
     end
 
     # Visit all descendants of `root`.
@@ -164,7 +167,7 @@ module JsonPath2
       return [] if selector.step.zero? # IETF: When step is 0, no elements are selected.
 
       # Convert -1 placeholder to the actual termination index
-      last_index = \
+      last_index =
         if selector.step.positive?
           selector.end == -1 ? (input.size - 1) : selector.end - 1
         else
@@ -174,11 +177,10 @@ module JsonPath2
       selector
         .start
         .step(by: selector.step, to: last_index)
-        .map { |i| input[i] }
-        .compact
+        .filter_map { |i| input[i] }
     end
 
-    def interpret_filter_selector(selector, input)
+    def interpret_filter_selector(_selector, input)
       # @see IETF 2.3.5.2
       # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
       return nil unless [Array, Hash].include?(input.class)
@@ -199,20 +201,18 @@ module JsonPath2
 
       given = fn_call.args.length
       expected = fn_def.params.length
-      if given != expected
-        raise JsonPath2::Error::Runtime::WrongNumArg, fn_def.function_name_as_str, given, expected
-      end
+      raise JsonPath2::Error::Runtime::WrongNumArg, fn_def.function_name_as_str, given, expected if given != expected
 
       # Applying the values passed in this particular function call to the respective defined parameters.
-      if fn_def.params != nil
-        fn_def.params.each_with_index do |param, i|
-          if env.has_key?(param.name)
-            # A global variable is already defined. We assign the passed in value to it.
-            env[param.name] = interpret_node(fn_call.args[i])
-          else
-            # A global variable with the same name doesn't exist. We create a new local variable.
-            stack_frame.env[param.name] = interpret_node(fn_call.args[i])
-          end
+      return if fn_def.params.nil?
+
+      fn_def.params.each_with_index do |param, i|
+        if env.key?(param.name)
+          # A global variable is already defined. We assign the passed in value to it.
+          env[param.name] = interpret_node(fn_call.args[i])
+        else
+          # A global variable with the same name doesn't exist. We create a new local variable.
+          stack_frame.env[param.name] = interpret_node(fn_call.args[i])
         end
       end
     end
@@ -226,7 +226,7 @@ module JsonPath2
 
       nodes.each do |node|
         last_value = interpret_node(node, last_value)
-        #puts "LAST_VALUE is #{last_value}"
+        # puts "LAST_VALUE is #{last_value}"
 
         if return_detected?(node)
           raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length.positive?
@@ -236,7 +236,8 @@ module JsonPath2
         end
 
         if unwind_call_stack == call_stack.length
-          # We are still inside a function that returned, so we keep on bubbling up from its structures (e.g., conditionals, loops etc).
+          # We are still inside a function that returned, so we keep on bubbling up
+          # from its structures (e.g., conditionals, loops etc).
           return last_value
         elsif unwind_call_stack > call_stack.length
           # We returned from the function, so we reset the "unwind indicator".
@@ -281,7 +282,13 @@ module JsonPath2
       end
     end
 
-    # TODO: Empty blocks are accepted both for the IF and for the ELSE. For the IF, the parser returns a block with an empty collection of expressions. For the else, no block is constructed. The evaluation is already resulting in nil, which is the desired behavior. It would be better, however, if the parser also returned a block with no expressions for an ELSE with an empty block, as is the case in an IF with an empty block. Investigate this nuance of the parser in the future.
+    # TODO: Empty blocks are accepted both for the IF and for the ELSE.
+    # For the IF, the parser returns a block with an empty collection of expressions.
+    # For the else, no block is constructed.
+    # The evaluation is already resulting in nil, which is the desired behavior.
+    # It would be better, however, if the parser also returned a block with no expressions
+    # for an ELSE with an empty block, as is the case in an IF with an empty block.
+    # Investigate this nuance of the parser in the future.
     def interpret_conditional(conditional)
       evaluated_cond = interpret_node(conditional.condition)
 
@@ -296,9 +303,7 @@ module JsonPath2
     end
 
     def interpret_repetition(repetition)
-      while interpret_node(repetition.condition)
-        interpret_nodes(repetition.block.expressions)
-      end
+      interpret_nodes(repetition.block.expressions) while interpret_node(repetition.condition)
     end
 
     def interpret_function_definition(fn_def)
@@ -328,7 +333,7 @@ module JsonPath2
     # TODO: Is this implementation REALLY the most straightforward in Ruby (apart from using eval)?
     def interpret_unary_operator(unary_op)
       case unary_op.operator
-      when :'-'
+      when :-
         -interpret_node(unary_op.operand)
       else # :'!'
         !interpret_node(unary_op.operand)

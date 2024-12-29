@@ -134,9 +134,9 @@ module JsonPath2
 
     def determine_parsing_function
       @log.debug "PARSE: #{current.type}"
-      parse_methods = %I[identifier number string true false nil fn if while]
+      parse_methods = %I[identifier number string true false nil fn if while root current_node]
       if parse_methods.include?(current.type)
-        "parse_#{current.type}".to_sym
+        :"parse_#{current.type}"
       elsif current.type == :group_start # (
         :parse_grouped_expr
       elsif %I[\n eof].include?(current.type)
@@ -149,10 +149,6 @@ module JsonPath2
         :parse_dot_notation
       elsif current.type == :descendants # ..
         :parse_descendant_segment
-      elsif current.type == :root # $
-        :parse_root
-      elsif current.type == :current_node # @
-        :parse_current_node
       else
         raise "Don't know how to parse #{current}"
       end
@@ -411,7 +407,7 @@ module JsonPath2
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       @log.debug "#parse_array_slice_selector start (current=#{current})"
-      start, end_, step = 3.times.map { parse_array_slice_component }
+      start, end_, step = Array.new(3) { parse_array_slice_component }
       @log.debug "#parse_array_slice_selector got [#{start&.lexeme},#{end_&.lexeme},#{step&.lexeme}] (current=#{current})"
 
       raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
@@ -443,7 +439,7 @@ module JsonPath2
     # Feed tokens to the FilterSelector until hitting a terminator
     def parse_filter_selector
       @log.debug "#parse_filter_selector: #{current}"
-#      consume # "?"
+      #      consume # "?"
 
       # FIXME: not 100% sure this complexity is necessary
       # could I just make AST::FilterSelector hald a single top-level operator?
@@ -491,7 +487,8 @@ module JsonPath2
 
       # Note that here we are checking the NEXT token.
       if nxt_not_terminator? && precedence < nxt_precedence
-        @log.debug "#parse_expr_recursively will loop, current:#{current} checking #{nxt}, precedence " + [precedence, nxt_precedence].inspect
+        @log.debug "#parse_expr_recursively will loop, current:#{current} checking #{nxt}, precedence " + [precedence,
+                                                                                                           nxt_precedence].inspect
       end
       while nxt_not_terminator? && precedence < nxt_precedence
         infix_parsing_function = determine_infix_function(nxt)

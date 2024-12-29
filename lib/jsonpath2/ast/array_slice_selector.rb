@@ -70,14 +70,14 @@ module JsonPath2
       # Don't make changes here without referring to the original code in the spec.
 
       # IETF: Slice expression parameters start and end are not directly usable
-      # as slice bounds and must first be normalized. Normalization for this
-      # purpose is defined as:
-      # @param i [Integer]
+      # as slice bounds and must first be normalized.
+      #
+      # @param index [Integer]
       # @param len [Integer]
-      def normalize(i, len)
-        return i if i.positive?
+      def normalize(index, len)
+        return index if index.positive?
 
-        len + i
+        len + index
       end
 
       # IETF: Slice expression parameters start and end are used to derive
@@ -89,11 +89,11 @@ module JsonPath2
         n_end = normalize(end_, len)
 
         if step >= 0
-          lower = [[n_start, 0].max, len].min
-          upper = [[n_end, 0].max, len].min
+          lower = n_start.clamp(0, len)
+          upper = n_end.clamp(0, len)
         else
-          lower = [[n_start, -1].max, len - 1].min
-          upper = [[n_end, -1].max, len - 1].min
+          lower = n_start.clamp(-1, len - 1)
+          upper = n_end.clamp(-1, len - 1)
         end
 
         [lower, upper]

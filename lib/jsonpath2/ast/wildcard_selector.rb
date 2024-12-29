@@ -12,7 +12,7 @@ module JsonPath2
     #
     # Note that the children of an object are its member values, not its member names.
     #
-    # The wildcard selector selects nothing from a primitive JSON value (that is, a number, a string, true, false, or null).
+    # The wildcard selector selects nothing from a primitive JSON value (ie. a number, a string, true, false, or null).
     #
     # It has only one possible value: '*'
     # @example: $.store.book[*]

@@ -162,7 +162,8 @@ module JsonPath2
     def delimited_string(delimiter)
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
-        self.line += 1 if lookahead == "\n" # FIXME: do jsonpath queries have lines? Find out when implementing functions
+        # FIXME: do jsonpath queries have lines? Find out when implementing functions
+        self.line += 1 if lookahead == "\n"
 
         # Transform escaped representation to literal chars
         literal_chars <<
