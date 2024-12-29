@@ -33,6 +33,10 @@ module JsonPath2
         case operator
         when :or then '||'
         when :and then '&&'
+        when :less_than then '<='
+        when :greater_than then '>='
+        when :equal then '=='
+        when :not_equal then '!='
         else
           raise "unknown binary operator #{operator}"
         end

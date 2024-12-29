@@ -151,6 +151,8 @@ module JsonPath2
         :parse_descendant_segment
       elsif current.type == :root # $
         :parse_root
+      elsif current.type == :current_node # @
+        :parse_current_node
       else
         raise "Don't know how to parse #{current}"
       end
@@ -298,6 +300,22 @@ module JsonPath2
       AST::Root.new
     end
 
+    # Parse the current node operator "@", and optionally a selector which is applied to it
+    def parse_current_node
+      @log.debug "#parse_current_node: , next=#{nxt}"
+      # detect following selector which uses dot or bracket notation
+      selector =
+        if nxt.type == :dot
+          consume
+          parse_dot_notation
+        elsif nxt.type == :child_start
+          consume
+          parse_bracketed_selector
+        end
+
+      AST::CurrentNode.new(selector)
+    end
+
     # Parse one or more selectors surrounded by brackets.
     #
     # More than 1 selector may be within the brackets, as long as they are separated by commas.
@@ -412,9 +430,17 @@ module JsonPath2
     # Feed tokens to the FilterSelector until hitting a terminator
     def parse_filter_selector
       @log.debug "#parse_filter_selector: #{current}"
-      consume # "?"
+#      consume # "?"
 
-      selector = AST::FilterSelector.new(parse_expr_recursively)
+      # FIXME: not 100% sure this complexity is necessary
+      # could I just make AST::FilterSelector hald a single top-level operator?
+      selector = AST::FilterSelector.new
+      while nxt && nxt.type != :child_end
+        consume
+        @log.debug "CONSUME in filter selector, current=#{current}"
+        node = parse_expr_recursively
+        selector << node if node
+      end
 
       consume # because #parse_expr_recursively expects its "top-level" loop to consume, it leaves an already-parsed token
       @log.debug "#parse_filter_selector: finished with #{selector.children}, current #{current}"
@@ -451,7 +477,9 @@ module JsonPath2
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.
-      @log.debug "#parse_expr_recursively will loop, current:#{current} checking #{nxt}, precedence " + [precedence, nxt_precedence].inspect
+      if nxt_not_terminator? && precedence < nxt_precedence
+        @log.debug "#parse_expr_recursively will loop, current:#{current} checking #{nxt}, precedence " + [precedence, nxt_precedence].inspect
+      end
       while nxt_not_terminator? && precedence < nxt_precedence
         infix_parsing_function = determine_infix_function(nxt)
         @log.debug "#parse_expr_recursively next token #{nxt.lexeme}, will parse with #{infix_parsing_function.inspect}(#{expr.inspect})"

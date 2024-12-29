@@ -111,7 +111,7 @@ module JsonPath2
 
     ALPHA = ('a'..'z').to_a.concat(('A'..'Z').to_a)
     def alpha_numeric?(lexeme)
-      ALPHA.include?(lexeme)
+      ALPHA.include?(lexeme) || digit?(lexeme)
     end
 
     def lookahead(offset = 1)

@@ -46,6 +46,19 @@ module JsonPath2
         ast = described_class.parse('$[? false && false || true]')
         expect(ast).to eq('$[? ((false && false) || true)]')
       end
+
+      it 'parses current node operator' do
+        ast = described_class.parse('$[? @.key1 == true]')
+        expect(ast).to eq('$[? (@.key1 == true)]')
+      end
+
+      ### Examples from https://www.rfc-editor.org/rfc/rfc9535.html#name-examples-6
+
+      it 'handles equality operator with nodelists' do
+        ast = described_class.parse('$.absent1 == $.absent2', LOG)
+        pp ast.to_s
+        expect(ast).to eq('$.absent1 == $.absent2')
+      end
     end
   end
 end

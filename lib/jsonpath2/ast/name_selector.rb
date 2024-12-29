@@ -16,7 +16,7 @@ module JsonPath2
       end
 
       def to_s
-        "#<JsonPath2::AST::NameSelector:#{object_id} name=#{@value.inspect}>"
+        ".#{@value}"
       end
     end
   end
