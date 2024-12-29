@@ -180,12 +180,12 @@ module JsonPath2
         .filter_map { |i| input[i] }
     end
 
-    def interpret_filter_selector(_selector, input)
+    def interpret_filter_selector(selector, input)
       # @see IETF 2.3.5.2
       # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
       return nil unless [Array, Hash].include?(input.class)
 
-      raise NotImplementedError
+      interpret_node(selector.value, input)
     end
 
     def fetch_function_definition(fn_name)
@@ -340,19 +340,51 @@ module JsonPath2
       end
     end
 
-    def interpret_binary_operator(binary_op)
-      case binary_op.operator
-      when :and
-        interpret_node(binary_op.left) && interpret_node(binary_op.right)
-      when :or
-        interpret_node(binary_op.left) || interpret_node(binary_op.right)
-      else
-        # TODO: Add type verification (e.g. the operator '*' cannot have strings as its operands)
-        interpret_node(binary_op.left).send(binary_op.operator, interpret_node(binary_op.right))
-      end
+    def interpret_binary_operator(binary_op, input)
+      lhs = interpret_node(binary_op.left, input)
+      rhs = interpret_node(binary_op.right, input)
+      send(:"interpret_#{binary_op.operator}", lhs, rhs)
     end
 
-    def interpret_boolean(boolean)
+    def interpret_equal(lhs, rhs)
+      lhs == rhs
+    end
+
+    def interpret_not_equal(lhs, rhs)
+      lhs != rhs
+    end
+
+    def interpret_and(lhs, rhs)
+      lhs && rhs
+    end
+
+    def interpret_or(lhs, rhs)
+      lhs || rhs
+    end
+
+    def interpret_less_than(lhs, rhs)
+      lhs.respond_to?(:<) && rhs.respond_to?(:<) ? lhs < rhs : false
+    end
+
+    def interpret_less_than_or_equal(lhs, rhs)
+      # handle nil which does not support <=
+      return true if lhs == rhs
+
+      lhs.respond_to?(:<) && rhs.respond_to?(:<) ? lhs < rhs : false
+    end
+
+    def interpret_greater_than(lhs, rhs)
+      lhs.respond_to?(:>) && rhs.respond_to?(:>) ? lhs > rhs : false
+    end
+
+    def interpret_greater_than_or_equal(lhs, rhs)
+      # handle nil which does not support >=
+      return true if lhs == rhs
+
+      lhs.respond_to?(:>) && rhs.respond_to?(:>) ? lhs > rhs : false
+    end
+
+    def interpret_boolean(boolean, _input)
       boolean.value
     end
 
@@ -360,11 +392,11 @@ module JsonPath2
       nil
     end
 
-    def interpret_number(number)
+    def interpret_number(number, _input)
       number.value
     end
 
-    def interpret_string(string)
+    def interpret_string(string, _input)
       string.value
     end
   end

@@ -6,7 +6,9 @@ module JsonPath2
       attr_accessor :value
 
       def initialize(val = nil)
-        @value = val
+        # don't set the instance variable if unused, because it makes the
+        # "#inspect" output cleaner in rspec test failures
+        @value = val if val
       end
 
       def ==(other)
