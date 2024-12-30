@@ -64,6 +64,19 @@ module JsonPath2
           ]
         )
       end
+
+      it 'supports nested filter selectors' do
+        pp '$[?@[?@.b]]'
+        result = described_class.interpret(input, '$[?@[?@.b]]')
+        expect(result).to eq(
+          [[3, 5, 1, 2, 4, 6, { 'b' => 'j' }, { 'b' => 'k' }, { 'b' => {} }, { 'b' => 'kilo' }]]
+        )
+      end
+
+      xit 'supports unioned filter selectors' do
+        result = described_class.interpret(input, '$.o[?@<3, @<3]')
+        expect(result).to eq([1, 2, 2, 1])
+      end
     end
   end
 end

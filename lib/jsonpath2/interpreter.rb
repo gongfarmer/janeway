@@ -13,6 +13,7 @@ module JsonPath2
 
       tokens = Lexer.lex(query)
       ast = Parser.new(tokens).parse
+      pp ast.expressions
       new(input).interpret(ast)
     end
 
@@ -55,7 +56,7 @@ module JsonPath2
     # Interpret AST::Root, which returns the input
     def interpret_root(node, _input)
       # Ignore the given _input from the current interpretation state.
-      # Root node starts from the top-level un-modified input.
+      # Root node starts from the top level regardless of current state.
       return @input unless node.value
 
       # If there is a selector list that modifies this node, then apply it
@@ -67,10 +68,10 @@ module JsonPath2
       end
     end
 
-    # Interpret a list of selectors
+    # Interpret a list of 1 or more selectors, seperated by the union operator.
     #
     # @param selector_list[AST::SelectorList]
-    # @param input [Array, Hash] tree of data which the jsonpath query is addressing
+    # @param input [Array, Hash] data which the jsonpath query is addressing
     # @return [Array] results
     def interpret_selector_list(selector_list, input)
       return send(:"interpret_#{selector_list.first.type}", selector_list.first, input) if selector_list.size == 1
@@ -93,6 +94,7 @@ module JsonPath2
     # Filter the input by returning the key that has the given name
     # FIXME: json allows duplicate keys, ruby does not. How to handle this?
     # @param selector [NameSelector]
+    # @return [nil]
     def interpret_name_selector(selector, input)
       return nil unless input
 
@@ -116,7 +118,7 @@ module JsonPath2
       input[selector.value]
     end
 
-    # "Filter" the input by returning every value, but no keys.
+    # "Filter" the input by returning values, but not keys.
     #
     # @param selector [WildcardSelector]
     # @return [Array] matching values
@@ -125,8 +127,49 @@ module JsonPath2
       when Array then input
       when Hash then input.values
       else
-        raise "don't know how to apply wildcard to #{input.inspect}"
+        # wildcard selector does not match singular values, only values of composite types
+        nil
       end
+    end
+
+    # Filter the input by applying the array slice selector.
+    # Returns at most 1 element.
+    #
+    # @param selector [ArraySliceSelector]
+    # @return [Object, nil] nil if no matching index
+    def interpret_array_slice_selector(selector, input)
+      return nil unless input.is_a?(Array)
+      return nil if selector.step.zero? # IETF: When step is 0, no elements are selected.
+
+      # Convert -1 placeholder to the actual termination index
+      last_index =
+        if selector.step.positive?
+          selector.end == -1 ? (input.size - 1) : selector.end - 1
+        else
+          selector.end == -1 ? 0 : selector.end + 1
+        end
+      # Collect values from target indices
+      selector
+        .start
+        .step(by: selector.step, to: last_index)
+        .filter_map { |i| input[i] }
+    end
+
+    # Return the set of values from the input which for which the filter is true
+    # @param selector [AST::FilterSelector]
+    # @param input [Hash, Array]
+    # @return [nil, Array] list of matched values, or nil if no matched values
+    def interpret_filter_selector(selector, input)
+      # @see IETF 2.3.5.2
+      # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
+      return nil unless [Array, Hash].include?(input.class)
+
+      puts "#interpret_filter_selector(#{selector.value.class.inspect}, #{input.inspect})"
+      values = input.is_a?(Array) ? input : input.values
+
+      results = values.select { |value| interpret_node(selector.value, value) }
+      puts "#interpret_filter_selector(#{input.inspect}) returns #{results.inspect}"
+      results.empty? ? nil : results
     end
 
     # Find all descendants of the current input that match the selector in the DescendantSegment
@@ -157,38 +200,6 @@ module JsonPath2
       results.flatten.compact
     end
 
-    # Filter the input by applying the array slice selector.
-    # Returns at most 1 element.
-    #
-    # @param selector [ArraySliceSelector]
-    # @return [Object, nil] nil if no matching index
-    def interpret_array_slice_selector(selector, input)
-      return nil unless input.is_a?(Array)
-      return nil if selector.step.zero? # IETF: When step is 0, no elements are selected.
-
-      # Convert -1 placeholder to the actual termination index
-      last_index =
-        if selector.step.positive?
-          selector.end == -1 ? (input.size - 1) : selector.end - 1
-        else
-          selector.end == -1 ? 0 : selector.end + 1
-        end
-      # Collect values from target indices
-      selector
-        .start
-        .step(by: selector.step, to: last_index)
-        .filter_map { |i| input[i] }
-    end
-
-    def interpret_filter_selector(selector, input)
-      # @see IETF 2.3.5.2
-      # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
-      return nil unless [Array, Hash].include?(input.class)
-
-      values = input.is_a?(Array) ? input : input.values
-
-      values.select { |value| interpret_node(selector.value, value) }
-    end
 
     def fetch_function_definition(fn_name)
       fn_def = env[fn_name]
@@ -262,6 +273,7 @@ module JsonPath2
       case node.value
       when AST::SelectorList then interpret_selector_list(node.value, input)
       when AST::NameSelector then interpret_name_selector(node.value, input)
+      when AST::WildcardSelector then interpret_wildcard_selector(node.value, input)
       when nil then input
       else
         raise "don't know how to interpret #{node.value.class}"
