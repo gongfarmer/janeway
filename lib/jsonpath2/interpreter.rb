@@ -139,7 +139,6 @@ module JsonPath2
     # Visit all descendants of `root`.
     # Return results of applying `action` on each.
     def visit(root, &action)
-      puts "#visit(#{root.inspect})"
       results = [yield(root)]
 
       ## DEBUG
@@ -185,7 +184,9 @@ module JsonPath2
       # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
       return nil unless [Array, Hash].include?(input.class)
 
-      interpret_node(selector.value, input)
+      values = input.is_a?(Array) ? input : input.values
+
+      values.select { |value| interpret_node(selector.value, value) }
     end
 
     def fetch_function_definition(fn_name)
@@ -226,7 +227,7 @@ module JsonPath2
 
       nodes.each do |node|
         last_value = interpret_node(node, last_value)
-        # puts "LAST_VALUE is #{last_value}"
+        #puts "LAST_VALUE is #{last_value} after node #{node.type}"
 
         if return_detected?(node)
           raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length.positive?
@@ -252,6 +253,18 @@ module JsonPath2
     def interpret_node(node, input)
       interpreter_method = "interpret_#{node.type}"
       send(interpreter_method, node, input)
+    end
+
+    # Apply selector to each value in the current node and return result
+    def interpret_current_node(node, input)
+
+      # If there is a selector list that modifies this node, then apply it
+      case node.value
+      when AST::SelectorList then interpret_selector_list(node.value, input)
+      when AST::NameSelector then interpret_name_selector(node.value, input)
+      else
+        raise "don't know how to interpret #{node.value.class}"
+      end
     end
 
     def interpret_identifier(identifier)

@@ -3,6 +3,7 @@
 require 'json'
 require 'jsonpath2'
 
+# Examples from https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.5.3-4
 module JsonPath2
   describe Interpreter do
     describe '#interpret_filter_selector' do
@@ -17,137 +18,137 @@ module JsonPath2
 
       it 'compares empty node lists with ==' do
         result = described_class.interpret(input, '$[? $.absent1 == $.absent2 ]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares empty node lists with <=' do
         result = described_class.interpret(input, '$[? $.absent1 <= $.absent2 ]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares empty node list with string literal using ==' do
         result = described_class.interpret(input, "$[? $.absent == 'g' ]")
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares empty node lists with !=' do
         result = described_class.interpret(input, '$[? $.absent1 != $.absent2 ]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares empty node list with string literal using !=' do
         result = described_class.interpret(input, "$[? $.absent != 'g' ]")
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'performs numeric comaprison with <=' do
-        result = described_class.interpret(input, "$[? 1 <= 2]")
-        expect(result).to be(true)
+        result = described_class.interpret(input, '$[? 1 <= 2]')
+        expect(result).not_to be_empty
       end
 
       it 'performs numeric comaprison with >' do
-        result = described_class.interpret(input, "$[? 1 > 2]")
-        expect(result).to be(false)
+        result = described_class.interpret(input, '$[? 1 > 2]')
+        expect(result).to be_empty
       end
 
       it 'compares number to string (type mismatch)' do
         result = described_class.interpret(input, "$[? 13 == '13']")
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares string to string with <=' do
         result = described_class.interpret(input, "$[? 'a' <= 'b']")
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares hash to array with == (type mismatch)' do
         result = described_class.interpret(input, '$[? $.obj == $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares hash to array with != (type mismatch)' do
         result = described_class.interpret(input, '$[? $.obj != $.arr]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares hash to self with ==' do
         result = described_class.interpret(input, '$[? $.obj == $.obj]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares hash to self with !=' do
         result = described_class.interpret(input, '$[? $.obj != $.obj]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares array to self with ==' do
         result = described_class.interpret(input, '$[? $.arr == $.arr]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares array to self with !=' do
         result = described_class.interpret(input, '$[? $.arr != $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares hash to number with ==' do
         result = described_class.interpret(input, '$[? $.obj == 17]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares hash to number with !=' do
         result = described_class.interpret(input, '$[? $.obj != 17]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares hash to array with <= (type mismatch)' do
         result = described_class.interpret(input, '$[? $.obj <= $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares hash to array with < (type mismatch)' do
         result = described_class.interpret(input, '$[? $.obj < $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares hash to self with <=' do
         result = described_class.interpret(input, '$[? $.obj <= $.obj]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares array to self with <=' do
         result = described_class.interpret(input, '$[? $.arr <= $.arr]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares number to array with <=' do
         result = described_class.interpret(input, '$[? 1 <= $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares number to array with >=' do
         result = described_class.interpret(input, '$[? 1 >= $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares number to array with >' do
         result = described_class.interpret(input, '$[? 1 > $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares number to array with <' do
         result = described_class.interpret(input, '$[? 1 < $.arr]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
 
       it 'compares true with self using <=' do
         result = described_class.interpret(input, '$[? true <= true]')
-        expect(result).to be(true)
+        expect(result).not_to be_empty
       end
 
       it 'compares true with self using >' do
         result = described_class.interpret(input, '$[? true > true]')
-        expect(result).to be(false)
+        expect(result).to be_empty
       end
     end
   end
