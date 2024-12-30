@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative '../helpers'
+
 module JsonPath2
   module AST
     module Shared
@@ -21,16 +23,7 @@ module JsonPath2
         end
 
         def name
-          string_underscore(self.class.to_s.split('::').last)
-        end
-
-        def string_underscore(string)
-          string
-            .gsub('::', '/')
-            .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-            .gsub(/([a-z\d])([A-Z])/, '\1_\2')
-            .tr('-', '_')
-            .downcase
+          AST::Helpers.camcelcase_to_underscore(self.class.to_s.split('::').last)
         end
 
         def children
