@@ -103,6 +103,11 @@ module JsonPath2
         ast = described_class.parse('$[? true <= true]')
         expect(ast).to eq('$[? (true <= true)]')
       end
+
+      it 'handles numeric comparison with greater-than against a fractional number' do
+        ast = described_class.parse('$[? 1 > 2.5]')
+        expect(ast).to eq('$[? (1 > 2.5)]')
+      end
     end
   end
 end

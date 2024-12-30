@@ -257,6 +257,16 @@ module JsonPath2
         expected = %I[root dot identifier equal root dot identifier eof]
         expect(described_class.lex(query)).to eq(expected)
       end
+
+      it 'tokenizes number' do
+        expected = %I[root child_start filter current_node greater_than number child_end eof]
+        expect(described_class.lex('$[?@>3]')).to eq(expected)
+      end
+
+      it 'tokenizes number with decimal point' do
+        expected = %I[root child_start filter current_node greater_than number child_end eof]
+        expect(described_class.lex('$[?@>3.5]')).to eq(expected)
+      end
     end
   end
 end

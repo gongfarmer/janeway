@@ -230,12 +230,16 @@ module JsonPath2
     # Consume a numeric string
     def number
       consume_digits
-      lexeme = source[lexeme_start_p..(next_p - 1)]
 
       # Look for a fractional part.
-      raise "Decimal digits are not handled: #{lexeme}#{lookahead}" if lookahead == '.'
+      if lookahead == '.' && digit?(lookahead(2))
+        consume # "."
+        consume_digits
+      end
 
-      Token.new(:number, lexeme, lexeme.to_i, current_location)
+      lexeme = source[lexeme_start_p..(next_p - 1)]
+      literal = lexeme.include?('.') ? lexeme.to_f : lexeme.to_i
+      Token.new(:number, lexeme, literal, current_location)
     end
 
     # Consume an alphanumeric string
