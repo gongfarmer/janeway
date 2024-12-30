@@ -17,7 +17,10 @@ require 'yard'
 
 # For code coverage measurements to work properly, `SimpleCov` should be loaded
 # and started before any application code is loaded.
-require 'simplecov' if ENV['COVERAGE']
+task :coverage do
+  ENV['COVERAGE'] = 'yes'
+  Rake::Task[:spec].invoke
+end
 
 CLEAN.include %w[coverage doc *.gem .yardoc]
 
