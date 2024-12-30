@@ -49,8 +49,9 @@ module JsonPath2
     class FilterSelector < JsonPath2::AST::Selector
       attr_reader :value
 
-      def initialize
+      def initialize(value = nil)
         super([])
+        @value << value if value
       end
 
       # Insert tokens in a hierarchical AST

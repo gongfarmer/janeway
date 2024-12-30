@@ -19,5 +19,13 @@ module JsonPath2
         [AST::Root.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2), AST::IndexSelector.new(3)])]
       )
     end
+
+    it 'allows a wildcard selector after a dot' do
+      tokens = Lexer.lex('$[?@.*]')
+      ast = described_class.new(tokens).parse
+      expect(ast.expressions).to eq(
+        [AST::Root.new([AST::FilterSelector.new(AST::CurrentNode.new(AST::WildcardSelector.new))])]
+      )
+    end
   end
 end

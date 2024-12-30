@@ -221,6 +221,7 @@ module JsonPath2
     def parse_descendant_segment
       consume # '..' token
       @log.debug "#parse_descendant_segment: current=#{current}"
+      # FIXME: replace with #parse_selector?
       selector =
         case current.type
         when :wildcard then AST::WildcardSelector.new(current_literal_and_consume)
@@ -235,15 +236,21 @@ module JsonPath2
 
     # Dot notation is an alternate representation of a bracketed name selector.
     #
-    # The IETF doc does not explicitly define whether other selector types
-    # (eg. IndexSelector) are allowed here, but the examples suggest that only
-    # NameSelector can be used with dot notation.
+    # The IETF doc includes examples of these selector types following the dot:
+    #   * NameSelector
+    #   * WildCardSelector
+    #
+    # It is not explicitly defined whether other selector types
+    # (eg. IndexSelector) are allowed here.
     def parse_dot_notation
       consume
 
-      raise "Expect name to follow dot in dot notation, got #{current}" unless current.type == :identifier
+      #raise "Expect name to follow dot in dot notation, got #{current}" unless current.type == :identifier
 
-      AST::NameSelector.new(current.lexeme)
+      case current.type
+      when :identifier then AST::NameSelector.new(current.lexeme)
+      when :wildcard then AST::WildcardSelector.new
+      end
     end
 
     def parse_conditional
