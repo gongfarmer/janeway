@@ -102,7 +102,8 @@ module JsonPath2
       # FIXME: commented out because this adds extra results to DescendantSelector
       #      when Array
       #        input.select { |elt| elt.is_a?(Hash) }.map { |hash| hash[key] }.compact
-      else [] # can't apply NameSelector to this input, empty result
+      else
+        nil # can't apply NameSelector to this input, empty result
       end
     end
 
@@ -163,7 +164,7 @@ module JsonPath2
     # @return [Object, nil] nil if no matching index
     def interpret_array_slice_selector(selector, input)
       return nil unless input.is_a?(Array)
-      return [] if selector.step.zero? # IETF: When step is 0, no elements are selected.
+      return nil if selector.step.zero? # IETF: When step is 0, no elements are selected.
 
       # Convert -1 placeholder to the actual termination index
       last_index =
@@ -257,11 +258,11 @@ module JsonPath2
 
     # Apply selector to each value in the current node and return result
     def interpret_current_node(node, input)
-
       # If there is a selector list that modifies this node, then apply it
       case node.value
       when AST::SelectorList then interpret_selector_list(node.value, input)
       when AST::NameSelector then interpret_name_selector(node.value, input)
+      when nil then input
       else
         raise "don't know how to interpret #{node.value.class}"
       end
@@ -376,25 +377,31 @@ module JsonPath2
     end
 
     def interpret_less_than(lhs, rhs)
-      lhs.respond_to?(:<) && rhs.respond_to?(:<) ? lhs < rhs : false
+      lhs < rhs
+    rescue
+      false
     end
 
     def interpret_less_than_or_equal(lhs, rhs)
-      # handle nil which does not support <=
       return true if lhs == rhs
 
-      lhs.respond_to?(:<) && rhs.respond_to?(:<) ? lhs < rhs : false
+      lhs < rhs
+    rescue
+      false
     end
 
     def interpret_greater_than(lhs, rhs)
-      lhs.respond_to?(:>) && rhs.respond_to?(:>) ? lhs > rhs : false
+      lhs > rhs
+    rescue
+      false
     end
 
     def interpret_greater_than_or_equal(lhs, rhs)
-      # handle nil which does not support >=
       return true if lhs == rhs
 
-      lhs.respond_to?(:>) && rhs.respond_to?(:>) ? lhs > rhs : false
+      lhs > rhs
+    rescue
+      false
     end
 
     def interpret_boolean(boolean, _input)

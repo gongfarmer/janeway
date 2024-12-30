@@ -34,7 +34,35 @@ module JsonPath2
 
       it 'compares numerical array values' do
         result = described_class.interpret(input, '$.a[?@>3.5]')
-        expect(result).to match_array([5, 4, 6])
+        expect(result).to eq([5, 4, 6])
+      end
+
+      it 'tests array value existence' do
+        result = described_class.interpret(input, '$.a[?@.b]')
+        expect(result).to eq(
+          [
+            { 'b' => 'j' },
+            { 'b' => 'k' },
+            { 'b' => {} },
+            { 'b' => 'kilo' },
+          ]
+        )
+      end
+
+      it 'does non-singular queries' do
+        result = described_class.interpret(input, '$[?@.*]')
+        expect(result).to eq(
+          [
+            [
+              3, 5, 1, 2, 4, 6,
+              { 'b' => 'j' },
+              { 'b' => 'k' },
+              { 'b' => {} },
+              { 'b' => 'kilo' },
+            ],
+            { 'p' => 1, 'q' => 2, 'r' => 3, 's' => 5, 't' => { 'u' => 6 } },
+          ]
+        )
       end
     end
   end
