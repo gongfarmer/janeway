@@ -13,7 +13,6 @@ module JsonPath2
 
       tokens = Lexer.lex(query)
       ast = Parser.new(tokens).parse
-      pp ast.expressions
       new(input).interpret(ast)
     end
 
@@ -37,7 +36,8 @@ module JsonPath2
 
       @query = ast
 
-      interpret_nodes(@query.expressions)
+      result = interpret_nodes(@query.expressions)
+      result.is_a?(Array) ? result : [result].compact
     end
 
     private
@@ -49,7 +49,6 @@ module JsonPath2
 
       result = interpret_node(fn_call.args.first).to_s
       output << result
-      puts result
       true
     end
 
@@ -164,11 +163,9 @@ module JsonPath2
       # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
       return nil unless [Array, Hash].include?(input.class)
 
-      puts "#interpret_filter_selector(#{selector.value.class.inspect}, #{input.inspect})"
       values = input.is_a?(Array) ? input : input.values
 
       results = values.select { |value| interpret_node(selector.value, value) }
-      puts "#interpret_filter_selector(#{input.inspect}) returns #{results.inspect}"
       results.empty? ? nil : results
     end
 
@@ -187,7 +184,6 @@ module JsonPath2
 
       ## DEBUG
       unless results.compact.flatten.empty?
-        puts "GOT DIRECT RESULT #{results.compact.flatten.inspect} FROM #{root.inspect}"
       end
 
       case root
@@ -196,7 +192,6 @@ module JsonPath2
       when Hash
         results.concat(root.values.map { |value| visit(value, &action) })
       end
-      puts "RESULT #{results.flatten.compact.inspect} FROM #{root.inspect}"
       results.flatten.compact
     end
 
@@ -239,7 +234,6 @@ module JsonPath2
 
       nodes.each do |node|
         last_value = interpret_node(node, last_value)
-        #puts "LAST_VALUE is #{last_value} after node #{node.type}"
 
         if return_detected?(node)
           raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length.positive?

@@ -66,7 +66,6 @@ module JsonPath2
       end
 
       it 'supports nested filter selectors' do
-        pp '$[?@[?@.b]]'
         result = described_class.interpret(input, '$[?@[?@.b]]')
         expect(result).to eq(
           [[3, 5, 1, 2, 4, 6, { 'b' => 'j' }, { 'b' => 'k' }, { 'b' => {} }, { 'b' => 'kilo' }]]
