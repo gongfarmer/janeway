@@ -78,10 +78,53 @@ module JsonPath2
       end
 
       it 'supports multiple union operators' do
-        puts '$.o[?@<3, ?@<3, ?@<3]'
-        pp Parser.parse('$.o[?@<3, ?@<3, ?@<3]')
         result = described_class.interpret(input, '$.o[?@<3, ?@<3, ?@<3]')
         expect(result).to match_array([1, 2, 1, 2, 1, 2]) # order is undefined
+      end
+
+      it 'supports logical OR of array values' do
+        result = described_class.interpret(input, '$.a[?@<2 || @.b == "k"]')
+        expect(result).to eq([1, { 'b' => 'k' }])
+      end
+
+      # Skipped, functions are not supported yet
+      xit 'supports regular expression match of array values' do
+        result = described_class.interpret(input, '$.a[?match(@.b, "[jk]")]')
+        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
+      end
+
+      # Skipped, functions are not supported yet
+      xit 'supports regular expression search of array values' do
+        result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
+        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'kilo' }])
+      end
+
+      it 'supports logical AND of object values' do
+        result = described_class.interpret(input, '$.o[?@>1 && @<4]')
+        expect(result).to eq([2, 3]) # order is undefined
+      end
+
+      it 'supports logical OR of object values' do
+        result = described_class.interpret(input, '$.o[?@.u || @.x]')
+        expect(result).to eq([{ 'u' => 6 }]) # order is undefined
+      end
+
+      it 'supports comparison of queries with no values' do
+        result = described_class.interpret(input, '$.a[?@.b == $.x]')
+        expect(result).to eq([3,5,1,2,4,6]) # order is undefined
+      end
+
+      it 'compares primitive and structured values' do
+        result = described_class.interpret(input, '$.a[?@ == @]')
+        expect(result).to eq(
+          [
+            3, 5, 1, 2, 4, 6,
+            { 'b' => 'j' },
+            { 'b' => 'k' },
+            { 'b' => {} },
+            { 'b' => 'kilo' },
+          ]
+        )
       end
     end
   end

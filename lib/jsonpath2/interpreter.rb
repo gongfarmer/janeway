@@ -159,7 +159,6 @@ module JsonPath2
     # @param input [Hash, Array]
     # @return [nil, Array] list of matched values, or nil if no matched values
     def interpret_filter_selector(selector, input)
-      puts "#interpret_filter_selector(#{selector.value.class}, #{input.inspect})"
       # @see IETF 2.3.5.2
       # filter selector selects nothing when applied to non-composite types.
       return nil unless [Array, Hash].include?(input.class)
@@ -173,10 +172,10 @@ module JsonPath2
     #
     # Ruby normally defines truthy as anything besides nil or false.
     # This method also considers empty arrays and arrays containing only nil / false values not to be truthy.
+    # Empty Hashes are "truthy", changing that breaks some tests
     #
     # @return [Boolean]
     def truthy?(value)
-      # FIXME: are empty hashes "truthy" too?
       case value
       when Array then value.any? # false for empty array or array that contains only nil / false values
       else
@@ -191,7 +190,6 @@ module JsonPath2
     # @param rhs [Array] right hand side
     # @return [Array]
     def interpret_union(lhs, rhs)
-      puts "interpret_union(#{lhs.inspect}, #{rhs.inspect})"
       if lhs.is_a?(Array) && rhs.is_a?(Array)
         # can't use ruby's array union operator "|" here because it eliminates duplicates
         lhs.concat rhs
@@ -221,7 +219,6 @@ module JsonPath2
       end
       results.flatten.compact
     end
-
 
     def fetch_function_definition(fn_name)
       fn_def = env[fn_name]
