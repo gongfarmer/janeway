@@ -2,7 +2,7 @@
 
 module JsonPath2
   module AST
-    class String < JsonPath2::AST::Expression
+    class StringType < JsonPath2::AST::Expression
       def ==(other)
         value == other&.value
       end

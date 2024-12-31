@@ -450,7 +450,7 @@ module JsonPath2
       number.value
     end
 
-    def interpret_string(string, _input)
+    def interpret_string_type(string, _input)
       string.value
     end
   end
