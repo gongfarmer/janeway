@@ -8,12 +8,13 @@ module JsonPath2
     attr_accessor :tokens, :ast, :errors
 
     UNARY_OPERATORS = %w[! -].freeze
-    BINARY_OPERATORS = %w[== != > < >= <=].freeze
+    BINARY_OPERATORS = %w[== != > < >= <= ,].freeze
     LOGICAL_OPERATORS = %w[&& ||].freeze
 
     LOWEST_PRECEDENCE = 0
     PREFIX_PRECEDENCE = 7
     OPERATOR_PRECEDENCE = {
+      ',' => 0,
       '||' => 1,
       '&&' => 2,
       '==' => 3,
@@ -149,6 +150,8 @@ module JsonPath2
         :parse_dot_notation
       elsif current.type == :descendants # ..
         :parse_descendant_segment
+      elsif current.type == :filter # ?
+        :parse_filter_selector
       else
         raise "Don't know how to parse #{current}"
       end
@@ -445,20 +448,28 @@ module JsonPath2
 
     # Feed tokens to the FilterSelector until hitting a terminator
     def parse_filter_selector
-      @log.debug "#parse_filter_selector: #{current}"
+      @log.debug "#parse_filter_selector: #{current}, #{nxt}"
       #      consume # "?"
 
-      # FIXME: not 100% sure this complexity is necessary
-      # could I just make AST::FilterSelector hald a single top-level operator?
       selector = AST::FilterSelector.new
-      while nxt && nxt.type != :child_end
+      while nxt && nxt.type != :child_end && nxt.type != :union
+        @log.debug "#parse_filter_selector: start loop iteration for #{nxt}"
+
         consume
-        @log.debug "CONSUME in filter selector, current=#{current}"
-        node = parse_expr_recursively
-        selector << node if node
+        @log.debug "CONSUME in filter selector, current=#{current}, have #{selector}"
+        node =
+          if BINARY_OPERATORS.include?(current.lexeme)
+            parse_binary_operator(selector.value)
+          else
+            parse_expr_recursively
+          end
+        # may replace existing node with a binary operator that incorporates the original node
+        selector.value = node
       end
 
-      consume # because #parse_expr_recursively expects its "top-level" loop to consume, it leaves an already-parsed token
+      # #parse_expr_recursively expects its "top-level" loop to consume,
+      # so it must leave an already-parsed token to be consumed
+      consume
       @log.debug "#parse_filter_selector: finished with #{selector.children}, current #{current}"
 
       selector
@@ -494,8 +505,8 @@ module JsonPath2
 
       # Note that here we are checking the NEXT token.
       if nxt_not_terminator? && precedence < nxt_precedence
-        @log.debug "#parse_expr_recursively will loop, current:#{current} checking #{nxt}, precedence " + [precedence,
-                                                                                                           nxt_precedence].inspect
+        @log.debug "#parse_expr_recursively will loop, current:#{current} " \
+                   "checking #{nxt}, precedence " + [precedence, nxt_precedence].inspect
       end
       while nxt_not_terminator? && precedence < nxt_precedence
         infix_parsing_function = determine_infix_function(nxt)

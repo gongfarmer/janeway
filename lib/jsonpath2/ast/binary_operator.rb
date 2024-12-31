@@ -39,6 +39,7 @@ module JsonPath2
         when :less_than_or_equal then '<='
         when :not_equal then '!='
         when :or then '||'
+        when :union then ','
         else
           raise "unknown binary operator #{operator}"
         end

@@ -51,7 +51,7 @@ module JsonPath2
       end
 
       def to_s
-        format('[%s]', @value.map(&:to_s).join(','))
+        format('[%s]', @value.map(&:to_s).join(', '))
       end
     end
   end

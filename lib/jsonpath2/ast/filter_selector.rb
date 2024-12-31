@@ -47,22 +47,8 @@ module JsonPath2
     #
     # @example: $.store[@.price < 10]
     class FilterSelector < JsonPath2::AST::Selector
-      attr_reader :value
-
-      def initialize(value = nil)
-        super([])
-        @value << value if value
-      end
-
-      # Insert tokens in a hierarchical AST
-      # @return [self]
-      def <<(token)
-        @value = token
-        self
-      end
-
       def to_s
-        "? #{value}"
+        "?#{value}"
       end
 
       def ==(other)
