@@ -93,13 +93,14 @@ module JsonPath2
 
     it 'tokenizes array slice selector' do
       expect(described_class.lex('$[1:3]')).to eq([:root, :child_start, 1, :array_slice_separator, 3, :child_end, :eof])
-      expect(described_class.lex('$[5:]')).to eq([:root, :child_start, 5, :array_slice_separator, :child_end, :eof])
-      expect(described_class.lex('$[1:5:2]')).to eq([:root, :child_start, 1, :array_slice_separator, 5, :array_slice_separator,
-                                                     2, :child_end, :eof])
-      expect(described_class.lex('$[5:1:-2]')).to eq([:root, :child_start, 5, :array_slice_separator, 1, :array_slice_separator,
-                                                      :minus, 2, :child_end, :eof])
-      expect(described_class.lex('$[::-1]')).to eq([:root, :child_start, :array_slice_separator, :array_slice_separator, :minus,
-                                                    1, :child_end, :eof])
+      expect(described_class.lex('$[5:]'))
+        .to eq([:root, :child_start, 5, :array_slice_separator, :child_end, :eof])
+      expect(described_class.lex('$[1:5:2]'))
+        .to eq([:root, :child_start, 1, :array_slice_separator, 5, :array_slice_separator, 2, :child_end, :eof])
+      expect(described_class.lex('$[5:1:-2]'))
+        .to eq([:root, :child_start, 5, :array_slice_separator, 1, :array_slice_separator, :minus, 2, :child_end, :eof])
+      expect(described_class.lex('$[::-1]'))
+        .to eq([:root, :child_start, :array_slice_separator, :array_slice_separator, :minus, 1, :child_end, :eof])
     end
 
     context 'when tokenizing filter selector' do
@@ -126,8 +127,10 @@ module JsonPath2
       end
 
       it 'tokenizes less-than operator, with brackets' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :less_than, :dot, 'two', :group_end,
-                    :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one',
+          :less_than, :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one < .two)]')).to eq(expected)
       end
 
@@ -137,8 +140,10 @@ module JsonPath2
       end
 
       it 'tokenizes less-than-or-equal operator, with brackets' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :less_than_or_equal, :dot, 'two',
-                    :group_end, :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one', :less_than_or_equal,
+          :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one <= .two)]')).to eq(expected)
       end
 
@@ -148,26 +153,34 @@ module JsonPath2
       end
 
       it 'tokenizes greater-than operator, with brackets' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :greater_than, :dot, 'two', :group_end,
-                    :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than,
+          :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one > .two)]')).to eq(expected)
       end
 
       it 'tokenizes greater-than operator, without brackets' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :greater_than, :dot, 'two', :group_end,
-                    :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than,
+          :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one > .two)]')).to eq(expected)
       end
 
       it 'tokenizes greater-than-or-equal operator, with brackets' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal, :dot, 'two',
-                    :group_end, :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal,
+          :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one >= .two)]')).to eq(expected)
       end
 
       it 'tokenizes greater-than-or-equal operator, without brackets' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal, :dot, 'two',
-                    :group_end, :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal,
+          :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one >= .two)]')).to eq(expected)
       end
 
@@ -202,8 +215,10 @@ module JsonPath2
       end
 
       it 'tokenizes grouping function expressions' do
-        expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal, :dot, 'two',
-                    :group_end, :child_end, :eof]
+        expected = [
+          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal,
+          :dot, 'two', :group_end, :child_end, :eof,
+        ]
         expect(described_class.lex('$[?(.one >= .two)]')).to eq(expected)
       end
 
@@ -247,8 +262,10 @@ module JsonPath2
 
       it 'tokenizes current_node operator' do
         # only valid within filter selector
-        expected = %I[root child_start filter group_start current_node dot identifier less_than number group_end
-                      child_end eof]
+        expected = %I[
+          root child_start filter group_start current_node dot identifier less_than
+          number group_end child_end eof
+        ]
         expect(described_class.lex('$[?(@.price < 10)]')).to eq(expected)
       end
 
@@ -266,6 +283,46 @@ module JsonPath2
       it 'tokenizes number with decimal point' do
         expected = %I[root child_start filter current_node greater_than number child_end eof]
         expect(described_class.lex('$[?@>3.5]')).to eq(expected)
+      end
+
+      it 'recognizes function "length"' do
+        expected = %I[
+          root child_start filter function group_start current_node dot
+          identifier group_end greater_than_or_equal number child_end eof
+        ]
+        expect(described_class.lex('$[?length(@.authors) >= 5]')).to eq(expected)
+      end
+
+      it 'recognizes function "count"' do
+        expected = %I[
+          root child_start filter function group_start current_node dot
+          wildcard dot identifier group_end greater_than_or_equal number child_end eof
+        ]
+        expect(described_class.lex('$[?count(@.*.author) >= 5]')).to eq(expected)
+      end
+
+      it 'recognizes function "match"' do
+        expected = %I[
+          root dot identifier child_start filter function group_start current_node dot
+          identifier union string group_end child_end eof
+        ]
+        expect(described_class.lex('$.a[?match(@.b, "[str]")]')).to eq(expected)
+      end
+
+      it 'recognizes function "search"' do
+        expected = %I[
+          root child_start filter function group_start current_node dot
+          identifier union string group_end child_end eof
+        ]
+        expect(described_class.lex('$[?search(@.author, "[BR]ob")]')).to eq(expected)
+      end
+
+      it 'recognizes function "value"' do
+        expected = %I[
+          root child_start filter function group_start current_node descendants
+          identifier group_end equal string child_end eof
+        ]
+        expect(described_class.lex('$[?value(@..color) == "red"]')).to eq(expected)
       end
     end
   end

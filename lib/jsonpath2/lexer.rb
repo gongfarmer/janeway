@@ -36,6 +36,8 @@ module JsonPath2
   WHITESPACE = " \t"
   KEYWORD = %w[true false null].freeze
 
+  FUNCTIONS = %w[length count match search value].freeze
+
   # Transforms source code into tokens
   class Lexer
     attr_reader :source, :tokens
@@ -250,6 +252,8 @@ module JsonPath2
       type =
         if KEYWORD.include?(identifier) && !ignore_keywords
           identifier.to_sym
+        elsif FUNCTIONS.include?(identifier) && !ignore_keywords
+          :function
         else
           :identifier
         end
