@@ -72,9 +72,16 @@ module JsonPath2
         )
       end
 
-      xit 'supports unioned filter selectors' do
-        result = described_class.interpret(input, '$.o[?@<3, @<3]')
-        expect(result).to eq([1, 2, 2, 1])
+      it 'supports union of two filter selectors' do
+        result = described_class.interpret(input, '$.o[?@<3, ?@<3]')
+        expect(result).to match_array([1, 2, 2, 1]) # order is undefined
+      end
+
+      it 'supports multiple union operators' do
+        puts '$.o[?@<3, ?@<3, ?@<3]'
+        pp Parser.parse('$.o[?@<3, ?@<3, ?@<3]')
+        result = described_class.interpret(input, '$.o[?@<3, ?@<3, ?@<3]')
+        expect(result).to match_array([1, 2, 1, 2, 1, 2]) # order is undefined
       end
     end
   end

@@ -159,14 +159,45 @@ module JsonPath2
     # @param input [Hash, Array]
     # @return [nil, Array] list of matched values, or nil if no matched values
     def interpret_filter_selector(selector, input)
+      puts "#interpret_filter_selector(#{selector.value.class}, #{input.inspect})"
       # @see IETF 2.3.5.2
-      # filter selector selects nothing when applied to primitive values. only applies to Array / Hash
+      # filter selector selects nothing when applied to non-composite types.
       return nil unless [Array, Hash].include?(input.class)
 
       values = input.is_a?(Array) ? input : input.values
-
-      results = values.select { |value| interpret_node(selector.value, value) }
+      results = values.select { |value| truthy? interpret_node(selector.value, value) }
       results.empty? ? nil : results
+    end
+
+    # True if the value is "truthy" in the context of a filter selector.
+    #
+    # Ruby normally defines truthy as anything besides nil or false.
+    # This method also considers empty arrays and arrays containing only nil / false values not to be truthy.
+    #
+    # @return [Boolean]
+    def truthy?(value)
+      # FIXME: are empty hashes "truthy" too?
+      case value
+      when Array then value.any? # false for empty array or array that contains only nil / false values
+      else
+        !!value
+      end
+    end
+
+    # Combine results from selectors into a single list.
+    # Duplicate elements are allowed.
+    #
+    # @param lhs [Array] left hand side
+    # @param rhs [Array] right hand side
+    # @return [Array]
+    def interpret_union(lhs, rhs)
+      puts "interpret_union(#{lhs.inspect}, #{rhs.inspect})"
+      if lhs.is_a?(Array) && rhs.is_a?(Array)
+        # can't use ruby's array union operator "|" here because it eliminates duplicates
+        lhs.concat rhs
+      else
+        [lhs, rhs]
+      end
     end
 
     # Find all descendants of the current input that match the selector in the DescendantSegment
@@ -181,10 +212,6 @@ module JsonPath2
     # Return results of applying `action` on each.
     def visit(root, &action)
       results = [yield(root)]
-
-      ## DEBUG
-      unless results.compact.flatten.empty?
-      end
 
       case root
       when Array
@@ -389,10 +416,14 @@ module JsonPath2
     end
 
     def interpret_less_than_or_equal(lhs, rhs)
+      # Must be done in 2 comparisons, because the equality comparison is
+      # valid for many types that do not support the < operator.
       return true if lhs == rhs
 
       lhs < rhs
     rescue
+      # This catches type mismatches like { a: 1 } <= 1
+      # IETF says that both < and > return false for such comparisons
       false
     end
 
