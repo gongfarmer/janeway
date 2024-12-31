@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# FIXME:  Unused?? Delete
+
 # https://github.com/ietf-wg-jsonpath/draft-ietf-jsonpath-base/blob/main/draft-ietf-jsonpath-base.md#selectors
 # Selectors:
 #

@@ -11,9 +11,8 @@ module JsonPath2
       #
       # JSONPath return type: ValueType
       def parse_function_length
-        @log.debug "#parse_function_length, current=#{current}"
         consume # function
-
+        log "current=#{current}, next_token=#{next_token}"
 
         # Read parameters
         parameters = []
@@ -54,7 +53,7 @@ module JsonPath2
       #
       # @example $[?count(@.*.author) >= 5]
       def parse_function_count
-        @log.debug "#parse_function_count, current=#{current}"
+        log "current=#{current}, next_token=#{next_token}"
         consume # function
 
         # Read parameters

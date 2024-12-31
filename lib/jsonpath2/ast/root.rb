@@ -19,7 +19,11 @@ module JsonPath2
       end
 
       def to_s
-        "$#{@value}"
+        if @value.is_a?(NameSelector)
+          "$.#{@value}"
+        else
+          "$#{@value}"
+        end
       end
     end
   end

@@ -3,7 +3,7 @@
 module JsonPath2
   module AST
     class Identifier < JsonPath2::AST::Expression
-      attr_accessor :name
+      alias name value
 
       # TODO: This list is incomplete. Complete after some aspects of the parser become clearer.
       EXPECTED_NEXT_TOKENS = %I[
@@ -22,16 +22,12 @@ module JsonPath2
         ||
       ].freeze
 
-      def initialize(name)
-        @name = name
-      end
-
       def ==(other)
         name == other&.name
       end
 
-      def children
-        []
+      def to_s
+        @value
       end
 
       def expects?(next_token)

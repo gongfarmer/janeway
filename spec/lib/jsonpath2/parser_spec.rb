@@ -27,5 +27,11 @@ module JsonPath2
         [AST::Root.new([AST::FilterSelector.new(AST::CurrentNode.new(AST::WildcardSelector.new))])]
       )
     end
+
+    it 'parses bracketed name selectors with names containing spaces or dots' do
+      ast = described_class.parse("$.o['j j']['k.k']", LOG)
+      puts ast
+      expect(ast).to eq("$.o['j j']['k.k']")
+    end
   end
 end
