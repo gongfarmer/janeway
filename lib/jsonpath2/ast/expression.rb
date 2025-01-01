@@ -17,10 +17,6 @@ module JsonPath2
         raise NotImplementedError # subclass must implement
       end
 
-      def children
-        []
-      end
-
       # @return [String]
       def type
         name = self.class.to_s.split('::').last # eg. JsonPath2::AST::FunctionCall => "FunctionCall"

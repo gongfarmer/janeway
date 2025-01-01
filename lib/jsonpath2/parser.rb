@@ -448,10 +448,10 @@ module JsonPath2
     # Parse wildcard selector and any following selector
     def parse_wildcard_selector
       log "current=#{current}, next_token=#{next_token}"
-      selector = AST::WildcardSelector.new(current.literal)
+      selector = AST::WildcardSelector.new
       consume
       log " ... current=#{current}"
-
+      selector.child = parse_next_selector
       selector
     end
 

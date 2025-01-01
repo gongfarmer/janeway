@@ -10,9 +10,9 @@ module JsonPath2
         expect(ast.to_s).to eq('$[?(length(@.authors) >= 5)]')
       end
 
-      xit 'parses the count function' do
-        ast = described_class.parse('$[?count(@.*.author) >= 5]', LOG)
-        expect(ast).to eq('$[?count(@.*.author) >= 5]')
+      it 'parses the count function' do
+        ast = described_class.parse('$[?count(@.*.author) >= 5]')
+        expect(ast.to_s).to eq('$[?(count(@.*.author) >= 5)]')
       end
     end
   end

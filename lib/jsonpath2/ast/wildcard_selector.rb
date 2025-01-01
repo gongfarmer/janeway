@@ -17,8 +17,19 @@ module JsonPath2
     # It has only one possible value: '*'
     # @example: $.store.book[*]
     class WildcardSelector < JsonPath2::AST::Selector
+      attr_accessor :child
+
+      def initialize
+        super
+        @child = nil
+      end
+
       def to_s
-        '*'
+        if @child.is_a?(NameSelector) || @child.is_a?(WildcardSelector)
+          "*.#{@child}"
+        else
+          "*#{@child}"
+        end
       end
     end
   end

@@ -30,7 +30,7 @@ module JsonPath2
     # Construct accepts an optional Selector which will be applied to the "current" node
     class CurrentNode < JsonPath2::AST::Expression
       def to_s
-        if @value.is_a?(NameSelector)
+        if @value.is_a?(NameSelector) || @value.is_a?(WildcardSelector)
           "@.#{@value}"
         else
           "@#{@value}"
