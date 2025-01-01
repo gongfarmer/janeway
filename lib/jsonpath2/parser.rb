@@ -383,7 +383,7 @@ module JsonPath2
         log "parsed selector #{selector_list.last}, current=#{current}"
         break unless current.type == :union # no more selectors in these parentheses
 
-        # consume the union operator, then move on to the next selector
+        # consume union operator and move on to next selector
         consume # ","
       end
 
@@ -393,9 +393,31 @@ module JsonPath2
         raise "expect current token to be ], got #{current.type.inspect}"
       end
 
-      log "got selectors #{selector_list.children.map(&:type).inspect}, current=#{current}"
+      # Parse any subsequent expression which consumes this selector list
+      selector_list.child = parse_next_selector
 
+      log "return #{selector_list}, current=#{current}"
       selector_list
+    end
+
+    # Parse a selector and return it.
+    # @return [Selector, SelectorList, nil]
+    def parse_next_selector
+      log next_token
+      case next_token.type
+      when :child_start then parse_selector_list
+      when :dot then parse_dot_notation
+      end
+    end
+
+    # Return true if the given token represents the start of any type of selector,
+    # or a collection of selectors.
+    #
+    # @param token [Token]
+    # @return [Boolean]
+    def selector?(token)
+      type = token.type.to_s
+      type.include?('selector') || %w[dot child_start].include?(type)
     end
 
     # Parse a selector.

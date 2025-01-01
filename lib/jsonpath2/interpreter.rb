@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module JsonPath2
-  # Tree-walk interpreter to apply the operations from the abstract syntax tree onto the input value
+  # Tree-walk interpreter to apply the operations from the abstract syntax tree to the input value
   class Interpreter
     attr_reader :query, :output, :env, :call_stack, :unwind_call_stack
 
@@ -95,16 +95,14 @@ module JsonPath2
     # @param selector [NameSelector]
     # @return [nil]
     def interpret_name_selector(selector, input)
-      return nil unless input
+      node = input.respond_to?(:[]) ? input[selector.name] : nil
 
-      key = selector.value
-      case input
-      when Hash then input[key]
-      # FIXME: commented out because this adds extra results to DescendantSelector
-      #      when Array
-      #        input.select { |elt| elt.is_a?(Hash) }.map { |hash| hash[key] }.compact
-      else
-        nil # can't apply NameSelector to this input, empty result
+      return nil if node.nil?
+      return node if selector.children.empty?
+
+      # FIXME: can AST::NameSelector have more than one child? If not simplify this
+      selector.children.map do |child|
+        send(:"interpret_#{child.type}", child, node)
       end
     end
 

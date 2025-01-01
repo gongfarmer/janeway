@@ -26,6 +26,7 @@ module JsonPath2
         name == other&.name
       end
 
+      # @return [String]
       def to_s
         @value
       end

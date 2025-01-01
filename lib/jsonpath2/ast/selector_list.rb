@@ -20,8 +20,18 @@ module JsonPath2
       extend Forwardable
       def_delegators :@value, :size, :first, :last
 
+      # subsequent expression that modifies the result of this one
+      attr_accessor :child
+
       def initialize
+        # @value holds the expressions in this selector
         super([])
+        @child = nil
+      end
+
+      # @return [Array]
+      def children
+        @value
       end
 
       # Add a selector to the list
@@ -29,11 +39,6 @@ module JsonPath2
         raise ArgumentError, "expect Selector, got #{selector.inspect}" unless selector.is_a?(Selector)
 
         @value << selector
-      end
-
-      # List selectors
-      def children
-        @value
       end
 
       def ==(other)
@@ -46,7 +51,7 @@ module JsonPath2
       end
 
       def to_s
-        format('[%s]', @value.map(&:to_s).join(', '))
+        format('[%s]%s', @value.map(&:to_s).join(', '), @child)
       end
     end
   end

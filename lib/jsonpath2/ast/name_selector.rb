@@ -27,7 +27,26 @@ module JsonPath2
       end
 
       def to_s
-        "#{@value}#{@children.map(&:to_s).join}"
+        # Add quotes if the name includes chars that require quoting.
+        # These chars are not allowed in dotted notation, only bracket notation.
+        special_chars = [' ', '.']
+        name_str =
+          if special_chars.any? { |char| @value.include?(char) }
+            quote(@value)
+          else
+            @value
+          end
+        "#{name_str}#{@children.map(&:to_s).join}"
+      end
+
+      # put surrounding quotes on a string
+      # @return [String]
+      def quote(str)
+        if str.include?("'")
+          format('"%s"', str)
+        else
+          "'#{str}'"
+        end
       end
     end
   end

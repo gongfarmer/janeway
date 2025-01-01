@@ -30,8 +30,8 @@ module JsonPath2
 
     it 'parses bracketed name selectors with names containing spaces or dots' do
       ast = described_class.parse("$.o['j j']['k.k']", LOG)
-      puts ast
-      expect(ast).to eq("$.o['j j']['k.k']")
+      pp ast.expressions
+      expect(ast.to_s).to eq("$.o['j j']['k.k']")
     end
   end
 end
