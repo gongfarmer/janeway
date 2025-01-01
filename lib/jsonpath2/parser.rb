@@ -507,10 +507,9 @@ module JsonPath2
       AST::NameSelector.new(current.lexeme).tap do |selector|
         # If there is a following expression, consume
         case next_token.type
-        when :dot then selector << parse_dot_notation
-        when :child_start then selector << parse_selector_list
-        when :descendant then selector << parse_descendant_segment
-        when :group_end, :union then nil # do nothing, no children to add
+        when :dot then selector.child = parse_dot_notation
+        when :child_start then selector.child = parse_selector_list
+        when :descendant then selector.child = parse_descendant_segment
         end
       end
     end

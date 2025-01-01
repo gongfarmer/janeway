@@ -93,7 +93,6 @@ module JsonPath2
     end
 
     # Filter the input by returning the key that has the given name
-    # FIXME: json allows duplicate keys, ruby does not. How to handle this?
     # @param selector [NameSelector]
     def interpret_name_selector(selector, input)
       return nil unless input.is_a?(Hash)
@@ -101,14 +100,11 @@ module JsonPath2
       node = input.respond_to?(:[]) ? input[selector.name] : nil
 
       return nil if node.nil?
-      return node if selector.children.empty?
+      return node unless selector.child
 
-      # FIXME: can AST::NameSelector have more than one child? If not simplify this
-      results = 
-        selector.children.map do |child|
-          send(:"interpret_#{child.type}", child, node)
-        end
-      results.first # FIXME assumes NameSelector can only have one child
+      # Interpret child using output of this name selector, and return result
+      child = selector.child
+      send(:"interpret_#{child.type}", child, node)
     end
 
     # Filter the input by returning the array element with the given index.
@@ -123,14 +119,11 @@ module JsonPath2
     # "Filter" the input by returning values, but not keys.
     #
     # @param selector [WildcardSelector]
-    # @return [Array] matching values
+    # @return [Array, nil] matching values (nil if input is not a composite type)
     def interpret_wildcard_selector(_selector, input)
       case input
       when Array then input
       when Hash then input.values
-      else
-        # wildcard selector does not match singular values, only values of composite types
-        nil
       end
     end
 
