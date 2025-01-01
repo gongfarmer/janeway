@@ -222,18 +222,33 @@ module JsonPath2
       hex_digits.join.hex.chr('UTF-8')
     end
 
-    # Consume a numeric string. May be an integer or float.
+    # Consume a numeric string. May be an integer, fractional, or exponent.
+    #   number = (int / "-0") [ frac ] [ exp ] ; decimal number
+    #   frac   = "." 1*DIGIT                   ; decimal fraction
+    #   exp    = "e" [ "-" / "+" ] 1*DIGIT     ; decimal exponent
     def number
       consume_digits
 
-      # Look for a fractional part.
+      # Look for a fractional part
       if lookahead == '.' && digit?(lookahead(2))
         consume # "."
         consume_digits
       end
 
+      # Look for an exponent part
+      if lookahead == 'e' && %w[+ -].include?(lookahead(2))
+        consume # "e"
+        consume # "+" / "-"
+        consume_digits
+      end
+
       lexeme = source[lexeme_start_p..(next_p - 1)]
-      literal = lexeme.include?('.') ? lexeme.to_f : lexeme.to_i
+      literal =
+        if lexeme.include?('.') || lexeme.include?('e')
+          lexeme.to_f
+        else
+          lexeme.to_i
+        end
       Token.new(:number, lexeme, literal, current_location)
     end
 

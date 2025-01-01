@@ -150,6 +150,16 @@ module JsonPath2
         result = described_class.interpret(input, '$[? true > true]')
         expect(result).to be_empty
       end
+
+      it 'compares number to exponential positive number' do
+        result = described_class.interpret(input, '$[? 1 < 5e+2]')
+        expect(result).not_to be_empty
+      end
+
+      it 'compares number to exponential negative number' do
+        result = described_class.interpret(input, '$[? 1 < 5e-2]')
+        expect(result).to be_empty
+      end
     end
   end
 end

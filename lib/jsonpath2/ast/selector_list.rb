@@ -2,12 +2,8 @@
 
 require 'forwardable'
 
-# https://github.com/ietf-wg-jsonpath/draft-ietf-jsonpath-base/blob/main/draft-ietf-jsonpath-base.md#selectors
-#
-# A set of selectors within the same set of brackets, as a comma-separated list.
-#
-# If multiple selectors exist, then their results are to be combined (possibly introducing
-# duplicate elements in the result.)
+# A set of selectors within brackets, as a comma-separated list.
+# https://www.rfc-editor.org/rfc/rfc9535.html#child-segment
 #
 # @example
 #    $[*, *]
@@ -25,9 +21,8 @@ module JsonPath2
       attr_accessor :child
 
       def initialize
-        # @value holds the expressions in this selector
-        super([])
-        @child = nil
+        super([]) # @value holds the expressions in the selector
+        @child = nil # @child is the next expression, which modifies the output of this one
       end
 
       # Add a selector to the list
@@ -40,7 +35,7 @@ module JsonPath2
       def ==(other)
         case other
         when Array then @value == other
-        when SelectorList then children == other.children
+        when SelectorList then @value == other.value
         else
           false
         end

@@ -8,11 +8,6 @@ module JsonPath2
     class Query
       include JsonPath2::AST::Shared::ExpressionCollection
 
-      # Represent AST as basic ruby types, for comparison
-      def tree
-        children.map(&:tree)
-      end
-
       def to_s
         expressions.map(&:to_s).join
       end

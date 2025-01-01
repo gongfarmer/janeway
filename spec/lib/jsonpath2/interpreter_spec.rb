@@ -6,6 +6,11 @@ module JsonPath2
   describe Interpreter do
     let(:interpreter) { described_class.new({}) }
 
+    it 'returns input when query is just a root selector' do
+      input = { 'a' => 1 }
+      expect(described_class.interpret(input, '$')).to eq([input])
+    end
+
     describe '#truthy' do
       it 'says nil is false' do
         expect(interpreter.send(:truthy?, nil)).to be(false)

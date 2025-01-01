@@ -118,6 +118,16 @@ module JsonPath2
         ast = described_class.parse('$.o[?@<3, ?@<3, ?@<3]')
         expect(ast).to eq('$.o[?(@ < 3), ?(@ < 3), ?(@ < 3)]')
       end
+
+      it 'handles numeric comparison with positive exponent' do
+        ast = described_class.parse('$[? 1 <= 5e+2]')
+        expect(ast).to eq('$[?(1 <= 500.0)]')
+      end
+
+      it 'handles numeric comparison with negative exponent' do
+        ast = described_class.parse('$[? 1 <= 5e-2]')
+        expect(ast).to eq('$[?(1 <= 0.05)]')
+      end
     end
   end
 end

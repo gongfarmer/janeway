@@ -2,6 +2,7 @@
 
 module JsonPath2
   module AST
+    # Represent keywords true, false
     class Boolean < JsonPath2::AST::Expression
       def ==(other)
         case other
@@ -10,10 +11,6 @@ module JsonPath2
         else
           raise "don't know how to compare AST::Boolean to #{other.inspect}"
         end
-      end
-
-      def children
-        []
       end
 
       def to_s

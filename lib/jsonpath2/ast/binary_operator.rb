@@ -15,11 +15,7 @@ module JsonPath2
       end
 
       def ==(other)
-        operator == other&.operator && children == other&.children
-      end
-
-      def children
-        [left, right]
+        operator == other&.operator && left == other.left && right == other.right
       end
 
       def to_s

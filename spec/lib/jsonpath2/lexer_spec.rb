@@ -324,6 +324,32 @@ module JsonPath2
         ]
         expect(described_class.lex('$[?value(@..color) == "red"]')).to eq(expected)
       end
+
+      it 'tokenizes exponential number' do
+        expected = %I[
+          root child_start filter group_start current_node dot identifier less_than
+          number group_end child_end eof
+        ]
+        expect(described_class.lex('$[?(@.price < 5e+2)]')).to eq(expected)
+      end
+
+      it 'tokenizes positive exponential number' do
+        tokens = described_class.lex('$[?(@.price < 5e+2)]')
+        token = tokens.find { |tk| tk.type == :number }
+        expect(token).to have_attributes(
+          lexeme: '5e+2',
+          literal: 500.0
+        )
+      end
+
+      it 'tokenizes negative exponential number' do
+        tokens = described_class.lex('$[?(@.price < 5e-2)]')
+        token = tokens.find { |tk| tk.type == :number }
+        expect(token).to have_attributes(
+          lexeme: '5e-2',
+          literal: 0.05
+        )
+      end
     end
   end
 end

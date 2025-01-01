@@ -10,7 +10,7 @@ module JsonPath2
     # unordered. Children of an array appear in array order in the
     # resultant nodelist.
     #
-    # Note that the children of an object are its member values, not its member names.
+    # Note that the children of an object are its member values, not its member names/keys.
     #
     # The wildcard selector selects nothing from a primitive JSON value (ie. a number, a string, true, false, or null).
     #
