@@ -1,0 +1,149 @@
+#!/usr/bin/ruby
+
+# frozen_string_literal: true
+
+require 'json'
+require 'logger'
+require 'optparse'
+
+# FIXME: delete from final version?
+$LOAD_PATH << "#{__dir__}/../lib/"
+require 'jsonpath2'
+
+SCRIPT_NAME = File.basename($PROGRAM_NAME)
+HELP = <<~HELP_TEXT.freeze
+  Usage:
+    #{SCRIPT_NAME} QUERY FILENAME
+
+  Purpose:
+    Print the result of applying a JsonPath query to a JSON input.
+
+    QUERY is a JsonPath query. Quote it with single quotes to avoid shell errors.
+
+    FILENAME is the path to a JSON file to use as input.
+    Alternately, input JSON can be provided on STDIN.
+
+    For an introduction to JsonPath, see https://goessner.net/articles/JsonPath/
+    For the complete reference, see https://www.rfc-editor.org/info/rfc9535
+
+  Examples:
+    #{SCRIPT_NAME} '$.store.book[*].author' input.json
+    cat input.json | #{SCRIPT_NAME} '$.store.book[*].author'
+
+HELP_TEXT
+
+# Command-line options
+Options = Struct.new(:query, :query_file, :input, :compact_output, :verbose)
+
+# Parse the command-line arguments.
+# This includes both bare words and hyphenated options.
+#
+# @param argv [Array<String>]
+def parse_args(argv)
+  # parse command-line options
+  argv << '--help' if argv.empty?
+  options = parse_options(argv)
+
+  # Next get jsonpath query and input jsonn
+  options.query = read_query(options.query_file, argv)
+  options.input = read_input(argv.first)
+  options
+end
+
+# Parse the command-line options.
+#
+# @param argv [Array<String>]
+def parse_options(argv)
+  options = Options.new
+  op = OptionParser.new do |opts|
+    opts.banner = HELP
+    opts.separator('Options:')
+
+    opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
+    opts.on('-v', '--verbose', 'Emit log messages during query parsing') { options.verbose = true }
+    opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
+    opts.on('--version', 'Show version number') { abort(JsonPath2::VERSION) }
+    opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
+  end
+  op.parse!(argv)
+  options
+end
+
+# Read jsonpath query from file or command-line arguments
+#
+# @param path [String,nil] query path, or nil if not provided
+# @param argv [Array<String>] command line arguments
+def read_query(path, argv)
+  return File.read(path) if path
+
+  query = argv.find { |arg| arg.start_with?('$') }
+  abort('No JsonPath query received, provide one on the command line.') unless query
+
+  argv.delete(query)
+  query
+end
+
+# Read input json from file or STDIN
+# @param path [String,nil] json file path, or nil if not provided
+# @return [Hash, Array] un-serialized json, as ruby objects
+def read_input(path)
+  json =
+    if path
+      File.read(path)
+    elsif !$stdin.tty?
+      $stdin.read
+    else
+      abort('No input JSON provided. Provide a filename or pipe it to STDIN.')
+    end
+  parse_json(json)
+end
+
+# Parse JSON, and abort if it is invalid
+# @param json [String]
+# @return [Hash, Array] un-serialized json, as ruby objects
+def parse_json(json)
+  JSON.parse(json)
+rescue JSON::JSONError => e
+  # JSON error messages may include the entire input, so limit how much is printed.
+  msg = e.message[0..256]
+  msg += "\n..." if e.message.length > 256
+  abort "Input is not valid JSON: #{msg}"
+end
+
+# Create a logger that writes to STDERR.
+# This can be used to print the log messages emitted by the parser.
+#
+# Log messages are not on STDOUT because STDOUT needs to produce valid JSON.
+#
+# @return [Logger]
+def make_logger
+  Logger.new($stderr, level: :debug).tap do |logger|
+    logger.formatter = proc { |severity, _time, progname, msg|
+      # include severity to distinguish log messages from debug print statements
+      format("%-5s -- %s: %s\n", severity, progname, msg)
+    }
+  end
+end
+
+def main(options)
+  # Compile JsonPath query
+  logger = options.verbose ? make_logger : nil
+  query = JsonPath2.compile(options.query, logger)
+
+  # Apply query to data
+  result = JsonPath2.apply(options.input, query)
+
+  # Print result
+  if options.compact_output
+    puts JSON.generate(result)
+  else
+    puts JSON.pretty_generate(result)
+  end
+end
+
+begin
+  options = parse_args(ARGV.dup)
+  main(options)
+rescue Interrupt, Errno::EPIPE
+  abort("\n")
+end

@@ -8,13 +8,40 @@ module JsonPath2
   module AST
   end
 
+  # Apply a JsonPath query to the givein input, and return the result.
+  #
   # @param input [Object] ruby object to be indexed
   # @param query [String] jsonpath query
   # @return [Object] result of applying query to input
-  def self.on(input, query, logger: nil)
+  def self.on(input, query)
+    query = compile(query)
+    JsonPath2::Interpreter.new(input).interpret(query)
+  end
+
+  # Compile a JsonPath query into an Abstract Syntax Tree.
+  # This can applied to inputs using the 'apply' method.
+  #
+  # Use this to compile the query once and then re-use it for
+  # multiple inputs later.
+  #
+  # @param query [String] jsonpath query
+  # @return [JsonPath2::AST::Query]
+  def self.compile(query, logger = nil)
     logger ||= Logger.new(IO::NULL)
     tokens = JsonPath2::Lexer.lex(query)
-    ast = JsonPath2::Parser.new(tokens, logger).parse
+    JsonPath2::Parser.new(tokens, logger).parse
+  end
+
+  # Apply JsonPath2::AST::Query to input and return the results.
+  #
+  # This does not accept a string query.
+  # Use this to apply the result of JsonPath2.compile to various inputs.
+  #
+  # @param input [Object] ruby object to be indexed
+  # @param ast [JsonPath2::AST::Query]
+  def self.apply(input, ast)
+    raise ArgumentError, "expect JsonPath2::AST::Query, got #{ast.inspect}" unless ast.is_a?(JsonPath2::AST::Query)
+
     JsonPath2::Interpreter.new(input).interpret(ast)
   end
 end
