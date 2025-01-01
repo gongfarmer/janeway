@@ -5,45 +5,44 @@ require 'jsonpath2'
 module JsonPath2
   describe Interpreter do
     describe '#interpret_array_slice_selector' do
-      let(:query) { '$[6:12:2]' }
-      let(:tokens) { JsonPath2::Lexer.lex(query) }
-      let(:ast) { JsonPath2::Parser.new(tokens).parse }
       let(:input) { ('a'..'g').to_a }
-      subject { described_class.new(input) }
 
-      context 'for slice with default step' do
-        let(:query) { '$[1:3]' }
-        it 'counts by 1' do
-          result = subject.interpret(ast)
-          expect(result).to eq(%w[b c])
-        end
+      it 'counts by 1 when slice uses default step' do
+        expect(described_class.interpret(input, '$[1:3]')).to eq(%w[b c])
       end
-      context 'for slice with no end index' do
-        let(:query) { '$[5:]' }
-        it 'counts to end' do
-          result = subject.interpret(ast)
-          expect(result).to eq(%w[f g])
-        end
+
+      it 'counts to the end when slice has no end index' do
+        expect(described_class.interpret(input, '$[5:]')).to eq(%w[f g])
       end
-      context 'for slice with step 2' do
-        let(:query) { '$[1:5:2]' }
-        it 'counts by 2' do
-          result = subject.interpret(ast)
-          expect(result).to eq(%w[b d])
-        end
+
+      it 'counts by 2 when slice has step 2' do
+        expect(described_class.interpret(input, '$[1:5:2]')).to eq(%w[b d])
       end
-      context 'for slice with negative step' do
-        let(:query) { '$[5:1:-2]' }
-        it 'counts backwards by 2' do
-          result = subject.interpret(ast)
-          expect(result).to eq(%w[f d])
-        end
+
+      it 'counts backwards by 2 when slice has negative step' do
+        expect(described_class.interpret(input, '$[5:1:-2]')).to eq(%w[f d])
       end
-      context 'for slice without start/end and negative step' do
-        let(:query) { '$[::-1]' }
+
+      it 'selects nothing when step is 0' do
+        expect(described_class.interpret(input, '$[::0]')).to be_empty
+      end
+
+      it 'selects everything when no start, end or step are given' do
+        expect(described_class.interpret(input, '$[:]')).to eq(input)
+      end
+
+      context 'when slice has no start or end and uses negative step' do
         it 'finds all elements in reverse order' do
-          result = subject.interpret(ast)
-          expect(result).to eq(('g'..'a').to_a)
+          expect(described_class.interpret(input, '$[::-1]')).to eq(input.reverse)
+        end
+      end
+
+      context 'when array slice selectors are in serial' do
+        let(:input) { [%w[a b c], %w[d e f], %w[g h i]] }
+
+        it 'finds all elements' do
+          expected = [%w[d e f], %w[g h i]]
+          expect(described_class.interpret(input, '$[1:3][:]')).to eq(expected)
         end
       end
     end

@@ -68,6 +68,7 @@ module JsonPath2
       # in the IETF spec.
       # The methods #normalize and #bounds are ruby implementations of that code.
       # Don't make changes here without referring to the original code in the spec.
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-6
 
       # IETF: Slice expression parameters start and end are not directly usable
       # as slice bounds and must first be normalized.
@@ -84,6 +85,7 @@ module JsonPath2
       # slice bounds lower and upper. The direction of the iteration, defined
       # by the sign of step, determines which of the parameters is the lower
       # bound and which is the upper bound:¶
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-9
       def bounds(start, end_, step, len)
         n_start = normalize(start, len)
         n_end = normalize(end_, len)

@@ -14,6 +14,7 @@ Style/TrailingCommaInArrayLiteral:
 
 
 AllCops:
+  TargetRubyVersion: 3.4
   DisabledByDefault: false
   SuggestExtensions: true
   NewCops: enable

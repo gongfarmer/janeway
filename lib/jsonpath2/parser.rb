@@ -485,8 +485,7 @@ module JsonPath2
       log "current=#{current}, next_token=#{next_token}"
       token =
         case current.type
-        when :child_end then return nil
-        when :array_slice_separator then nil
+        when :array_slice_separator, :child_end, :union then nil
         when :minus # apply - sign to number and retry
           parse_minus_operator
           parse_array_slice_component

@@ -75,20 +75,10 @@ module JsonPath2
     def interpret_selector_list(selector_list, input)
       # This is a list of multiple selectors.
       # Evaluate each one against the same input, and combine the results.
-      results = []
-      selector_list.each do |selector|
-        result = send(:"interpret_#{selector.type}", selector, input)
-        next unless result
+      results = selector_list.map { |selector| send(:"interpret_#{selector.type}", selector, input) }
 
-        if result.is_a?(Array)
-          results.concat(result)
-        else
-          results.push(result)
-        end
-      end
-
-      # If not a union, then don't combine results into an array
-      results = results.first if selector_list.size == 1
+      # FIXME: how to handle a union?
+      results = results.first
 
       # Send result to the next node in the AST, if any
       child = selector_list.child
@@ -139,22 +129,30 @@ module JsonPath2
     # Returns at most 1 element.
     #
     # @param selector [ArraySliceSelector]
-    # @return [Object, nil] nil if no matching index
+    # @return [Object, nil] nil if index does not match anything
     def interpret_array_slice_selector(selector, input)
       return nil unless input.is_a?(Array)
       return nil if selector.step.zero? # IETF: When step is 0, no elements are selected.
 
-      # Convert -1 placeholder to the actual termination index
+      # Convert -1 placeholder to the actual termination index, for positive step
       last_index =
         if selector.step.positive?
           selector.end == -1 ? (input.size - 1) : selector.end - 1
         else
-          selector.end == -1 ? 0 : selector.end + 1
+          selector.end.zero? ? 0 : selector.end + 1
         end
+
+      # Convert -1 placeholder to the actual start index, for negative step
+      first_index =
+        if selector.step.negative? && selector.start == -1
+          input.size - 1
+        else
+          selector.start
+        end
+
       # Collect values from target indices
-      selector
-        .start
-        .step(by: selector.step, to: last_index)
+      first_index
+        .step(to: last_index, by: selector.step)
         .filter_map { |i| input[i] }
     end
 
