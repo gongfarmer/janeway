@@ -77,29 +77,38 @@ module JsonPath2
       # Evaluate each one against the same input, and combine the results.
       results = selector_list.map { |selector| send(:"interpret_#{selector.type}", selector, input) }
 
-      # FIXME: how to handle a union?
-      results = results.first
+      # combine results
+      result =
+        if selector_list.size > 1
+          results.flatten(1).compact
+        else
+          results.first
+        end
 
       # Send result to the next node in the AST, if any
       child = selector_list.child
-      return results unless child
+      return result unless child
 
-      send(:"interpret_#{child.type}", child, results)
+      send(:"interpret_#{child.type}", child, result)
     end
 
     # Filter the input by returning the key that has the given name
     # FIXME: json allows duplicate keys, ruby does not. How to handle this?
     # @param selector [NameSelector]
     def interpret_name_selector(selector, input)
+      return nil unless input.is_a?(Hash)
+
       node = input.respond_to?(:[]) ? input[selector.name] : nil
 
       return nil if node.nil?
       return node if selector.children.empty?
 
       # FIXME: can AST::NameSelector have more than one child? If not simplify this
-      selector.children.map do |child|
-        send(:"interpret_#{child.type}", child, node)
-      end
+      results = 
+        selector.children.map do |child|
+          send(:"interpret_#{child.type}", child, node)
+        end
+      results.first # FIXME assumes NameSelector can only have one child
     end
 
     # Filter the input by returning the array element with the given index.

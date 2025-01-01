@@ -7,8 +7,6 @@ module JsonPath2
     describe '#interpret_index_selector' do
       let(:input) { ('a'..'c').to_a }
 
-      subject { described_class.new(input) }
-
       it 'finds matching element' do
         expect(described_class.interpret(input, '$[0]')).to eq(['a'])
         expect(described_class.interpret(input, '$[1]')).to eq(['b'])
