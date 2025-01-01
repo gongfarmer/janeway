@@ -18,20 +18,16 @@ module JsonPath2
     # Represent a selector, which is an expression that filters nodes from a list based on a predicate.
     class SelectorList < JsonPath2::AST::Expression
       extend Forwardable
-      def_delegators :@value, :size, :first, :last
+      def_delegators :@value, :size, :first, :last, :each
 
-      # subsequent expression that modifies the result of this one
+      # Subsequent expression that modifies the result of this selector list.
+      # This one is not in the selector list, it comes afterward.
       attr_accessor :child
 
       def initialize
         # @value holds the expressions in this selector
         super([])
         @child = nil
-      end
-
-      # @return [Array]
-      def children
-        @value
       end
 
       # Add a selector to the list

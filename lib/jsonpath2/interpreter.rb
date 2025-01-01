@@ -73,11 +73,10 @@ module JsonPath2
     # @param input [Array, Hash] data which the jsonpath query is addressing
     # @return [Array] results
     def interpret_selector_list(selector_list, input)
-      return send(:"interpret_#{selector_list.first.type}", selector_list.first, input) if selector_list.size == 1
-
-      # This is a list of multiple selectors, collect the results in an array
+      # This is a list of multiple selectors.
+      # Evaluate each one against the same input, and combine the results.
       results = []
-      selector_list.children.each do |selector|
+      selector_list.each do |selector|
         result = send(:"interpret_#{selector.type}", selector, input)
         next unless result
 
@@ -87,13 +86,20 @@ module JsonPath2
           results.push(result)
         end
       end
-      results
+
+      # If not a union, then don't combine results into an array
+      results = results.first if selector_list.size == 1
+
+      # Send result to the next node in the AST, if any
+      child = selector_list.child
+      return results unless child
+
+      send(:"interpret_#{child.type}", child, results)
     end
 
     # Filter the input by returning the key that has the given name
     # FIXME: json allows duplicate keys, ruby does not. How to handle this?
     # @param selector [NameSelector]
-    # @return [nil]
     def interpret_name_selector(selector, input)
       node = input.respond_to?(:[]) ? input[selector.name] : nil
 
