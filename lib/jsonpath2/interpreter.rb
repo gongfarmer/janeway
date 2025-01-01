@@ -190,10 +190,15 @@ module JsonPath2
 
     # Find all descendants of the current input that match the selector in the DescendantSegment
     #
-    # @param ds [DescendantSegment]
+    # @param descendant_segment [DescendantSegment]
     # @param input [Object] ruby object to be indexed
     def interpret_descendant_segment(descendant_segment, input)
-      visit(input) { |node| interpret_node(descendant_segment.selector, node) }
+      results = visit(input) { |node| interpret_node(descendant_segment.selector, node) }
+
+      return results unless descendant_segment.child
+
+      child = descendant_segment.child
+      send(:"interpret_#{child.type}", child, results)
     end
 
     # Visit all descendants of `root`.
@@ -207,6 +212,7 @@ module JsonPath2
       when Hash
         results.concat(root.values.map { |value| visit(value, &action) })
       end
+
       results.flatten.compact
     end
 

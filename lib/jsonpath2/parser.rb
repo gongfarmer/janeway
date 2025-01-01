@@ -228,19 +228,33 @@ module JsonPath2
     #
     #  Note: .. on its own is not a valid segment.
     def parse_descendant_segment
-      consume # '..' token
+      consume # '..'
       log "current=#{current}, next_token=#{next_token}"
-      # FIXME: replace with #parse_selector?
+
+      # DescendantSegment must be followed by a selector S which it applies to all descendants.
+      #
+      # Normally the parser makes the selector after S be a child of S.
+      # However that is not the desired behavior for DescendantSelector.
+      # Consier '$.a..b[1]'. The first element must be taken from the set of all 'b' keys.
+      # If the SelectorList was a child of the `b` NameSelector, then it would be taking
+      # index 1 from every 'b' found rather than from the set of all 'b's.
+      #
+      # To get around this, the Parser must embed a Selector object that
+      # doesn't include the following selector as a child. Then the following
+      # selector must be made a child of the DescendantSegment.
       selector =
-        case current.type
-        when :wildcard then parse_wildcard_selector
-        when :child_start then parse_selector_list
-        when :string, :identifier then parse_selector
+        case next_token.type
+        when :wildcard then parse_wildcard_selector(and_child: false)
+        when :child_start then parse_selector_list(and_child: false)
+        when :string, :identifier then parse_name_selector(and_child: false)
         else
           raise "Invalid query: descendant segment must have selector, got ..#{current.lexeme}"
         end
 
-      AST::DescendantSegment.new(selector)
+      AST::DescendantSegment.new(selector).tap do |ds|
+        # If there is another selector after this one, make it a child
+        ds.child = parse_next_selector
+      end
     end
 
     # Dot notation reprsents a name selector, and is an alternative to bracket notation.
@@ -328,8 +342,9 @@ module JsonPath2
     #     an end position, and an optional step value that moves the position from the start to the end.
     #   * filter expressions select certain children of an object or array, as in:
     #
+    # @param and_child [Boolean] make following token a child of this selector list
     # @return [AST::SelectorList]
-    def parse_selector_list
+    def parse_selector_list(and_child: true)
       consume
       log "current=#{current}, next_token=#{next_token}"
       raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :child_start
@@ -353,15 +368,17 @@ module JsonPath2
         raise "expect current token to be ], got #{current.type.inspect}"
       end
 
-      # Parse any subsequent expression which consumes this selector list
-      selector_list.child = parse_next_selector
+      if and_child
+        # Parse any subsequent expression which consumes this selector list
+        selector_list.child = parse_next_selector
+      end
 
       log "return #{selector_list}, current=#{current}"
       selector_list
     end
 
     # Parse a selector and return it.
-    # @return [Selector, SelectorList, nil]
+    # @return [Selector, SelectorList, nil] nil if no more selectors to use
     def parse_next_selector
       log next_token
       case next_token.type
@@ -406,12 +423,12 @@ module JsonPath2
     end
 
     # Parse wildcard selector and any following selector
-    def parse_wildcard_selector
+    # @param and_child [Boolean] make following token a child of this selector
+    def parse_wildcard_selector(and_child: true)
       log "current=#{current}, next_token=#{next_token}"
       selector = AST::WildcardSelector.new
       consume
-      log " ... current=#{current}"
-      selector.child = parse_next_selector
+      selector.child = parse_next_selector if and_child
       selector
     end
 
@@ -460,18 +477,22 @@ module JsonPath2
     # Parse a name selector.
     # The name selector may have been in dot notation or parentheses, that part is already parsed.
     # Next token is just the name.
+    #
+    # @param and_child [Boolean] make following token a child of this selector
     # @return [AST::NameSelector]
-    def parse_name_selector
+    def parse_name_selector(and_child: true)
       consume
       log "current=#{current}, next_token=#{next_token}"
-      AST::NameSelector.new(current.lexeme).tap do |selector|
-        # If there is a following expression, consume
+      selector = AST::NameSelector.new(current.lexeme)
+      if and_child
+        # If there is a following expression, parse that too
         case next_token.type
         when :dot then selector.child = parse_dot_notation
         when :child_start then selector.child = parse_selector_list
-        when :descendant then selector.child = parse_descendant_segment
+        when :descendants then selector.child = parse_descendant_segment
         end
       end
+      selector
     end
 
     # Feed tokens to the FilterSelector until hitting a terminator
