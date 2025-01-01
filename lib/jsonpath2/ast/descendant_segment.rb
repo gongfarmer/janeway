@@ -16,14 +16,15 @@ module JsonPath2
     #   $..[*, *] All values, twice non-deterministic order
     #   $..[0, 1] Multiple segments
     class DescendantSegment < JsonPath2::AST::Selector
-      def inspect
-        format('#<JsonPath2::AST::DescendantSegment:%s selector=%s>',
-               object_id, @value)
+      # @return [AST::Selector]
+      def child
+        value
       end
 
-      # @return [AST::Selector]
-      def selector
-        value
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, '..'), child.tree(level + 1)]
       end
     end
   end

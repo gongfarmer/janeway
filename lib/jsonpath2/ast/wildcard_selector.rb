@@ -31,6 +31,12 @@ module JsonPath2
           "*#{@child}"
         end
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, '*'), @child.tree(level + 1)]
+      end
     end
   end
 end

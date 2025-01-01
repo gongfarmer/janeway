@@ -56,6 +56,12 @@ module JsonPath2
 
         raise "don't know how to compare FilterSelector to #{other.class}"
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, to_s)]
+      end
     end
   end
 end

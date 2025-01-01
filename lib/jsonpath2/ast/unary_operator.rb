@@ -15,6 +15,12 @@ module JsonPath2
       def ==(other)
         operator == other&.operator && operand == other&.operand
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        indented(level, "#{operator}#{operand}")
+      end
     end
   end
 end

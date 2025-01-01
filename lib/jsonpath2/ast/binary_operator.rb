@@ -40,6 +40,16 @@ module JsonPath2
           raise "unknown binary operator #{operator}"
         end
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [
+          indented(level, to_s),
+          @left.tree(level + 1),
+          @right.tree(level + 1),
+        ]
+      end
     end
   end
 end

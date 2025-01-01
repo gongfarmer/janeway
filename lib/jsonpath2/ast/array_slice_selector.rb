@@ -107,6 +107,12 @@ module JsonPath2
           @end == other.end &&
           @step == other.step
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, to_s)]
+      end
     end
   end
 end

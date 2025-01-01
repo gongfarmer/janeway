@@ -23,6 +23,14 @@ module JsonPath2
       def ==(other)
         to_s == other.to_s
       end
+
+      # Print AST in tree format
+      # Every AST class prints a 1-line representation of self, with children on separate lines
+      def tree
+        result = expressions.first.tree(0)
+
+        result.flatten.join("\n")
+      end
     end
   end
 end

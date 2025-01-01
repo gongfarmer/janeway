@@ -44,6 +44,13 @@ module JsonPath2
       def to_s
         format('[%s]%s', @value.map(&:to_s).join(', '), @child)
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        msg = format('[%s]', @value.map(&:to_s).join(', '))
+        [indented(level, msg), @child&.tree(level + 1)]
+      end
     end
   end
 end

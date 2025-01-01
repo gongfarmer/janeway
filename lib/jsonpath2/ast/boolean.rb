@@ -16,6 +16,12 @@ module JsonPath2
       def to_s
         @value ? 'true' : 'false'
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, to_s)]
+      end
     end
   end
 end

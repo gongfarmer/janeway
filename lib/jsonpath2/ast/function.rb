@@ -21,6 +21,12 @@ module JsonPath2
       def to_s
         "#{name}(#{@parameters.join(',')})"
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, to_s)]
+      end
     end
   end
 end

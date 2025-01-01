@@ -43,6 +43,12 @@ module JsonPath2
           "'#{str}'"
         end
       end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level)
+        [indented(level, "NameSelector:\"#{@value}\""), @child.tree(level + 1)]
+      end
     end
   end
 end
