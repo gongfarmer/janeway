@@ -3,7 +3,7 @@
 module JsonPath2
   # Tree-walk interpreter to apply the operations from the abstract syntax tree to the input value
   class Interpreter
-    attr_reader :query, :output, :env, :call_stack, :unwind_call_stack
+    attr_reader :query, :output, :env, :call_stack
 
     # Interpret a query on the given input, return result
     # @param input [Hash, Array]
@@ -23,10 +23,6 @@ module JsonPath2
       end
 
       @input = input
-      @output = []
-      @env = {} # execution state
-      @call_stack = []
-      @unwind_call_stack = -1
     end
 
     # @param ast [AST::Query] abstract syntax tree
@@ -41,16 +37,6 @@ module JsonPath2
     end
 
     private
-
-    attr_writer :unwind_call_stack
-
-    def println(fn_call)
-      return false if fn_call.function_name_as_str != 'println'
-
-      result = interpret_node(fn_call.args.first).to_s
-      output << result
-      true
-    end
 
     # Interpret AST::Root, which returns the input
     def interpret_root(node, _input)
@@ -163,8 +149,7 @@ module JsonPath2
     # @param input [Hash, Array]
     # @return [nil, Array] list of matched values, or nil if no matched values
     def interpret_filter_selector(selector, input)
-      # @see IETF 2.3.5.2
-      # filter selector selects nothing when applied to non-composite types.
+      # @see IETF 2.3.5.2, filter selector selects nothing when applied to non-composite types.
       return nil unless [Array, Hash].include?(input.class)
 
       values = input.is_a?(Array) ? input : input.values
@@ -175,8 +160,9 @@ module JsonPath2
     # True if the value is "truthy" in the context of a filter selector.
     #
     # Ruby normally defines truthy as anything besides nil or false.
-    # This method also considers empty arrays and arrays containing only nil / false values not to be truthy.
-    # Empty Hashes are "truthy", changing that breaks some tests
+    # JsonPath also considers empty arrays and arrays containing only nil / false values not to be truthy.
+    #
+    # Empty Hashes are still "truthy", changing that breaks some tests.
     #
     # @return [Boolean]
     def truthy?(value)
@@ -224,60 +210,11 @@ module JsonPath2
       results.flatten.compact
     end
 
-    def fetch_function_definition(fn_name)
-      fn_def = env[fn_name]
-      raise JsonPath2::Error::Runtime::UndefinedFunction, fn_name if fn_def.nil?
-
-      fn_def
-    end
-
-    def assign_function_args_to_params(stack_frame)
-      fn_def = stack_frame.fn_def
-      fn_call = stack_frame.fn_call
-
-      given = fn_call.args.length
-      expected = fn_def.params.length
-      raise JsonPath2::Error::Runtime::WrongNumArg, fn_def.function_name_as_str, given, expected if given != expected
-
-      # Applying the values passed in this particular function call to the respective defined parameters.
-      return if fn_def.params.nil?
-
-      fn_def.params.each_with_index do |param, i|
-        if env.key?(param.name)
-          # A global variable is already defined. We assign the passed in value to it.
-          env[param.name] = interpret_node(fn_call.args[i])
-        else
-          # A global variable with the same name doesn't exist. We create a new local variable.
-          stack_frame.env[param.name] = interpret_node(fn_call.args[i])
-        end
-      end
-    end
-
-    def return_detected?(node)
-      node.type == 'return'
-    end
-
     def interpret_nodes(nodes)
       last_value = nil
 
       nodes.each do |node|
         last_value = interpret_node(node, last_value)
-
-        if return_detected?(node)
-          raise JsonPath2::Error::Runtime::UnexpectedReturn unless call_stack.length.positive?
-
-          self.unwind_call_stack = call_stack.length # store current stack level to know when to stop returning.
-          return last_value
-        end
-
-        if unwind_call_stack == call_stack.length
-          # We are still inside a function that returned, so we keep on bubbling up
-          # from its structures (e.g., conditionals, loops etc).
-          return last_value
-        elsif unwind_call_stack > call_stack.length
-          # We returned from the function, so we reset the "unwind indicator".
-          self.unwind_call_stack = -1
-        end
       end
 
       last_value
@@ -290,6 +227,8 @@ module JsonPath2
     end
 
     # Apply selector to each value in the current node and return result
+    # @param node [CurrentNode] current node identifer, "@"
+    # @param input [Hash, Array]
     def interpret_current_node(node, input)
       # If there is a selector list that modifies this node, then apply it
       case node.value
@@ -315,21 +254,6 @@ module JsonPath2
       end
     end
 
-    def interpret_var_binding(var_binding)
-      if call_stack.empty?
-        # We are inside a function. If the name points to a global var, we assign the value to it.
-        # Otherwise, we create and / or assign to a local var.
-        if env.key?(var_binding.var_name_as_str)
-          env[var_binding.var_name_as_str] = interpret_node(var_binding.right)
-        else
-          call_stack.last.env[var_binding.var_name_as_str] = interpret_node(var_binding.right)
-        end
-      else
-        # We are not inside a function. Therefore, we create and / or assign to a global var.
-        env[var_binding.var_name_as_str] = interpret_node(var_binding.right)
-      end
-    end
-
     # TODO: Empty blocks are accepted both for the IF and for the ELSE.
     # For the IF, the parser returns a block with an empty collection of expressions.
     # For the else, no block is constructed.
@@ -347,44 +271,6 @@ module JsonPath2
         interpret_nodes(conditional.when_false.expressions)
       else
         interpret_nodes(conditional.when_true.expressions)
-      end
-    end
-
-    def interpret_repetition(repetition)
-      interpret_nodes(repetition.block.expressions) while interpret_node(repetition.condition)
-    end
-
-    def interpret_function_definition(fn_def)
-      env[fn_def.function_name_as_str] = fn_def
-    end
-
-    def interpret_function_call(fn_call)
-      return if println(fn_call)
-
-      fn_def = fetch_function_definition(fn_call.function_name_as_str)
-
-      stack_frame = JsonPath2::Runtime::StackFrame.new(fn_def, fn_call)
-
-      assign_function_args_to_params(stack_frame)
-
-      # Executing the function body.
-      call_stack << stack_frame
-      value = interpret_nodes(fn_def.body.expressions)
-      call_stack.pop
-      value
-    end
-
-    def interpret_return(ret)
-      interpret_node(ret.expression)
-    end
-
-    # TODO: Is this implementation REALLY the most straightforward in Ruby (apart from using eval)?
-    def interpret_unary_operator(unary_op)
-      case unary_op.operator
-      when :-
-        -interpret_node(unary_op.operand)
-      else # :'!'
-        !interpret_node(unary_op.operand)
       end
     end
 
@@ -412,7 +298,7 @@ module JsonPath2
 
     def interpret_less_than(lhs, rhs)
       lhs < rhs
-    rescue
+    rescue StandardError
       false
     end
 
@@ -422,7 +308,7 @@ module JsonPath2
       return true if lhs == rhs
 
       lhs < rhs
-    rescue
+    rescue StandardError
       # This catches type mismatches like { a: 1 } <= 1
       # IETF says that both < and > return false for such comparisons
       false
@@ -430,7 +316,7 @@ module JsonPath2
 
     def interpret_greater_than(lhs, rhs)
       lhs > rhs
-    rescue
+    rescue StandardError
       false
     end
 
@@ -438,16 +324,12 @@ module JsonPath2
       return true if lhs == rhs
 
       lhs > rhs
-    rescue
+    rescue StandardError
       false
     end
 
     def interpret_boolean(boolean, _input)
       boolean.value
-    end
-
-    def interpret_nil(_nil_node)
-      nil
     end
 
     def interpret_number(number, _input)

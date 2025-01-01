@@ -35,7 +35,6 @@ module JsonPath2
 
   WHITESPACE = " \t"
   KEYWORD = %w[true false null].freeze
-
   FUNCTIONS = %w[length count match search value].freeze
 
   # Transforms source code into tokens
@@ -43,6 +42,7 @@ module JsonPath2
     attr_reader :source, :tokens
 
     # Tokenize and return the token list.
+    #
     # @param query [String] jsonpath query
     # @return [Array<Token>]
     def self.lex(query)
@@ -56,7 +56,6 @@ module JsonPath2
     def initialize(source)
       @source = source
       @tokens = []
-      @line = 0
       @next_p = 0
       @lexeme_start_p = 0
     end
@@ -67,19 +66,16 @@ module JsonPath2
       tokens << Token.new(:eof, '', nil, after_source_end_location)
     end
 
-    # FIXME: why? why not just use regular instance vars?
-    attr_accessor :line, :next_p, :lexeme_start_p
+    attr_accessor :next_p, :lexeme_start_p
 
     # Read a token from the @source, increment the pointers.
     def tokenize
       self.lexeme_start_p = next_p
 
       c = consume
-
       return if WHITESPACE.include?(c)
 
       if c == "\n"
-        self.line += 1
         tokens << token_from_one_char_lex(c) if tokens.last&.type != :"\n"
 
         return
@@ -113,7 +109,7 @@ module JsonPath2
 
     ALPHA = ('a'..'z').to_a.concat(('A'..'Z').to_a)
     def alpha_numeric?(lexeme)
-      ALPHA.include?(lexeme) || digit?(lexeme)
+      ALPHA.include?(lexeme) || DIGITS.include?(lexeme)
     end
 
     def lookahead(offset = 1)
@@ -164,9 +160,6 @@ module JsonPath2
     def delimited_string(delimiter)
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
-        # FIXME: do jsonpath queries have lines? Find out when implementing functions
-        self.line += 1 if lookahead == "\n"
-
         # Transform escaped representation to literal chars
         literal_chars <<
           if lookahead == '\\'
@@ -229,7 +222,7 @@ module JsonPath2
       hex_digits.join.hex.chr('UTF-8')
     end
 
-    # Consume a numeric string
+    # Consume a numeric string. May be an integer or float.
     def number
       consume_digits
 
@@ -244,7 +237,11 @@ module JsonPath2
       Token.new(:number, lexeme, literal, current_location)
     end
 
-    # Consume an alphanumeric string
+    # Consume an alphanumeric string.
+    # If `ignore_keywords`, the result is alway an :identifier token.
+    # Otherwise, keywords and function names will be recognized and tokenized as those types.
+    #
+    # @param ignore_keywords [Boolean]
     def identifier(ignore_keywords: false)
       consume while alpha_numeric?(lookahead)
 
@@ -270,11 +267,11 @@ module JsonPath2
     end
 
     def current_location
-      Location.new(line, lexeme_start_p, next_p - lexeme_start_p)
+      Location.new(lexeme_start_p, next_p - lexeme_start_p)
     end
 
     def after_source_end_location
-      Location.new(line, next_p, 1)
+      Location.new(next_p, 1)
     end
   end
 end

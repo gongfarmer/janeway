@@ -76,8 +76,8 @@ module JsonPath2
       @next_p < tokens.length
     end
 
-    def nxt_not_terminator?
-      nxt && nxt.type != :"\n" && nxt.type != :eof
+    def next_not_terminator?
+      next_token && next_token.type != :"\n" && next_token.type != :eof
     end
 
     # Make "next" token become "current" by moving the pointer
@@ -94,8 +94,8 @@ module JsonPath2
       current.literal.tap { consume }
     end
 
-    def consume_if_nxt_is(expected)
-      if nxt.type == expected.type
+    def consume_if_next_is(expected)
+      if next_token.type == expected.type
         consume
         true
       else
@@ -112,11 +112,9 @@ module JsonPath2
       lookahead(0)
     end
 
-    # FIXME: rename to #next_token
-    def nxt
+    def next_token
       lookahead
     end
-    alias next_token nxt
 
     def lookahead(offset = 1)
       lookahead_p = (@next_p - 1) + offset
@@ -129,8 +127,8 @@ module JsonPath2
       OPERATOR_PRECEDENCE[current.lexeme] || LOWEST_PRECEDENCE
     end
 
-    def nxt_precedence
-      OPERATOR_PRECEDENCE[nxt.lexeme] || LOWEST_PRECEDENCE
+    def next_precedence
+      OPERATOR_PRECEDENCE[next_token.lexeme] || LOWEST_PRECEDENCE
     end
 
     def unrecognized_token_error
@@ -138,17 +136,16 @@ module JsonPath2
     end
 
     def unexpected_token_error(expected = nil)
-      errors << Error::Syntax::UnexpectedToken.new(current, nxt, expected)
+      errors << Error::Syntax::UnexpectedToken.new(current, next_token, expected)
     end
 
     def check_syntax_compliance(ast_node)
-      return if ast_node.expects?(nxt)
+      return if ast_node.expects?(next_token)
 
       unexpected_token_error
     end
 
     def determine_parsing_function
-      #log "for #{current}"
       parse_methods = %I[identifier number string true false nil function if while root current_node]
       if parse_methods.include?(current.type)
         :"parse_#{current.type}"
@@ -210,10 +207,6 @@ module JsonPath2
       AST::Boolean.new(current.literal == 'true')
     end
 
-    def parse_nil
-      AST::Nil.new
-    end
-
     # Parse a descendant segment.
     #
     # The descendant segment consists of a double dot "..", followed by
@@ -273,44 +266,11 @@ module JsonPath2
       end
     end
 
-    # FIXME: delete this and its alias, when unit tests are passing again
-    def parse_conditional
-      conditional = AST::Conditional.new
-      consume
-      conditional.condition = parse_expr_recursively
-      return unless consume_if_nxt_is(build_token(:"\n", "\n"))
-
-      conditional.when_true = parse_block
-
-      # TODO: Probably is best to use nxt and check directly; ELSE is optional and should not result in errors being added to the parsing. Besides that: think of some sanity checks (e.g., no parser errors) that maybe should be done in EVERY parser test.
-      if consume_if_nxt_is(build_token(:else, 'else'))
-        return unless consume_if_nxt_is(build_token(:"\n", "\n"))
-
-        conditional.when_false = parse_block
-      end
-
-      conditional
-    end
-
-    # FIXME: remove, but consider parsing root this way
-    def parse_block
-      consume
-      block = AST::Block.new
-      while current.type != :end && current.type != :eof && nxt.type != :else
-        expr = parse_expr_recursively
-        block << expr unless expr.nil?
-        consume
-      end
-      unexpected_token_error(build_token(:eof)) if current.type == :eof
-
-      block
-    end
-
     def parse_grouped_expr
       consume
 
       expr = parse_expr_recursively
-      return unless consume_if_nxt_is(build_token(:group_end, ')'))
+      return unless consume_if_next_is(build_token(:group_end, ')'))
 
       expr
     end
@@ -325,10 +285,10 @@ module JsonPath2
 
       # detect optional following selector, using dot or bracket notation
       selector =
-        if nxt.type == :dot
+        if next_token.type == :dot
           #consume
           parse_dot_notation
-        elsif nxt.type == :child_start
+        elsif next_token.type == :child_start
           #consume
           parse_selector_list
         end
@@ -342,10 +302,10 @@ module JsonPath2
 
       # detect optional following selector, using dot or bracket notation
       selector =
-        if nxt.type == :dot
+        if next_token.type == :dot
           #consume # "."
           parse_dot_notation
-        elsif nxt.type == :child_start
+        elsif next_token.type == :child_start
           #consume # "["
           parse_selector_list
         end
@@ -520,7 +480,7 @@ module JsonPath2
 
       selector = AST::FilterSelector.new
       terminator_types = %I[child_end union eof]
-      while nxt && !terminator_types.include?(next_token.type)
+      while next_token && !terminator_types.include?(next_token.type)
         consume
         log "(loop) parse current=#{current}, have #{selector}"
         node =
@@ -581,12 +541,12 @@ module JsonPath2
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.
-      if nxt_not_terminator? && precedence < nxt_precedence
-        log "will loop, current:#{current} checking #{nxt}, precedence " + [precedence, nxt_precedence].inspect
+      if next_not_terminator? && precedence < next_precedence
+        log "will loop, current:#{current} checking #{next_token}, precedence " + [precedence, next_precedence].inspect
       end
-      while nxt_not_terminator? && precedence < nxt_precedence
-        infix_parsing_function = determine_infix_function(nxt)
-        log "(loop) next token #{nxt.lexeme}, will parse with #{infix_parsing_function.inspect}(#{expr.inspect})"
+      while next_not_terminator? && precedence < next_precedence
+        infix_parsing_function = determine_infix_function(next_token)
+        log "(loop) next token #{next_token.lexeme}, will parse with #{infix_parsing_function.inspect}(#{expr.inspect})"
 
         return expr if infix_parsing_function.nil?
 
@@ -608,6 +568,5 @@ module JsonPath2
 
     alias parse_true parse_boolean
     alias parse_false parse_boolean
-    alias parse_if parse_conditional
   end
 end
