@@ -18,10 +18,6 @@ module JsonPath2
 
     # @param input [Array,Hash] tree of data which the jsonpath query is addressing
     def initialize(input)
-      unless input.is_a?(Hash) || input.is_a?(Array)
-        raise ArgumentError, "expect ruby composite type, got #{input.inspect}"
-      end
-
       @input = input
     end
 
@@ -29,6 +25,9 @@ module JsonPath2
     # @return [Object]
     def interpret(ast)
       raise "expect AST, got #{ast.inspect}" unless ast.is_a?(AST::Query)
+      unless @input.is_a?(Hash) || @input.is_a?(Array)
+        return [] # can't query on any other types
+      end
 
       @query = ast
 

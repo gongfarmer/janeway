@@ -32,6 +32,10 @@ module JsonPath2
         expect(described_class.interpret(input, '$[0,1,2]')).to eq(input)
         expect(described_class.interpret(input, '$[0,1,2,3,4,5]')).to eq(input)
       end
+
+      it 'does not crash when applying index selector to string' do
+        expect(described_class.interpret('hello world', '$[0]')).to be_empty
+      end
     end
   end
 end
