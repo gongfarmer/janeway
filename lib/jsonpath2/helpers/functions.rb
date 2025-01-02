@@ -32,9 +32,11 @@ module JsonPath2
         # If argument value is an object, result is the number of members in the object.
         # For any other argument value, the result is the special result Nothing.
         AST::Function.new('length', parameters) do |value|
-          return value.size if [Array, Hash, String].include?(value.class)
-
-          :nothing
+          if [Array, Hash, String].include?(value.class)
+            value.size
+          else
+            :nothing
+          end
         end
       end
 
@@ -69,10 +71,11 @@ module JsonPath2
         raise "expect group_end token, found #{current}" unless current.type == :group_end
 
         AST::Function.new('count', parameters) do |node_list|
-          # probably need to allow Hash here too
-          raise ArgumentError, "expect list, got #{node_list.inspect}" unless node_list.is_a?(Array)
-
-          node_list.size
+          if node_list.is_a?(Array)
+            node_list.size
+          else
+            1
+          end
         end
       end
       def parse_function_match

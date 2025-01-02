@@ -18,7 +18,7 @@ module JsonPath2
     #
     # It may also not be followed by any selector, and be used directly with a comparison operator.
     #
-    # @examples
+    # @example
     #   $.a[?@.b == 'kilo']
     #   $.a[?@.b]
     #   $[?@.*]

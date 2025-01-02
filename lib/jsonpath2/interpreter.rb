@@ -104,7 +104,8 @@ module JsonPath2
 
     # "Filter" the input by returning values, but not keys.
     #
-    # @param selector [WildcardSelector]
+    # @param _selector [WildcardSelector]
+    # @param input [Hash, Array]
     # @return [Array, nil] matching values (nil if input is not a composite type)
     def interpret_wildcard_selector(_selector, input)
       case input
@@ -122,7 +123,7 @@ module JsonPath2
       return nil unless input.is_a?(Array)
       return nil if selector.step.zero? # IETF: When step is 0, no elements are selected.
 
-      # Convert -1 placeholder to the actual termination index, for positive step
+      # Convert -1 placeholder to the last index, for positive step
       last_index =
         if selector.step.positive?
           selector.end == -1 ? (input.size - 1) : selector.end - 1
@@ -130,7 +131,7 @@ module JsonPath2
           selector.end.zero? ? 0 : selector.end + 1
         end
 
-      # Convert -1 placeholder to the actual start index, for negative step
+      # Convert -1 placeholder to the first index, for negative step
       first_index =
         if selector.step.negative? && selector.start == -1
           input.size - 1
@@ -138,10 +139,17 @@ module JsonPath2
           selector.start
         end
 
-      # Collect values from target indices
+      # Put bounds on integer indices. There's no reason to check a million indices for small array.
+      first_index = first_index.clamp(0, input.size)
+      last_index = last_index.clamp(0, input.size)
+
+      # Collect values from target indices.
+      results = []
       first_index
         .step(to: last_index, by: selector.step)
-        .filter_map { |i| input[i] }
+        .each { |i| results << input[i] } # Enumerator::ArithmeticSequence has no #map, must use #each
+      results.compact!
+      results
     end
 
     # Return the set of values from the input which for which the filter is true
@@ -334,16 +342,29 @@ module JsonPath2
       false
     end
 
+    # @param boolean [AST::Boolean]
+    # @return [Boolean]
     def interpret_boolean(boolean, _input)
       boolean.value
     end
 
+    # @param number [AST::Number]
+    # @return [Integer, Float]
     def interpret_number(number, _input)
       number.value
     end
 
+    # @param string [AST::StringType]
+    # @return [String]
     def interpret_string_type(string, _input)
       string.value
+    end
+
+    # @param function [AST::Function]
+    # @param input [Hash, Array]
+    def interpret_function(function, input)
+      result = function.body.call(input)
+      result
     end
   end
 end

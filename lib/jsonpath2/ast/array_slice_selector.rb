@@ -4,9 +4,10 @@ require_relative 'selector'
 
 module JsonPath2
   module AST
-    # An array slice start:end:step ({{slice}}) selects a series of elements from
-    # an array, giving a start position, an end position, and an optional step
-    # value that moves the position from the start to the end.
+    # An array slice selects a series of elements from an array.
+    #
+    # It accepts a start and end positions, and a step value that define the range to select.
+    # All of these are optional.
     #
     # @example
     #   $[1:3]
@@ -14,6 +15,7 @@ module JsonPath2
     #   $[1:5:2]
     #   $[5:1:-2]
     #   $[::-1]
+    #   $[:]
     class ArraySliceSelector < JsonPath2::AST::Selector
       attr_accessor :start, :end, :step
 

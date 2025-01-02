@@ -74,7 +74,7 @@ end
 # @param path [String,nil] query path, or nil if not provided
 # @param argv [Array<String>] command line arguments
 def read_query(path, argv)
-  return File.read(path) if path
+  return File.read(path).strip if path
 
   query = argv.find { |arg| arg.start_with?('$') }
   abort('No JsonPath query received, provide one on the command line.') unless query

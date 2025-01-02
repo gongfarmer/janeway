@@ -4,7 +4,7 @@ require_relative 'selector'
 
 module JsonPath2
   module AST
-    # An array slice start:end:step ({{slice}}) selects a series of elements from
+    # An array slice start:end:step selects a series of elements from
     # an array, giving a start position, an end position, and an optional step
     # value that moves the position from the start to the end.
     #
