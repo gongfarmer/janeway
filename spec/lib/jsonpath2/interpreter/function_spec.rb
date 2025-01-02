@@ -78,14 +78,15 @@ module JsonPath2
       end
 
       it 'supports regular expression match of array values' do
+        # entire string match
         result = described_class.interpret(input, '$.a[?match(@.b, "[jk]")]')
         expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
       end
 
-      # Skipped, functions are not supported yet
-      xit 'supports regular expression search of array values' do
+      it 'supports regular expression search of array values' do
+        # substring match
         result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
-        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'kilo' }])
+        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }, { 'b' => 'kilo' }])
       end
     end
   end

@@ -29,6 +29,9 @@ module JsonPath2
     #   * For any unescaped dots (.) outside character classes (first
     #     alternative of charClass production), replace the dot with [^\n\r].
     #   * Enclose the regexp in \A(?: and )\z.
+    #
+    # tl;dr: How is this different from the search function?
+    # "match" must match the entire string, "search" matches a substring.
     def parse_function_match
       log "current=#{current}, next_token=#{next_token}"
       consume # function
@@ -60,33 +63,6 @@ module JsonPath2
           false # result defined by RFC9535
         end
       end
-    end
-
-    # Convert IRegexp format to ruby regexp equivalent, following the instructions in rfc9485.
-    # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-pcre-re2-and-ruby-regexps
-    # @param iregex [String]
-    # @return [Regexp]
-    def translate_iregex_to_ruby_regex(iregex)
-      # * For any unescaped dots (.) outside character classes (first
-      #   alternative of charClass production), replace the dot with [^\n\r].
-      chars = iregex.chars
-      in_char_class = false
-      indexes = []
-      chars.each_with_index do |char, i|
-        # FIXME: does not handle escaped '[', ']', or '.'
-        case char
-        when '[' then in_char_class = true
-        when ']' then in_char_class = false
-        when '.' then indexes << i unless in_char_class
-        end
-      end
-      indexes.reverse_each do |i|
-        chars[i] = '[^\n\r]'
-      end
-
-      # * Enclose the regexp in \A(?: and )\z.
-      regex_str = format('\A(?:%s)\z', chars.join)
-      Regexp.new(regex_str)
     end
   end
 end
