@@ -14,6 +14,12 @@ module JsonPath2
         ast = described_class.parse('$[?count(@.*.author) >= 5]')
         expect(ast.to_s).to eq('$[?(count(@.*.author) >= 5)]')
       end
+
+      it 'parses the match function' do
+        ast = described_class.parse('$[?match(@.date, "1974-05-..")]')
+        # Regexp looks much different after conversion from iregexp format to ruby regexp equivalnt
+        expect(ast.to_s).to eq('$[?match(@.date,(?-mix:\A(?:1974-05-[^\n\r][^\n\r])\z))]')
+      end
     end
   end
 end

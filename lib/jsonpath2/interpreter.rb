@@ -363,8 +363,16 @@ module JsonPath2
     # @param function [AST::Function]
     # @param input [Hash, Array]
     def interpret_function(function, input)
-      result = function.body.call(input)
-      result
+      # All functions in RFC9535 take a CurrentNode as the first parameter.
+      # Evaluate it against the input to get the value to pass into the function.
+      current_node = function.parameters.first
+      result = send(:"interpret_#{current_node.type}", current_node, input)
+      case function.parameters.size
+      when 1 then function.body.call(result)
+      when 2 then function.body.call(result, function.parameters[1])
+      else
+        raise "no function takes this many parameters: #{parameters.inspect}"
+      end
     end
   end
 end

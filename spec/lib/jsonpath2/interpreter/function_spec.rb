@@ -77,8 +77,7 @@ module JsonPath2
         end
       end
 
-      # Skipped, functions are not supported yet
-      xit 'supports regular expression match of array values' do
+      it 'supports regular expression match of array values' do
         result = described_class.interpret(input, '$.a[?match(@.b, "[jk]")]')
         expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
       end

@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 require 'logger'
-require_relative 'helpers/functions'
+require_relative 'functions'
 
 module JsonPath2
   # Transform a list of tokens into an Abstract Syntax Tree
   class Parser
     attr_accessor :tokens, :ast, :errors
 
-    include Helpers::Functions
+    include Functions
 
     UNARY_OPERATORS = %w[! -].freeze
     BINARY_OPERATORS = %w[== != > < >= <= ,].freeze

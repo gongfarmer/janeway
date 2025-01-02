@@ -33,25 +33,60 @@ module JsonPath2
       log "current=#{current}, next_token=#{next_token}"
       consume # function
 
-      # Read parameters
+      # Read parameter list
       parameters = []
       raise "expect group_start token, found #{current}" unless current.type == :group_start
       consume # (
-      if current.type == :current_node
-        parameters << parse_current_node
-        consume
-      else
-        raise "don't know how to evaluate parameter #{current}"
-      end
+      raise "don't know how to evaluate parameter #{current}" unless current.type == :current_node
+      # It is possible that 
+
+      # Parse the input argument
+      parameters << parse_current_node
+      consume
+      raise "expect comma token, found #{current}" unless current.type == :union
+
+      consume # ,
+      raise "don't know how to evaluate parameter #{current}" unless current.type == :string
+
+      # Parse the regexp string argument, converting it to ruby regexp format
+      parameters << translate_iregex_to_ruby_regex(current.literal)
+      consume
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
-      AST::Function.new('count', parameters) do |node_list|
-        if node_list.is_a?(Array)
-          node_list.size
+      AST::Function.new('match', parameters) do |str, regexp|
+        if str.is_a?(String) && regexp.is_a?(Regexp)
+          regexp.match?(str)
         else
-          1
+          false # result defined by RFC9535
         end
       end
+    end
+
+    # Convert IRegexp format to ruby regexp equivalent, following the instructions in rfc9485.
+    # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-pcre-re2-and-ruby-regexps
+    # @param iregex [String]
+    # @return [Regexp]
+    def translate_iregex_to_ruby_regex(iregex)
+      # * For any unescaped dots (.) outside character classes (first
+      #   alternative of charClass production), replace the dot with [^\n\r].
+      chars = iregex.chars
+      in_char_class = false
+      indexes = []
+      chars.each_with_index do |char, i|
+        # FIXME: does not handle escaped '[', ']', or '.'
+        case char
+        when '[' then in_char_class = true
+        when ']' then in_char_class = false
+        when '.' then indexes << i unless in_char_class
+        end
+      end
+      indexes.reverse_each do |i|
+        chars[i] = '[^\n\r]'
+      end
+
+      # * Enclose the regexp in \A(?: and )\z.
+      regex_str = format('\A(?:%s)\z', chars.join)
+      Regexp.new(regex_str)
     end
   end
 end
