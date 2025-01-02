@@ -48,6 +48,8 @@ module JsonPath2
       case node.value
       when AST::SelectorList then interpret_selector_list(node.value, @input)
       when AST::NameSelector then interpret_name_selector(node.value, @input)
+      when AST::DescendantSegment then interpret_descendant_segment(node.value, @input)
+      when AST::WildcardSelector then interpret_wildcard_selector(node.value, @input)
       else
         raise "don't know how to interpret #{node.value.class}"
       end
@@ -104,13 +106,21 @@ module JsonPath2
 
     # "Filter" the input by returning values, but not keys.
     #
-    # @param _selector [WildcardSelector]
+    # @param selector [WildcardSelector]
     # @param input [Hash, Array]
     # @return [Array, nil] matching values (nil if input is not a composite type)
-    def interpret_wildcard_selector(_selector, input)
-      case input
-      when Array then input
-      when Hash then input.values
+    def interpret_wildcard_selector(selector, input)
+      result =
+        case input
+        when Array then input
+        when Hash then input.values
+        end
+      return result unless selector.child
+
+      # Interpret child using output from this selector, and return result
+      child = selector.child
+      result.filter_map do |value|
+        send(:"interpret_#{child.type}", child, value)
       end
     end
 
@@ -249,6 +259,7 @@ module JsonPath2
       when AST::SelectorList then interpret_selector_list(node.value, input)
       when AST::NameSelector then interpret_name_selector(node.value, input)
       when AST::WildcardSelector then interpret_wildcard_selector(node.value, input)
+      when AST::DescendantSegment then interpret_descendant_segment(node.value, input)
       when nil then input
       else
         raise "don't know how to interpret #{node.value.class}"
@@ -366,7 +377,9 @@ module JsonPath2
       # All functions in RFC9535 take a CurrentNode as the first parameter.
       # Evaluate it against the input to get the value to pass into the function.
       current_node = function.parameters.first
+      puts "#{current_node.inspect} ON INPUT #{input.inspect}"
       result = send(:"interpret_#{current_node.type}", current_node, input)
+      puts "INTERPRET FUNCTION WITH VALUE #{result.inspect}"
       case function.parameters.size
       when 1 then function.body.call(result)
       when 2 then function.body.call(result, function.parameters[1])

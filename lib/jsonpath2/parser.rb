@@ -248,7 +248,7 @@ module JsonPath2
         when :child_start then parse_selector_list(and_child: false)
         when :string, :identifier then parse_name_selector(and_child: false)
         else
-          raise "Invalid query: descendant segment must have selector, got ..#{current.lexeme}"
+          raise "Invalid query: descendant segment must have selector, got ..#{next_token.type}"
         end
 
       AST::DescendantSegment.new(selector).tap do |ds|
@@ -268,6 +268,7 @@ module JsonPath2
     def parse_dot_notation
       consume # "."
       raise "#parse_dot_notation expects to consume :dot, got #{current}" unless current.type == :dot
+
       log "current=#{current}, next_token=#{next_token}"
 
       case next_token.type
@@ -297,14 +298,12 @@ module JsonPath2
     def parse_root
       log "current=#{current}, next_token=#{next_token}"
 
-      # detect optional following selector, using dot or bracket notation
+      # detect optional following selector
       selector =
-        if next_token.type == :dot
-          #consume
-          parse_dot_notation
-        elsif next_token.type == :child_start
-          #consume
-          parse_selector_list
+        case next_token.type
+        when :dot then parse_dot_notation
+        when :child_start then parse_selector_list
+        when :descendants then parse_descendant_segment
         end
 
       AST::Root.new(selector)
@@ -314,14 +313,12 @@ module JsonPath2
     def parse_current_node
       log "current=#{current}, next_token=#{next_token}"
 
-      # detect optional following selector, using dot or bracket notation
+      # detect optional following selector
       selector =
-        if next_token.type == :dot
-          #consume # "."
-          parse_dot_notation
-        elsif next_token.type == :child_start
-          #consume # "["
-          parse_selector_list
+        case next_token.type
+        when :dot then parse_dot_notation
+        when :child_start then parse_selector_list
+        when :descendants then parse_descendant_segment
         end
 
       AST::CurrentNode.new(selector)
@@ -353,7 +350,8 @@ module JsonPath2
 
       selector_list = AST::SelectorList.new
       loop do
-        selector_list << parse_selector
+        selector = parse_selector
+        selector_list << selector if selector # nil selector means empty brackets
 
         log "parsed selector #{selector_list.last}, current=#{current}"
         break unless current.type == :union # no more selectors in these parentheses
@@ -403,6 +401,7 @@ module JsonPath2
       case current.type
       when :array_slice_separator then parse_array_slice_selector
       when :filter then parse_filter_selector
+      when :wildcard then parse_wildcard_selector
       when :minus
         # apply the - sign to the following number and retry
         parse_minus_operator
@@ -415,8 +414,8 @@ module JsonPath2
         end
       when :identifier, :string
         AST::NameSelector.new(current_literal_and_consume)
-      when :wildcard
-        parse_wildcard_selector
+      when :child_end
+        nil # empty brackets. Do nothing but don't crash
       else
         raise "Unhandled selector: #{current}"
       end

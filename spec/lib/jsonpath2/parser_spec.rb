@@ -32,5 +32,15 @@ module JsonPath2
       ast = described_class.parse("$.o['j j']['k.k']")
       expect(ast.to_s).to eq("$.o['j j']['k.k']")
     end
+
+    it 'parses bracket notation with empty path' do
+      ast = described_class.parse('$[]')
+      expect(ast.to_s).to eq('$[]')
+    end
+
+    it 'parses dot notation with wildcard selector' do
+      ast = described_class.parse('$.*[1]')
+      expect(ast.to_s).to eq('$*[1]')
+    end
   end
 end

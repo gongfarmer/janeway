@@ -11,6 +11,16 @@ module JsonPath2
       expect(described_class.interpret(input, '$')).to eq([input])
     end
 
+    it 'returns nothing for empty brackets' do
+      input = { 'a' => 1 }
+      expect(described_class.interpret(input, '$[]')).to eq([])
+    end
+
+    it 'interprets dot notation with wildcard selector' do
+      input = [[1], [2,3]]
+      expect(described_class.interpret(input, '$.*[1]')).to eq([3])
+    end
+
     describe '#truthy' do
       it 'says nil is false' do
         expect(interpreter.send(:truthy?, nil)).to be(false)

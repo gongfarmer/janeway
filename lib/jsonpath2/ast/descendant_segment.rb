@@ -24,6 +24,10 @@ module JsonPath2
         @child = nil
       end
 
+      def to_s
+        "..#{@value}#{@child}"
+      end
+
       # @return [AST::Selector]
       #
       def selector
