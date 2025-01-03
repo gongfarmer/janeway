@@ -75,6 +75,10 @@ module JsonPath2
       it 'converts hexadecimal escape in lowercase to unicode' do
         expect(described_class.lex('$.["\u263a"]')).to eq([:root, :dot, :child_start, '☺', :child_end, :eof])
       end
+
+      it 'tokenizes name starting with extended unicode' do
+        expect(described_class.lex('$.☺☺abc').map(&:type)).to eq(%I[root dot identifier eof])
+      end
     end
 
     context 'when tokenizing index selector' do

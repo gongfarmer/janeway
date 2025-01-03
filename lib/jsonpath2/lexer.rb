@@ -37,9 +37,15 @@ module JsonPath2
   KEYWORD = %w[true false null].freeze
   FUNCTIONS = %w[length count match search value].freeze
 
+  # Benchmarking shows it is faster to check membership in a string than an array (ruby 3.1)
+  ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  DIGITS = '0123456789'
+  ALPHABET_OR_UNDERSCORE = "#{ALPHABET}_".freeze
+
   # Transforms source code into tokens
   class Lexer
     attr_reader :source, :tokens
+    attr_accessor :next_p, :lexeme_start_p
 
     # Tokenize and return the token list.
     #
@@ -66,20 +72,12 @@ module JsonPath2
       tokens << Token.new(:eof, '', nil, after_source_end_location)
     end
 
-    attr_accessor :next_p, :lexeme_start_p
-
     # Read a token from the @source, increment the pointers.
     def tokenize
       self.lexeme_start_p = next_p
 
       c = consume
       return if WHITESPACE.include?(c)
-
-      if c == "\n"
-        tokens << token_from_one_char_lex(c) if tokens.last&.type != :"\n"
-
-        return
-      end
 
       token =
         if ONE_OR_TWO_CHAR_LEX.include?(c)
@@ -89,11 +87,11 @@ module JsonPath2
         elsif TWO_CHAR_LEX_FIRST.include?(c)
           token_from_two_char_lex(c)
         elsif %w[" '].include?(c)
-          delimited_string(c)
+          lex_delimited_string(c)
         elsif digit?(c)
-          number
-        elsif alpha_numeric?(c)
-          identifier(ignore_keywords: tokens.last.type == :dot)
+          lex_number
+        elsif name_first_char?(c)
+          lex_member_name_shorthand(ignore_keywords: tokens.last.type == :dot)
         end
         # FIXME: what about string that starts with unicode?  Seems like #alpha_numeric? does not handle this
 
@@ -102,14 +100,12 @@ module JsonPath2
       tokens << token
     end
 
-    DIGITS = '0123456789'
     def digit?(lexeme)
       DIGITS.include?(lexeme)
     end
 
-    ALPHA = ('a'..'z').to_a.concat(('A'..'Z').to_a)
     def alpha_numeric?(lexeme)
-      ALPHA.include?(lexeme) || DIGITS.include?(lexeme)
+      ALPHABET.include?(lexeme) || DIGITS.include?(lexeme)
     end
 
     def lookahead(offset = 1)
@@ -157,7 +153,7 @@ module JsonPath2
 
     # @param delimiter [String] eg. ' or "
     # @return [Token] string token
-    def delimited_string(delimiter)
+    def lex_delimited_string(delimiter)
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
         # Transform escaped representation to literal chars
@@ -226,7 +222,7 @@ module JsonPath2
     #   number = (int / "-0") [ frac ] [ exp ] ; decimal number
     #   frac   = "." 1*DIGIT                   ; decimal fraction
     #   exp    = "e" [ "-" / "+" ] 1*DIGIT     ; decimal exponent
-    def number
+    def lex_number
       consume_digits
 
       # Look for a fractional part
@@ -257,7 +253,7 @@ module JsonPath2
     # Otherwise, keywords and function names will be recognized and tokenized as those types.
     #
     # @param ignore_keywords [Boolean]
-    def identifier(ignore_keywords: false)
+    def lex_identifier(ignore_keywords: false)
       consume while alpha_numeric?(lookahead)
 
       identifier = source[lexeme_start_p..(next_p - 1)]
@@ -270,6 +266,103 @@ module JsonPath2
           :identifier
         end
 
+      Token.new(type, identifier, identifier, current_location)
+    end
+
+    # Parse an identifier string which is not within delimiters.
+    # The standard set of unicode code points are allowed.
+    # No character escapes are allowed.
+    # Keywords and function names are ignored in this context.
+    # @return [Token]
+    def lex_unescaped_identifier
+      consume while unescaped?(lookahead)
+      identifier = source[lexeme_start_p..(next_p - 1)]
+      Token.new(:identifier, identifier, identifier, current_location)
+    end
+
+    # Return true if string matches the definition of "unescaped" from RFC9535:
+    # unescaped     = %x20-21 /        ; see RFC 8259
+    #                    ; omit 0x22 "
+    #                 %x23-26 /
+    #                    ; omit 0x27 '
+    #                 %x28-5B /
+    #                    ; omit 0x5C \
+    #                 %x5D-D7FF /
+    #                    ; skip surrogate code points
+    #                 %xE000-10FFFF
+    # @param char [String] single character, possibly multi-byte
+    def unescaped?(char)
+      case char.ord
+      when 0x20..0x21 then true # space, "!"
+      when 0x23..0x26 then true # "#", "$", "%"
+      when 0x28..0x5B then true # "(" ... "["
+      when 0x5D..0xD7FF then true # remaining ascii and lots of unicode code points
+        # omit surrogate code points
+      when 0xE000..0x10FFFF then true # much more unicode code points
+      else false
+      end
+    end
+
+    def escapable?(char)
+      case char.ord
+      when 0x62 then true # backspace
+      when 0x66 then true # form feed
+      when 0x6E then true # line feed
+      when 0x72 then true # carriage return
+      when 0x74 then true # horizontal tab
+      when 0x2F then true # slash
+      when 0x5C then true # backslash
+      else false
+      end
+    end
+
+    # True if character is suitable as the first character in a name selector
+    # using shorthand notation (ie. no bracket notation.)
+    #
+    # Defined in RFC9535 by ths ABNF grammar:
+    # name-first    = ALPHA /
+    #                 "_"   /
+    #                 %x80-D7FF /
+    #                    ; skip surrogate code points
+    #                 %xE000-10FFFF
+    #
+    # @param char [String] single character, possibly multi-byte
+    # @return [Boolean]
+    def name_first_char?(char)
+      ALPHABET_OR_UNDERSCORE.include?(char) \
+        || (0x80..0xD7FF).cover?(char.ord) \
+        || (0xE000..0x10FFFF).cover?(char.ord)
+    end
+
+    # True if character is acceptable in a name selector using shorthand notation (ie. no bracket notation.)
+    # This is the same set as #name_first_char? except that it also allows numbers
+    # @param char [String] single character, possibly multi-byte
+    # @return [Boolean]
+    def name_char?(char)
+      ALPHABET_OR_UNDERSCORE.include?(char) \
+        || DIGITS.include?(char) \
+        || (0x80..0xD7FF).cover?(char.ord) \
+        || (0xE000..0x10FFFF).cover?(char.ord)
+    end
+
+    # Lex a member name that is found within dot notation.
+    #
+    # Recognize keywords and given them the correct type.
+    # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.5.1.1-3
+    #
+    # @param ignore_keywords [Boolean]
+    # @return [Token]
+    def lex_member_name_shorthand(ignore_keywords: false)
+      consume while name_char?(lookahead)
+      identifier = source[lexeme_start_p..(next_p - 1)]
+      type =
+        if KEYWORD.include?(identifier) && !ignore_keywords
+          identifier.to_sym
+        elsif FUNCTIONS.include?(identifier) && !ignore_keywords
+          :function
+        else
+          :identifier
+        end
       Token.new(type, identifier, identifier, current_location)
     end
 
