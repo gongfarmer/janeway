@@ -47,5 +47,10 @@ module JsonPath2
       ast = described_class.parse('$[?@.a==null]')
       expect(ast.to_s).to eq('$[?(@.a == null)]')
     end
+
+    it 'parses comparison with exponent' do
+      ast = described_class.parse('$[?@.a==1e2]')
+      expect(ast.to_s).to eq('$[?(@.a == 100.0)]')
+    end
   end
 end

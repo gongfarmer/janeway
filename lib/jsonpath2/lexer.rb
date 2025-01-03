@@ -235,9 +235,11 @@ module JsonPath2
       end
 
       # Look for an exponent part
-      if lookahead == 'e' && %w[+ -].include?(lookahead(2))
+      if lookahead == 'e'
         consume # "e"
-        consume # "+" / "-"
+        if %w[+ -].include?(lookahead)
+          consume # "+" / "-"
+        end
         consume_digits
       end
 

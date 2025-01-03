@@ -265,11 +265,11 @@ module JsonPath2
       end
     end
 
-    def interpret_identifier(identifier)
+    def interpret_identifier(identifier, _input)
       if env.key?(identifier.name)
         # Global variable.
         env[identifier.name]
-      elsif call_stack.length.postive? && call_stack.last.env.key?(identifier.name)
+      elsif call_stack.length.positive? && call_stack.last.env.key?(identifier.name)
         # Local variable.
         call_stack.last.env[identifier.name]
       else
