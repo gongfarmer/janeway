@@ -7,21 +7,20 @@ module JsonPath2
     #
     # JSONPath return type: ValueType
     def parse_function_length
-      consume # function
       log "current=#{current}, next_token=#{next_token}"
-
-      # Read parameters
-      parameters = []
+      consume # function
       raise "expect group_start token, found #{current}" unless current.type == :group_start
 
       consume # (
-      parameters << send(:"parse_#{current.type}") # could be root or current_node
-      consume
+
+      # Read parameter
+      parameters = [parse_function_parameter]
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
-      # If argument value is a string, result is the number of Unicode scalar values in the string.
-      # If argument value is an array, result is the number of elements in the array.
-      # If argument value is an object, result is the number of members in the object.
+      # Meaning of return value depends on the JSON type:
+      #   * string - number of Unicode scalar values in the string.
+      #   * array -  number of elements in the array.
+      #   * object - number of members in the object.
       # For any other argument value, the result is the special result Nothing.
       AST::Function.new('length', parameters) do |value|
         if [Array, Hash, String].include?(value.class)

@@ -21,7 +21,10 @@ module JsonPath2
         case char
         when '[' then in_char_class = true
         when ']' then in_char_class = false
-        when '.' then indexes << i unless in_char_class
+        when '.'
+          next if in_char_class || chars[i-1] == '\\' # escaped dot
+
+          indexes << i # replace this dot
         end
       end
       indexes.reverse_each do |i|
@@ -31,6 +34,22 @@ module JsonPath2
       # * Enclose the regexp in \A(?: and )\z.
       regex_str = anchor ? format('\A(?:%s)\z', chars.join) : chars.join
       Regexp.new(regex_str)
+    end
+
+    # All jsonpath function parameters are one of these accepted types.
+    # Parse the function parameter and return the result.
+    # @return [String, AST::CurrentNode, AST::Root]
+    def parse_function_parameter
+      result =
+        case current.type
+        when :string then AST::StringType.new(current.literal)
+        when :current_node then parse_current_node
+        when :root then parse_root
+        else
+          raise "unexpected parameter 2 for match function: #{current.inspect}"
+        end
+      consume
+      result
     end
   end
 end

@@ -77,16 +77,31 @@ module JsonPath2
         end
       end
 
-      it 'supports regular expression match of array values' do
-        # entire string match
-        result = described_class.interpret(input, '$.a[?match(@.b, "[jk]")]')
-        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
+      describe 'jsonpath function "match"' do
+        it 'supports regular expression match of array values' do
+          # entire string match
+          result = described_class.interpret(input, '$.a[?match(@.b, "[jk]")]')
+          expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
+        end
+
+        it 'reads iregexp from the input document' do
+          query = '$.values[?match(@, $.regex)]'
+          input =
+            {
+              'regex' => 'b.?b',
+              'values' => ['abc', 'bcd', 'bab', 'bba', 'bbab', 'b', true, [], {}]
+            }
+          expected = ['bab']
+          expect(described_class.interpret(input, query)).to eq(expected)
+        end
       end
 
-      it 'supports regular expression search of array values' do
-        # substring match
-        result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
-        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }, { 'b' => 'kilo' }])
+      describe 'jsonpath function "match"' do
+        it 'supports regular expression search of array values' do
+          # substring match
+          result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
+          expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }, { 'b' => 'kilo' }])
+        end
       end
 
       it 'interprets the value() function' do

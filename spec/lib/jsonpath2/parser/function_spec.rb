@@ -17,8 +17,7 @@ module JsonPath2
 
       it 'parses the match function' do
         ast = described_class.parse('$[?match(@.date, "1974-05-..")]')
-        # Regexp looks much different after conversion from iregexp format to ruby regexp equivalnt
-        expect(ast.to_s).to eq('$[?match(@.date,(?-mix:\A(?:1974-05-[^\n\r][^\n\r])\z))]')
+        expect(ast.to_s).to eq("$[?match(@.date,'1974-05-..')]")
       end
 
       it 'parses the value function' do

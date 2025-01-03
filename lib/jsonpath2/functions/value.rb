@@ -26,17 +26,14 @@ module JsonPath2
     # Note: A singular query may be used anywhere where a ValueType is
     # expected, so there is no need to use the value() function extension with a singular query.
     def parse_function_value
-      # tl;dr this seems to do the same thing as a name selector? Why does this exist?
-      consume # function
       log "current=#{current}, next_token=#{next_token}"
-
-      # Read parameters
-      parameters = []
+      consume # function
       raise "expect group_start token, found #{current}" unless current.type == :group_start
 
       consume # (
-      parameters << send(:"parse_#{current.type}") # could be root or current_node
-      consume
+
+      # Read parameter
+      parameters = [parse_function_parameter]
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
       AST::Function.new('value', parameters) do |nodes|
