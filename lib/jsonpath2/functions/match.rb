@@ -39,12 +39,9 @@ module JsonPath2
       # Read parameter list
       parameters = []
       raise "expect group_start token, found #{current}" unless current.type == :group_start
-      consume # (
-      raise "don't know how to evaluate parameter #{current}" unless current.type == :current_node
-      # It is possible that 
 
-      # Parse the input argument
-      parameters << parse_current_node
+      consume # (
+      parameters << send(:"parse_#{current.type}") # could be root or current_node
       consume
       raise "expect comma token, found #{current}" unless current.type == :union
 

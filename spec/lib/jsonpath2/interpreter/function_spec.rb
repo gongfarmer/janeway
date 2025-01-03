@@ -95,6 +95,21 @@ module JsonPath2
         expected = [[4], { 'foo' => 4 }]
         expect(described_class.interpret(input, query)).to eq(expected)
       end
+
+      it 'interprets usage of the root node in a function call' do
+        query = '$.values[?length(@.a) == value($..c)]'
+        input =
+          {
+            'c' => 'cd',
+            'values' => [
+              {'a' => 'ab'},
+              {'c' => 'd'},
+              {'a' => nil}
+            ]
+          }
+        expected = [{'c' => 'd'}, {'a' => nil}]
+        expect(described_class.interpret(input, query)).to eq(expected)
+      end
     end
   end
 end

@@ -24,13 +24,10 @@ module JsonPath2
       # Read parameters
       parameters = []
       raise "expect group_start token, found #{current}" unless current.type == :group_start
+
       consume # (
-      if current.type == :current_node
-        parameters << parse_current_node
-        consume
-      else
-        raise "don't know how to evaluate parameter #{current}"
-      end
+      parameters << send(:"parse_#{current.type}") # could be root or current_node
+      consume
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
       AST::Function.new('count', parameters) do |node_list|
