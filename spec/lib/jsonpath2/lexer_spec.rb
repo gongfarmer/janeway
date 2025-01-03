@@ -396,6 +396,18 @@ module JsonPath2
           literal: '"',
         )
       end
+
+      it 'raises error when given a char that is not allowed' do
+        expect {
+          described_class.lex("$[\"\0\"]")
+        }.to raise_error(Lexer::Error, "invalid character \"\\u0000\"")
+      end
+
+      it 'raises error when given an escaped char that is not allowed' do
+        expect {
+          described_class.lex("$[\"\\\0\"]")
+        }.to raise_error(Lexer::Error, "invalid character \"\\u0000\"")
+      end
     end
   end
 end

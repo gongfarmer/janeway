@@ -160,19 +160,24 @@ module JsonPath2
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
         # Transform escaped representation to literal chars
+        next_char = lookahead
         literal_chars <<
-          if lookahead == '\\'
+          if next_char == '\\'
             if lookahead(2) == delimiter
               consume # \
               consume # delimiter
             else
               consume_escape_sequence # consumes multiple chars
             end
-          else
+          elsif unescaped?(next_char)
             consume
+          elsif %w[' "].include?(next_char) && next_char != delimiter
+            consume
+          else
+            raise Error.new("invalid character #{next_char.inspect}", current_location)
           end
       end
-      raise "Unterminated string error: #{literal_chars.join.inspect}" if source_completed?
+      raise Error.new("Unterminated string error: #{literal_chars.join.inspect}") if source_completed?
 
       consume # closing delimiter
 
@@ -203,8 +208,8 @@ module JsonPath2
         if unescaped?(char)
           char # unnecessary escape, just return the literal char
         else
-          # whatever this is, it is not allowed
-          raise "unknown escape sequence: \\#{char}"
+          # whatever this is, it is not allowed even when escaped
+          raise Error.new("invalid character #{char.inspect}", current_location)
         end
       end
     end
