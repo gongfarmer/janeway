@@ -21,6 +21,31 @@ module JsonPath2
       expect(described_class.interpret(input, '$.*[1]')).to eq([3])
     end
 
+    ## from compliance test suite
+    #it 'interprets wildcard shorthand then name shorthand' do
+    #  input = {
+    #    'x' => { 'a' => 'Ax', 'b' => 'Bx' },
+    #    'y' => { 'a' => 'Ay', 'b' => 'By' },
+    #  }
+    #  expected = [['Ax', 'Ay'], ['Ay', 'Ax']]
+    #  expect(described_class.interpret(input, '$.*.a')).to eq(expected)
+    #end
+
+    it 'interprets null' do
+      # FIXME: not sure this expectation is correct, just want it not to crash
+      expect(described_class.interpret({}, '$[?@.a==null]')).to eq([])
+    end
+
+    it 'interprets filter expression with unary operator' do
+      input = {'a' => 'a', 'd' => 'e'}, {'a' =>'b', 'd' => 'f'}, {'a' =>'d', 'd' => 'f'}
+      query = "$[?!(@.a=='b')]"
+      expected = [
+        {'a' => 'a', 'd' => 'e'},
+        {'a' => 'd', 'd' => 'f'}
+      ]
+      expect(described_class.interpret(input, query)).to eq(expected)
+    end
+
     describe '#truthy' do
       it 'says nil is false' do
         expect(interpreter.send(:truthy?, nil)).to be(false)

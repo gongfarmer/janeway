@@ -42,5 +42,10 @@ module JsonPath2
       ast = described_class.parse('$.*[1]')
       expect(ast.to_s).to eq('$*[1]')
     end
+
+    it 'parses null' do
+      ast = described_class.parse('$[?@.a==null]')
+      expect(ast.to_s).to eq('$[?(@.a == null)]')
+    end
   end
 end

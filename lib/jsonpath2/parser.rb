@@ -163,6 +163,8 @@ module JsonPath2
         :parse_descendant_segment
       elsif current.type == :filter # ?
         :parse_filter_selector
+      elsif current.type == :null # null
+        :parse_null
       else
         raise "Don't know how to parse #{current}"
       end
@@ -201,6 +203,11 @@ module JsonPath2
       parse_number
       current.literal = 0 - current.literal
       current
+    end
+
+    # @return [AST::Null]
+    def parse_null
+      AST::Null.new
     end
 
     def parse_boolean

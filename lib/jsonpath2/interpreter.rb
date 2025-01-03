@@ -370,6 +370,20 @@ module JsonPath2
       string.value
     end
 
+    # @param null [AST::Null]
+    def interpret_null(_null, _input)
+      :null
+    end
+
+    def interpret_unary_operator(op, input)
+      result = send(:"interpret_#{op.operand.type}", op.operand, input)
+      case op.operator
+      when :not then !result
+      when :minus then 0 - result
+      else raise "unknown unary operator #{op.inspect}"
+      end
+    end
+
     # @param function [AST::Function]
     # @param input [Hash, Array]
     def interpret_function(function, input)
