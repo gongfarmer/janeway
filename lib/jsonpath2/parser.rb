@@ -395,7 +395,7 @@ module JsonPath2
       type.include?('selector') || %w[dot child_start].include?(type)
     end
 
-    # Parse a selector.
+    # Parse a selector which is inside a selector list (ie. bracket notation.)
     def parse_selector
       log "current=#{current}, next_token=#{next_token}"
       case current.type
@@ -414,8 +414,7 @@ module JsonPath2
         end
       when :identifier, :string
         AST::NameSelector.new(current_literal_and_consume)
-      when :child_end
-        nil # empty brackets. Do nothing but don't crash
+      when :child_end then nil # empty brackets, do nothing.
       else
         raise "Unhandled selector: #{current}"
       end

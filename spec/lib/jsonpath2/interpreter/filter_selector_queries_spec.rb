@@ -87,18 +87,6 @@ module JsonPath2
         expect(result).to eq([1, { 'b' => 'k' }])
       end
 
-      # Skipped, functions are not supported yet
-      xit 'supports regular expression match of array values' do
-        result = described_class.interpret(input, '$.a[?match(@.b, "[jk]")]')
-        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
-      end
-
-      # Skipped, functions are not supported yet
-      xit 'supports regular expression search of array values' do
-        result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
-        expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'kilo' }])
-      end
-
       it 'supports logical AND of object values' do
         result = described_class.interpret(input, '$.o[?@>1 && @<4]')
         expect(result).to eq([2, 3]) # order is undefined

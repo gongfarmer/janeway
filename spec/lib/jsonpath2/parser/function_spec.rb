@@ -20,6 +20,11 @@ module JsonPath2
         # Regexp looks much different after conversion from iregexp format to ruby regexp equivalnt
         expect(ast.to_s).to eq('$[?match(@.date,(?-mix:\A(?:1974-05-[^\n\r][^\n\r])\z))]')
       end
+
+      it 'parses the value function' do
+        ast = described_class.parse("$[?value(@..color) == 'red']")
+        expect(ast.to_s).to eq("$[?(value(@..color) == 'red')]")
+      end
     end
   end
 end

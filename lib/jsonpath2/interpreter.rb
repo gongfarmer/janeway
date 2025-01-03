@@ -376,9 +376,7 @@ module JsonPath2
       # All functions in RFC9535 take a CurrentNode as the first parameter.
       # Evaluate it against the input to get the value to pass into the function.
       current_node = function.parameters.first
-      puts "#{current_node.inspect} ON INPUT #{input.inspect}"
       result = send(:"interpret_#{current_node.type}", current_node, input)
-      puts "INTERPRET FUNCTION WITH VALUE #{result.inspect}"
       case function.parameters.size
       when 1 then function.body.call(result)
       when 2 then function.body.call(result, function.parameters[1])

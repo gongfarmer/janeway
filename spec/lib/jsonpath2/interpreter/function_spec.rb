@@ -88,6 +88,13 @@ module JsonPath2
         result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
         expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }, { 'b' => 'kilo' }])
       end
+
+      it 'interprets the value() function' do
+        query = '$[?value(@.*)==4]'
+        input = [[4], { 'foo' => 4 }, [5], { 'foo' => 5 }, 4]
+        expected = [[4], { 'foo' => 4 }]
+        expect(described_class.interpret(input, query)).to eq(expected)
+      end
     end
   end
 end

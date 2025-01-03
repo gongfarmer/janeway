@@ -17,7 +17,7 @@ module JsonPath2
     end
 
     it 'interprets dot notation with wildcard selector' do
-      input = [[1], [2,3]]
+      input = [[1], [2, 3]]
       expect(described_class.interpret(input, '$.*[1]')).to eq([3])
     end
 
