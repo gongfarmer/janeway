@@ -23,8 +23,9 @@ module JsonPath2
       end
 
       describe 'jsonpath function "length"' do
+        let(:input) { %w[a ab abc abcd] }
+
         it 'gets the length of a string' do
-          input = %w[a ab abc abcd]
           expect(described_class.interpret(input, '$[? length(@) == 3]')).to eq(['abc'])
         end
 
@@ -49,6 +50,18 @@ module JsonPath2
         it 'returns Nothing if the input is not a string, array or hash' do
           input = [1, 2, 3]
           expect(described_class.interpret(input, '$[? length(@) == 3]')).to eq([])
+        end
+
+        it 'returns empty result when given bad parameter that is a number' do
+          expect(described_class.interpret(input, '$[?(length(4) == 4)]')).to be_empty
+        end
+
+        it 'returns empty result when given bad parameter that is a boolean' do
+          expect(described_class.interpret(input, '$[?(length(true) == 4)]')).to be_empty
+        end
+
+        it 'returns empty result when given bad parameter that is a null' do
+          expect(described_class.interpret(input, '$[?(length(null) == 4)]')).to be_empty
         end
       end
 

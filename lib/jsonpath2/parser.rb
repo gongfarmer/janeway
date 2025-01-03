@@ -556,6 +556,14 @@ module JsonPath2
       result
     end
 
+    # Parse an expression
+    def parse_expr
+      parsing_function = determine_parsing_function
+      raise Error::Syntax::UnrecognizedToken.new(current) unless parsing_function
+
+      send(parsing_function)
+    end
+
     def parse_expr_recursively(precedence = LOWEST_PRECEDENCE)
       parsing_function = determine_parsing_function
       return unrecognized_token_error unless parsing_function

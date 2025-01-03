@@ -362,6 +362,22 @@ module JsonPath2
         ]
         expect(described_class.lex('$[?(@.price < 5E2)]')).to eq(expected)
       end
+
+      it 'tokenizes true in a function call as true type, not a string' do
+        expected = %I[
+          root child_start filter function group_start true group_end greater_than
+          number child_end eof
+        ]
+        expect(described_class.lex('$[?length(true) > 5]')).to eq(expected)
+      end
+
+      it 'tokenizes null in a function call as null type, not a string' do
+        expected = %I[
+          root child_start filter function group_start null group_end greater_than
+          number child_end eof
+        ]
+        expect(described_class.lex('$[?length(null) > 5]')).to eq(expected)
+      end
     end
   end
 end

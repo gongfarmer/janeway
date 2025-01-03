@@ -42,11 +42,14 @@ module JsonPath2
     def parse_function_parameter
       result =
         case current.type
-        when :string then AST::StringType.new(current.literal)
+        when :string then parse_string
         when :current_node then parse_current_node
         when :root then parse_root
         else
-          raise "unexpected parameter 2 for match function: #{current.inspect}"
+          log("invalid function parameter: #{current.inspect}", level: :warn)
+          # Invalid, no function uses this.
+          # Instead of crashing here, accept it and let the function return an empty result.
+          parse_expr
         end
       consume
       result

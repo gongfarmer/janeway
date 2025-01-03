@@ -24,6 +24,24 @@ module JsonPath2
         ast = described_class.parse("$[?value(@..color) == 'red']")
         expect(ast.to_s).to eq("$[?(value(@..color) == 'red')]")
       end
+
+      it 'parses a function parameter with incorrect type number' do
+        # length() does not expect this type, Parser must not crash though.
+        ast = described_class.parse('$[?length(5) >= 5]')
+        expect(ast.to_s).to eq('$[?(length(5) >= 5)]')
+      end
+
+      it 'parses a function parameter with incorrect type boolean' do
+        # length() does not expect this type, Parser must not crash though.
+        ast = described_class.parse('$[?length(true) >= 5]')
+        expect(ast.to_s).to eq('$[?(length(true) >= 5)]')
+      end
+
+      it 'parses a function parameter with incorrect type null' do
+        # length() does not expect this type, Parser must not crash though.
+        ast = described_class.parse('$[?length(null) >= 5]')
+        expect(ast.to_s).to eq('$[?(length(null) >= 5)]')
+      end
     end
   end
 end

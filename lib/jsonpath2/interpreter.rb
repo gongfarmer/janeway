@@ -405,9 +405,10 @@ module JsonPath2
         case parameter
         when AST::CurrentNode then interpret_current_node(parameter, input)
         when AST::Root then interpret_root(parameter, input)
-        when AST::StringType then parameter.value
+        when AST::StringType then interpret_string_type(parameter, input)
         else
-          raise "unexpected function parameter: #{parameter.inspect}"
+          # invalid parameter type. Function must accept it and return Nothing result
+          parameter
         end
       end
     end
