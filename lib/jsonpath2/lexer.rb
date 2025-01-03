@@ -2,6 +2,7 @@
 
 require_relative 'location'
 require_relative 'token'
+require_relative 'error'
 
 module JsonPath2
   OPERATORS = {
@@ -37,13 +38,15 @@ module JsonPath2
   KEYWORD = %w[true false null].freeze
   FUNCTIONS = %w[length count match search value].freeze
 
-  # Benchmarking shows it is faster to check membership in a string than an array (ruby 3.1)
+  # Benchmarking shows it is faster to check membership in a string than an array of char (ruby 3.1.2)
   ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
   DIGITS = '0123456789'
   ALPHABET_OR_UNDERSCORE = "#{ALPHABET}_".freeze
 
   # Transforms source code into tokens
   class Lexer
+    class Error < JsonPathError; end
+
     attr_reader :source, :tokens
     attr_accessor :next_p, :lexeme_start_p
 
@@ -135,7 +138,7 @@ module JsonPath2
     # @return [Token]
     def token_from_two_char_lex(lexeme)
       next_two_chars = [lexeme, lookahead].join
-      raise "unknown operator: #{next_two_chars.inspect}" unless TWO_CHAR_LEX.include?(next_two_chars)
+      raise Error.new("Unknown operator \"#{next_two_chars}\"", @source) unless TWO_CHAR_LEX.include?(next_two_chars)
 
       consume
       Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
