@@ -378,6 +378,24 @@ module JsonPath2
         ]
         expect(described_class.lex('$[?length(null) > 5]')).to eq(expected)
       end
+
+      it 'tokenizes escaped slash character in a double quoted string' do
+        tokens = described_class.lex('$["\\/"]')
+        expect(tokens[2]).to have_attributes(
+          type: :string,
+          lexeme: '"\\/"', # lexeme retains unnecessary escape
+          literal: "/", # literal discards unnecessary escape
+        )
+      end
+
+      it 'tokenizes escaped double quote in a double quoted string' do
+        tokens = described_class.lex('$["\\""]')
+        expect(tokens[2]).to have_attributes(
+          type: :string,
+          lexeme: '"\""',
+          literal: '"',
+        )
+      end
     end
   end
 end

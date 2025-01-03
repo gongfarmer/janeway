@@ -162,7 +162,12 @@ module JsonPath2
         # Transform escaped representation to literal chars
         literal_chars <<
           if lookahead == '\\'
-            consume_escape_sequence # consumes multiple chars
+            if lookahead(2) == delimiter
+              consume # \
+              consume # delimiter
+            else
+              consume_escape_sequence # consumes multiple chars
+            end
           else
             consume
           end
@@ -195,7 +200,12 @@ module JsonPath2
       when '"', "'", '\\' then char
       when 'u' then consume_unicode_escape_sequence
       else
-        raise "unknown escape sequence: \\#{char}"
+        if unescaped?(char)
+          char # unnecessary escape, just return the literal char
+        else
+          # whatever this is, it is not allowed
+          raise "unknown escape sequence: \\#{char}"
+        end
       end
     end
 
