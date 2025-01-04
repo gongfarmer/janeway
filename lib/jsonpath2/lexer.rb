@@ -34,7 +34,7 @@ module JsonPath2
   TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.freeze
   ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.freeze
 
-  WHITESPACE = " \t"
+  WHITESPACE = " \t\n\r"
   KEYWORD = %w[true false null].freeze
   FUNCTIONS = %w[length count match search value].freeze
 

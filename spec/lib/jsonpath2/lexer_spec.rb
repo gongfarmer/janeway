@@ -95,6 +95,11 @@ module JsonPath2
       it 'tokenizes name starting with extended unicode' do
         expect(described_class.lex('$.☺☺abc').map(&:type)).to eq(%I[root dot identifier eof])
       end
+
+      it 'allows newline after ?' do
+        expected = [:root, :child_start, :filter,:dot, 'one', :equal, :number, :child_end, :eof]
+        expect(described_class.lex("$[?\n.one == 1]")).to eq(expected)
+      end
     end
 
     context 'when tokenizing index selector' do
