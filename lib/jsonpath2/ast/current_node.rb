@@ -37,6 +37,12 @@ module JsonPath2
         end
       end
 
+      # True if this is a bare current node operator, without a following expression
+      # @return [Boolean]
+      def empty?
+        @value.nil?
+      end
+
       # @param level [Integer]
       # @return [Array]
       def tree(level)

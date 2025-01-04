@@ -161,7 +161,7 @@ module JsonPath2
       results
     end
 
-    # Return the set of values from the input which for which the filter is true
+    # Return the set of values from the input for which the filter is true
     # @param selector [AST::FilterSelector]
     # @param input [Hash, Array]
     # @return [nil, Array] list of matched values, or nil if no matched values
@@ -170,6 +170,11 @@ module JsonPath2
       return nil unless [Array, Hash].include?(input.class)
 
       values = input.is_a?(Array) ? input : input.values
+
+      # Bare current_node operator: just do existence check. Nil values are retained.
+      return values if selector.value.is_a?(AST::CurrentNode) && selector.value&.empty?
+
+      # Evaluate filter expressions, discard values with non-truthy results
       results = values.select { |value| truthy? interpret_node(selector.value, value) }
       results.empty? ? nil : results
     end

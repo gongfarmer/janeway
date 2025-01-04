@@ -49,6 +49,11 @@ module JsonPath2
         )
       end
 
+      it 'does existence check using only the current_node operator' do
+        input = {"a"=>1, "b"=>nil}
+        expect(described_class.interpret(input, '$[?@]')).to match_array([1, nil])
+      end
+
       it 'does non-singular queries' do
         result = described_class.interpret(input, '$[?@.*]')
         expect(result).to eq(
