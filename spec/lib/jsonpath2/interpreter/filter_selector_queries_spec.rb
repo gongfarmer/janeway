@@ -137,6 +137,12 @@ module JsonPath2
         result = described_class.interpret(input, '$[?@.a==false]')
         expect(result).to eq([{"a"=>false, "d"=>"e"}])
       end
+
+      it 'uses correct precedence with logical and comparison operators' do
+        input = [{"d"=>"e"}, {"a"=>"c", "d"=>"f"}]
+        result = described_class.interpret(input, '$[?@.a&&@.a!=null]')
+        expect(result).to eq([{"a"=>"c", "d"=>"f"}])
+      end
     end
   end
 end

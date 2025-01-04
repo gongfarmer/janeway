@@ -345,10 +345,16 @@ module JsonPath2
     end
 
     def interpret_and(lhs, rhs)
+      # :none is false within a logical operator
+      lhs = lhs == :none ? false : lhs
+      rhs = rhs == :none ? false : rhs
       lhs && rhs
     end
 
     def interpret_or(lhs, rhs)
+      # :none is false within a logical operator
+      lhs = lhs == :none ? false : lhs
+      rhs = rhs == :none ? false : rhs
       lhs || rhs
     end
 
