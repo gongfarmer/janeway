@@ -32,7 +32,11 @@ module JsonPath2
       @query = ast
 
       result = interpret_nodes(@query.expressions)
-      result.is_a?(Array) ? result : [result].compact
+      case result
+      when Array then result.reject { _1 == :none }
+      when :none then []
+      else [result].compact
+      end
     end
 
     private
@@ -62,14 +66,16 @@ module JsonPath2
     def interpret_selector_list(selector_list, input)
       # This is a list of multiple selectors.
       # Evaluate each one against the same input, and combine the results.
-      results = selector_list.map { |selector| send(:"interpret_#{selector.type}", selector, input) }
+      results = selector_list
+        .map { |selector| send(:"interpret_#{selector.type}", selector, input) }
+        .reject { _1 == [] }
 
       # combine results
       result =
         if selector_list.size > 1
           results.flatten(1).compact
         else
-          results.first
+          results.empty? ? :none : results.first
         end
 
       # Send result to the next node in the AST, if any
@@ -79,14 +85,21 @@ module JsonPath2
       send(:"interpret_#{child.type}", child, result)
     end
 
-    # Filter the input by returning the key that has the given name
+    # Filter the input by returning the key that has the given name.
+    #
+    # Must differentiate between a null value of a key that exists (nil)
+    # and a key that does not exist (:none)
+    #
     # @param selector [NameSelector]
     def interpret_name_selector(selector, input)
-      return nil unless input.is_a?(Hash)
+      return :none unless input.is_a?(Hash)
 
-      node = input.respond_to?(:[]) ? input[selector.name] : nil
-
-      return nil if node.nil?
+      # Determine whether key exists, get key value which may be nil
+      if input.key?(selector.name)
+        node = input[selector.name] # possibly nil
+      else
+        return :none
+      end
       return node unless selector.child
 
       # Interpret child using output of this name selector, and return result
@@ -113,6 +126,7 @@ module JsonPath2
         case input
         when Array then input
         when Hash then input.values
+        else return :none # early exit -- no need to interpret child for this result
         end
       return result unless selector.child
 
@@ -167,18 +181,29 @@ module JsonPath2
     # @return [nil, Array] list of matched values, or nil if no matched values
     def interpret_filter_selector(selector, input)
       # @see IETF 2.3.5.2, filter selector selects nothing when applied to non-composite types.
-      return nil unless [Array, Hash].include?(input.class)
+      return :none unless [Array, Hash].include?(input.class)
 
       values = input.is_a?(Array) ? input : input.values
 
-      # Bare current_node operator: just do existence check. Nil values are retained.
-      return values if selector.value.is_a?(AST::CurrentNode) && selector.value&.empty?
+      # Current_node operator: just do existence check. Nil values are retained.
+      if selector.value.is_a?(AST::CurrentNode)
+        #return values.map { |value| interpret_node(selector.value, value) }
+        return values.select do |value|
+          result = interpret_node(selector.value, value)
+          result != :none
+        end
+      end
 
-      # Evaluate filter expressions, discard values with non-truthy results
-      results = values.select { |value| truthy? interpret_node(selector.value, value) }
+      # Comparison operator: discard values with non-truthy result
+      #results = values.select { |value| truthy? interpret_node(selector.value, value) }
+      results = values.select do |value|
+        result = interpret_node(selector.value, value)
+        result != :none && result != false
+      end
       results.empty? ? nil : results
     end
 
+    # FIXME: no longer used - delete?
     # True if the value is "truthy" in the context of a filter selector.
     #
     # Ruby normally defines truthy as anything besides nil or false.

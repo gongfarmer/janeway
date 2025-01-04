@@ -54,6 +54,12 @@ module JsonPath2
         expect(described_class.interpret(input, '$[?@]')).to match_array([1, nil])
       end
 
+      it 'tests for null values and returns the matches' do
+        input = [{"a"=>nil, "d"=>"e"}, {"b"=>"c", "d"=>"f"}]
+        expected = [{"a"=>nil, "d"=>"e"}]
+        expect(described_class.interpret(input, '$[?@.a]')).to match_array(expected)
+      end
+
       it 'does non-singular queries' do
         result = described_class.interpret(input, '$[?@.*]')
         expect(result).to eq(
