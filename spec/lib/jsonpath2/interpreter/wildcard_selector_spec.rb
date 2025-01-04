@@ -21,6 +21,12 @@ module JsonPath2
       expect(described_class.interpret(input, '$[*]')).to eq(expected)
     end
 
+    it 'uses shorthand notation' do
+      input = { 'a' => 'A', 'b' => 'B' }
+      expected = ["A", "B"]
+      expect(described_class.interpret(input, '$.*')).to match_array(expected)
+    end
+
     it 'selects values when applied to a hash' do
       expected = [1, 2] # order is not deterministic
       expect(described_class.interpret(input, '$.o[*]')).to match_array(expected)

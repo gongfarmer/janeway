@@ -52,5 +52,11 @@ module JsonPath2
       ast = described_class.parse('$[?@.a==1e2]')
       expect(ast.to_s).to eq('$[?(@.a == 100.0)]')
     end
+
+    it 'raises error on trailing comma' do
+      expect {
+        described_class.parse('$[0,]')
+      }.to raise_error(Parser::Error, 'Comma must be followed by another expression in filter selector')
+    end
   end
 end

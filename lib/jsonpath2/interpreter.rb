@@ -41,7 +41,7 @@ module JsonPath2
     def interpret_root(node, _input)
       # Ignore the given _input from the current interpretation state.
       # Root node starts from the top level regardless of current state.
-      return @input unless node.value
+      return [@input] unless node.value
 
       # If there is a selector list that modifies this node, then apply it
       case node.value

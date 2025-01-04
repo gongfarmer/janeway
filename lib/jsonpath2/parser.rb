@@ -6,6 +6,8 @@ require_relative 'functions'
 module JsonPath2
   # Transform a list of tokens into an Abstract Syntax Tree
   class Parser
+    class Error < JsonPathError; end
+
     attr_accessor :tokens, :ast, :errors
 
     include Functions
@@ -364,6 +366,11 @@ module JsonPath2
 
         # consume union operator and move on to next selector
         consume # ","
+
+        # not allowed to have comma with nothing after it
+        if current.type == :child_end
+          raise Error.new("Comma must be followed by another expression in filter selector")
+        end
       end
 
       # Do not consume the final ']', the top-level parsing loop will eat that
