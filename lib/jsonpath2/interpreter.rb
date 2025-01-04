@@ -228,9 +228,11 @@ module JsonPath2
         results.concat(root.map { |elt| visit(elt, &action) })
       when Hash
         results.concat(root.values.map { |value| visit(value, &action) })
+      else
+        root
       end
 
-      results.flatten.compact
+      results.flatten(1).compact
     end
 
     def interpret_nodes(nodes)
