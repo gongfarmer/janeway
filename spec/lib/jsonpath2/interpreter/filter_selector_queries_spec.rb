@@ -125,6 +125,12 @@ module JsonPath2
           ]
         )
       end
+
+      it 'queries for null' do
+        input = [{"a"=>nil, "d"=>"e"}, {"a"=>"c", "d"=>"f"}]
+        result = described_class.interpret(input, '$[?@.a==null]')
+        expect(result).to eq([{"a"=>nil, "d"=>"e"}])
+      end
     end
   end
 end

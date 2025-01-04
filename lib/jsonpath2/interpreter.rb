@@ -404,7 +404,7 @@ module JsonPath2
 
     # @param null [AST::Null]
     def interpret_null(_null, _input)
-      :null
+      nil
     end
 
     def interpret_unary_operator(op, input)
