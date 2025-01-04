@@ -214,12 +214,71 @@ module JsonPath2
       end
     end
 
-    # Read unicode escape sequence consisting of 4 hex digits.
-    # Both lower and uppercase are allowed.
-    # The `\u` prefix has already been consumed
+
+    # Consume a unicode escape that matches this ABNF grammar:
+    # https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.1.1-2
+    #
+    #     hexchar             = non-surrogate / (high-surrogate "\" %x75 low-surrogate)
+    #     non-surrogate       = ((DIGIT / "A"/"B"/"C" / "E"/"F") 3HEXDIG) /
+    #                           ("D" %x30-37 2HEXDIG )
+    #     high-surrogate      = "D" ("8"/"9"/"A"/"B") 2HEXDIG
+    #     low-surrogate       = "D" ("C"/"D"/"E"/"F") 2HEXDIG
+    #
+    #     HEXDIG              = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+    #
+    # Both lower and uppercase are allowed. The grammar does now show this here 
+    # but clarifies that in a following note.
+    #
+    # The preceding `\u` prefix has already been consumed.
     #
     # @return [String] single character (possibly multi-byte)
     def consume_unicode_escape_sequence
+      # return a non-surrogate sequence
+      hex_str = consume_four_hex_digits
+      return hex_str.hex.chr('UTF-8') unless hex_str.upcase.start_with?('D')
+
+      # hex string starts with D, but is still non-surrogate
+      if (0..7).cover?(hex_str[1].to_i)
+        return hex_str.hex.chr('UTF-8')
+      end
+
+      # hex value is in the high-surrogate or low-surrogate range.
+
+      if high_surrogate?(hex_str)
+        # valid, as long as it is followed by \u low-surrogate
+        prefix = [consume, consume].join
+        hex_str2 = consume_four_hex_digits
+        if prefix == '\\u' && low_surrogate?(hex_str2)
+          # this is a high-surrogate followed by a low-surrogate, which is allowed.
+          # this sequence is invalid in the UTF-8 encoding and must be represented as UTF-16
+          return [hex_str.hex, hex_str2.hex].pack('S>*').force_encoding('UTF-16')
+        else
+          raise "invalid unicode escape sequence: \\u#{hex_str2.join}"
+        end
+      end
+      raise "invalid unicode escape sequence: \\u#{hex_str}"
+    end
+
+    # Return true if the given 4 char hex string is "high-surrogate"
+    def high_surrogate?(hex_digits)
+      return false unless hex_digits.size == 4
+
+      %w[D8 D9 DA DB].include?(hex_digits[0..1].upcase)
+    end
+
+    # Return true if the given 4 char hex string is "low-surrogate"
+    def low_surrogate?(hex_digits)
+      return false unless hex_digits.size == 4
+
+      %w[DC DD DE DF].include?(hex_digits[0..1].upcase)
+    end
+
+    # Consume and return 4 hex digits from the source. Either upper or lower case is accepted.
+    # No judgement is made here on whether the resulting sequence is valid,
+    # as long as it is 4 hex digits.
+    #
+    # @return [String]
+    def consume_four_hex_digits
       hex_digits = []
       4.times do
         hex_digits << consume
@@ -232,8 +291,7 @@ module JsonPath2
         end
       end
       raise "incomplete unicode escape sequence: \\u#{hex_digits.join}" if hex_digits.size < 4
-
-      hex_digits.join.hex.chr('UTF-8')
+      hex_digits.join
     end
 
     # Consume a numeric string. May be an integer, fractional, or exponent.

@@ -76,6 +76,22 @@ module JsonPath2
         expect(described_class.lex('$.["\u263a"]')).to eq([:root, :dot, :child_start, '☺', :child_end, :eof])
       end
 
+      it 'accepts unicode escape with surrogate pair' do
+        tokens = described_class.lex("$[\"\\uD834\\uDD1E\"]")
+        expect(tokens[2]).to have_attributes(
+          type: :string,
+          literal: [0xD834, 0xDD1E].pack('S>*').force_encoding('UTF-16')
+        )
+      end
+
+      it 'accepts unicode escape that starts with D but is still non-surrogate' do
+        tokens = described_class.lex("$[\"\\uD7FF\"]")
+        expect(tokens[2]).to have_attributes(
+          type: :string,
+          literal: "\uD7FF",
+        )
+      end
+
       it 'tokenizes name starting with extended unicode' do
         expect(described_class.lex('$.☺☺abc').map(&:type)).to eq(%I[root dot identifier eof])
       end

@@ -32,6 +32,8 @@ module JsonPath2
             @value
           end
         "#{name_str}#{@child}"
+      rescue Encoding::CompatibilityError=> e
+        "#{@value}#{@child}"
       end
 
       # put surrounding quotes on a string

@@ -360,7 +360,6 @@ module JsonPath2
         selector = parse_selector
         selector_list << selector if selector # nil selector means empty brackets
 
-        log "parsed selector #{selector_list.last}, current=#{current}"
         break unless current.type == :union # no more selectors in these parentheses
 
         # consume union operator and move on to next selector

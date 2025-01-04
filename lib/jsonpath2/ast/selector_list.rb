@@ -43,6 +43,8 @@ module JsonPath2
 
       def to_s
         format('[%s]%s', @value.map(&:to_s).join(', '), @child)
+      rescue Encoding::CompatibilityError=> e
+        "[#{@value}]#{@child}"
       end
 
       # @param level [Integer]
