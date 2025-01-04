@@ -415,6 +415,7 @@ module JsonPath2
 
     def interpret_unary_operator(op, input)
       result = send(:"interpret_#{op.operand.type}", op.operand, input)
+      result = false if result == :none
       case op.operator
       when :not then !result
       when :minus then 0 - result

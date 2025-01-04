@@ -143,6 +143,42 @@ module JsonPath2
         result = described_class.interpret(input, '$[?@.a&&@.a!=null]')
         expect(result).to eq([{"a"=>"c", "d"=>"f"}])
       end
+
+      # This is test "filter, exists and exists, data false"
+      # from the compliance test suite.
+      #
+      # FIXME: makes no sense!
+      # I get these 3 "AND" comparisons (lhs / rhs):
+      #   interpret_binary got false, false
+      #   interpret_binary got :none, false
+      #   interpret_binary got :none, :none
+      #
+      # I think the meaning is that because there is no comparision operator,
+      # this should just be an "existence check" on both sides (in which "false" is not :none so it evaluates to true.)
+      #
+      # BUT the spec has this example: $.o[?@.u || @.x]
+      # which it describes as "Object value logical OR".
+      #
+      # So which is it, does a logical operator compare values or existence?
+      xit 'does existence checks on either side of a logical operator' do
+        input = [{"a"=>false, "b"=>false}, {"b"=>false}, {"c"=>false}]
+        result = described_class.interpret(input, '$[?@.a&&@.b]')
+        expect(result).to eq([{"a"=>false, "b"=>false}])
+      end
+
+      # CTS: "filter, not exists"
+      it 'applies not operator to existence check' do
+        input = [{"a"=>"a", "d"=>"e"}, {"d"=>"f"}, {"a"=>"d", "d"=>"f"}]
+        result = described_class.interpret(input, '$[?!@.a]')
+        expect(result).to eq([{"d"=>"f"}])
+      end
+
+      # CTS: "filter, not exists, data null"
+      it 'applies not operator to existence check' do
+        input = [{"a"=>nil, "d"=>"e"}, {"d"=>"f"}, {"a"=>"d", "d"=>"f"}]
+        result = described_class.interpret(input, '$[?!@.a]')
+        expect(result).to eq([{"d"=>"f"}])
+      end
     end
   end
 end
