@@ -38,7 +38,7 @@ module JsonPath2
 
     # All jsonpath function parameters are one of these accepted types.
     # Parse the function parameter and return the result.
-    # @return [String, AST::CurrentNode, AST::Root]
+    # @return [String, AST::CurrentNode, AST::RootNode]
     def parse_function_parameter
       result =
         case current.type

@@ -41,10 +41,10 @@ module JsonPath2
 
     private
 
-    # Interpret AST::Root, which returns the input
-    def interpret_root(node, _input)
+    # Interpret AST::RootNode, which returns the input
+    def interpret_root_node(node, _input)
       # Ignore the given _input from the current interpretation state.
-      # Root node starts from the top level regardless of current state.
+      # RootNode starts from the top level regardless of current state.
       return [@input] unless node.value
 
       # If there is a selector list that modifies this node, then apply it
@@ -423,6 +423,16 @@ module JsonPath2
       end
     end
 
+    # Interpret unary operator not
+    def interpret_not(input)
+      case input
+      when :none then true
+      when nil then true
+      else
+        !input
+      end
+    end
+
     # @param function [AST::Function]
     # @param input [Hash, Array]
     def interpret_function(function, input)
@@ -443,7 +453,7 @@ module JsonPath2
       parameters.map do |parameter|
         case parameter
         when AST::CurrentNode then interpret_current_node(parameter, input)
-        when AST::Root then interpret_root(parameter, input)
+        when AST::RootNode then interpret_root_node(parameter, input)
         when AST::StringType then interpret_string_type(parameter, input)
         else
           # invalid parameter type. Function must accept it and return Nothing result

@@ -13,7 +13,7 @@ module JsonPath2
     # @example:
     #   $(? $.key1 == $.key2 )
     #
-    class Root < JsonPath2::AST::Expression
+    class RootNode < JsonPath2::AST::Expression
       def ==(other)
         self.class == other.class
       end

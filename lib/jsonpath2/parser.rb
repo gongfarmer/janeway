@@ -315,7 +315,7 @@ module JsonPath2
         when :descendants then parse_descendant_segment
         end
 
-      AST::Root.new(selector)
+      AST::RootNode.new(selector)
     end
 
     # Parse the current node operator "@", and optionally a selector which is applied to it
