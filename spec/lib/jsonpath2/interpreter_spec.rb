@@ -11,9 +11,13 @@ module JsonPath2
       expect(described_class.interpret(input, '$')).to eq([input])
     end
 
-    it 'returns nothing for empty brackets' do
+    # Compliance test suite requires this to cause an error
+    # JsonPath comparison site suggests not to do that
+    it 'raises error for empty selector list' do
       input = { 'a' => 1 }
-      expect(described_class.interpret(input, '$[]')).to eq([])
+      expect {
+        described_class.interpret(input, '$[]')
+      }.to raise_error(JsonPath2::Parser::Error, 'Empty selector list')
     end
 
     it 'interprets dot notation with wildcard selector' do

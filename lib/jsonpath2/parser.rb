@@ -244,7 +244,7 @@ module JsonPath2
       #
       # Normally the parser makes the selector after S be a child of S.
       # However that is not the desired behavior for DescendantSelector.
-      # Consier '$.a..b[1]'. The first element must be taken from the set of all 'b' keys.
+      # Consider '$.a..b[1]'. The first element must be taken from the set of all 'b' keys.
       # If the SelectorList was a child of the `b` NameSelector, then it would be taking
       # index 1 from every 'b' found rather than from the set of all 'b's.
       #
@@ -372,6 +372,7 @@ module JsonPath2
           raise Error.new("Comma must be followed by another expression in filter selector")
         end
       end
+      raise Error.new('Empty selector list') if selector_list.empty?
 
       # Do not consume the final ']', the top-level parsing loop will eat that
       unless current.type == :child_end
