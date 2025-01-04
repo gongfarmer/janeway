@@ -126,10 +126,16 @@ module JsonPath2
         )
       end
 
-      it 'queries for null' do
+      it 'does comparison of null with key that has null value' do
         input = [{"a"=>nil, "d"=>"e"}, {"a"=>"c", "d"=>"f"}]
         result = described_class.interpret(input, '$[?@.a==null]')
         expect(result).to eq([{"a"=>nil, "d"=>"e"}])
+      end
+
+      it 'does comparison of false with key that has false value' do
+        input = [{"a"=>false, "d"=>"e"}, {"a"=>"c", "d"=>"f"}]
+        result = described_class.interpret(input, '$[?@.a==false]')
+        expect(result).to eq([{"a"=>false, "d"=>"e"}])
       end
     end
   end

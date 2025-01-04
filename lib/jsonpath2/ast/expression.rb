@@ -12,7 +12,7 @@ module JsonPath2
       def initialize(val = nil)
         # don't set the instance variable if unused, because it makes the
         # "#inspect" output cleaner in rspec test failures
-        @value = val if val
+        @value = val unless val.nil?  # false must be stored though!
       end
 
       def ==(other)
