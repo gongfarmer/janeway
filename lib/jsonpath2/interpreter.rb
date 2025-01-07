@@ -663,6 +663,17 @@ module JsonPath2
     # Singular queries (see RFC) produce a node list containing one value.
     # Return the value.
     #
+    # Implements this part of the RFC:
+    #   > When the declared type of the parameter is ValueType and
+    #     the argument is one of the following:
+    #   > ...
+    #   >
+    #   > A singular query. In this case:
+    #   > * If the query results in a nodelist consisting of a single node,
+    #       the argument is the value of the node.
+    #   > * If the query results in an empty nodelist, the argument is
+    #       the special result Nothing.
+    #
     # @param input [Object] usually an array - sometimes a basic type like String, Numeric
     # @return [Object] basic type -- string or number
     def deconstruct(input)
@@ -670,6 +681,7 @@ module JsonPath2
       return input unless input.is_a?(Array)
 
       if input.size == 1
+        # FIXME: what if it was a size 1 array that was intended to be a node not a node list? How to detect this?
         input.first
       elsif input.empty?
         NOTHING

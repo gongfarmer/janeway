@@ -216,7 +216,6 @@ module JsonPath2
       end
     end
 
-
     # Consume a unicode escape that matches this ABNF grammar:
     # https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.1.1-2
     #
@@ -251,14 +250,38 @@ module JsonPath2
         prefix = [consume, consume].join
         hex_str2 = consume_four_hex_digits
         if prefix == '\\u' && low_surrogate?(hex_str2)
-          # this is a high-surrogate followed by a low-surrogate, which is allowed.
-          # this sequence is invalid in the UTF-8 encoding and must be represented as UTF-16
-          return [hex_str.hex, hex_str2.hex].pack('S>*').force_encoding('UTF-16')
+          # This is a high-surrogate followed by a low-surrogate, which is valid.
+          # This is the UTF-16 method of representing certain high unicode codepoints.
+          # However this specific byte sequence is not a valid way to represent that same
+          # unicode character in the UTF-8 encoding.
+          # The surrogate pair must be converted into the correct UTF-8 code point.
+          # This returns a UTF-8 string containing a single unicode character.
+          return convert_surrogate_pair_to_codepoint(hex_str, hex_str2)
         else
+          # Not allowed to have high surrogate that is not followed by low surrogate
           raise "invalid unicode escape sequence: \\u#{hex_str2.join}"
         end
       end
+      # Not allowed to have low surrogate that is not preceded by high surrogate
       raise "invalid unicode escape sequence: \\u#{hex_str}"
+    end
+
+    # Convert a valid UTF-16 surrogate pair into a UTF-8 string containing a single code point.
+    #
+    # @param high_surrogate_hex [String] string of hex digits, eg. "D83D"
+    # @param low_surrogate_hex [String] string of hex digits, eg. "DE09"
+    # @return [String] UTF-8 string containing a single multi-byte unicode character, eg. "😉"
+    def convert_surrogate_pair_to_codepoint(high_surrogate_hex, low_surrogate_hex)
+      [high_surrogate_hex, low_surrogate_hex].each do |hex_str|
+        raise ArgumentError, "expect 4 hex digits, got #{hex_string.inspect}" unless hex_str.size == 4
+      end
+
+      # Calculate the code point from the surrogate pair values
+      # algorithm from https://russellcottrell.com/greek/utilities/SurrogatePairCalculator.htm
+      high = high_surrogate_hex.hex
+      low = low_surrogate_hex.hex
+      codepoint = ((high - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000
+      [codepoint].pack('U')
     end
 
     # Return true if the given 4 char hex string is "high-surrogate"

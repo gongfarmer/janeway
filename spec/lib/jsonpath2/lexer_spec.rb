@@ -76,11 +76,13 @@ module JsonPath2
         expect(described_class.lex('$.["\u263a"]')).to eq([:root, :dot, :child_start, '☺', :child_end, :eof])
       end
 
-      it 'accepts unicode escape with surrogate pair' do
-        tokens = described_class.lex("$[\"\\uD834\\uDD1E\"]")
-        expect(tokens[2]).to have_attributes(
+      it 'converts UTF-16 surrogate pair to UTF-8' do
+        tokens = described_class.lex("$[\"\\uD83D\\uDE09\"]")
+        token = tokens[2]
+        expect(token.literal.encoding).to be(Encoding::UTF_8)
+        expect(token).to have_attributes(
           type: :string,
-          literal: [0xD834, 0xDD1E].pack('S>*').force_encoding('UTF-16')
+          literal: '😉'
         )
       end
 
