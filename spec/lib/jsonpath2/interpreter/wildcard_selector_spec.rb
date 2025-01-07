@@ -23,7 +23,7 @@ module JsonPath2
 
     it 'uses shorthand notation' do
       input = { 'a' => 'A', 'b' => 'B' }
-      expected = ["A", "B"]
+      expected = %w[A B]
       expect(described_class.interpret(input, '$.*')).to match_array(expected)
     end
 

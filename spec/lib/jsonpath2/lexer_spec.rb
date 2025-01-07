@@ -77,7 +77,7 @@ module JsonPath2
       end
 
       it 'converts UTF-16 surrogate pair to UTF-8' do
-        tokens = described_class.lex("$[\"\\uD83D\\uDE09\"]")
+        tokens = described_class.lex('$["\\uD83D\\uDE09"]')
         token = tokens[2]
         expect(token.literal.encoding).to be(Encoding::UTF_8)
         expect(token).to have_attributes(
@@ -87,10 +87,10 @@ module JsonPath2
       end
 
       it 'accepts unicode escape that starts with D but is still non-surrogate' do
-        tokens = described_class.lex("$[\"\\uD7FF\"]")
+        tokens = described_class.lex('$["\\uD7FF"]')
         expect(tokens[2]).to have_attributes(
           type: :string,
-          literal: "\uD7FF",
+          literal: "\uD7FF"
         )
       end
 
@@ -99,7 +99,7 @@ module JsonPath2
       end
 
       it 'allows newline after ?' do
-        expected = [:root, :child_start, :filter,:dot, 'one', :equal, :number, :child_end, :eof]
+        expected = [:root, :child_start, :filter, :dot, 'one', :equal, :number, :child_end, :eof]
         expect(described_class.lex("$[?\n.one == 1]")).to eq(expected)
       end
     end
@@ -133,7 +133,7 @@ module JsonPath2
     context 'when tokenizing filter selector' do
       it 'tokenizes equality operator, with brackets' do
         expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :equal, :dot, 'two', :group_end,
-                    :child_end, :eof]
+                    :child_end, :eof,]
         expect(described_class.lex('$[?(.one == .two)]')).to eq(expected)
       end
 
@@ -144,7 +144,7 @@ module JsonPath2
 
       it 'tokenizes non-equality operator, with brackets' do
         expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :not_equal, :dot, 'two', :group_end,
-                    :child_end, :eof]
+                    :child_end, :eof,]
         expect(described_class.lex('$[?(.one != .two)]')).to eq(expected)
       end
 
@@ -407,7 +407,7 @@ module JsonPath2
         expect(tokens[2]).to have_attributes(
           type: :string,
           lexeme: '"\\/"', # lexeme retains unnecessary escape
-          literal: "/", # literal discards unnecessary escape
+          literal: '/' # literal discards unnecessary escape
         )
       end
 
@@ -416,20 +416,20 @@ module JsonPath2
         expect(tokens[2]).to have_attributes(
           type: :string,
           lexeme: '"\""',
-          literal: '"',
+          literal: '"'
         )
       end
 
       it 'raises error when given a char that is not allowed' do
-        expect {
+        expect do
           described_class.lex("$[\"\0\"]")
-        }.to raise_error(Lexer::Error, "invalid character \"\\u0000\"")
+        end.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
       end
 
       it 'raises error when given an escaped char that is not allowed' do
-        expect {
+        expect do
           described_class.lex("$[\"\\\0\"]")
-        }.to raise_error(Lexer::Error, "invalid character \"\\u0000\"")
+        end.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
       end
     end
   end

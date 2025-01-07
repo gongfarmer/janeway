@@ -102,7 +102,7 @@ module JsonPath2
           input =
             {
               'regex' => 'b.?b',
-              'values' => ['abc', 'bcd', 'bab', 'bba', 'bbab', 'b', true, [], {}]
+              'values' => ['abc', 'bcd', 'bab', 'bba', 'bbab', 'b', true, [], {}],
             }
           expected = ['bab']
           expect(described_class.interpret(input, query)).to eq(expected)
@@ -130,12 +130,12 @@ module JsonPath2
           {
             'c' => 'cd',
             'values' => [
-              {'a' => 'ab'},
-              {'c' => 'd'},
-              {'a' => nil}
-            ]
+              { 'a' => 'ab' },
+              { 'c' => 'd' },
+              { 'a' => nil },
+            ],
           }
-        expected = [{'c' => 'd'}, {'a' => nil}]
+        expected = [{ 'c' => 'd' }, { 'a' => nil }]
         expect(described_class.interpret(input, query)).to eq(expected)
       end
     end

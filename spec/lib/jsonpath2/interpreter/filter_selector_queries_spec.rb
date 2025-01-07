@@ -53,13 +53,13 @@ module JsonPath2
       end
 
       it 'does existence check using only the current_node operator' do
-        input = {"a"=>1, "b"=>nil}
-        expect(described_class.interpret(input, '$[?@]')).to match_array([1, nil])
+        input = { 'a' => 1, 'b' => nil }
+        expect(described_class.interpret(input, '$[?@]')).to contain_exactly(1, nil)
       end
 
       it 'tests for null values and returns the matches' do
-        input = [{"a"=>nil, "d"=>"e"}, {"b"=>"c", "d"=>"f"}]
-        expected = [{"a"=>nil, "d"=>"e"}]
+        input = [{ 'a' => nil, 'd' => 'e' }, { 'b' => 'c', 'd' => 'f' }]
+        expected = [{ 'a' => nil, 'd' => 'e' }]
         expect(described_class.interpret(input, '$[?@.a]')).to match_array(expected)
       end
 
@@ -88,12 +88,12 @@ module JsonPath2
 
       it 'supports union of two filter selectors' do
         result = described_class.interpret(input, '$.o[?@<3, ?@<3]')
-        expect(result).to match_array([1, 2, 2, 1]) # order is undefined
+        expect(result).to contain_exactly(1, 2, 2, 1) # order is undefined
       end
 
       it 'supports multiple union operators' do
         result = described_class.interpret(input, '$.o[?@<3, ?@<3, ?@<3]')
-        expect(result).to match_array([1, 2, 1, 2, 1, 2]) # order is undefined
+        expect(result).to contain_exactly(1, 2, 1, 2, 1, 2) # order is undefined
       end
 
       it 'supports logical OR of comparisons' do
@@ -114,7 +114,7 @@ module JsonPath2
       # RFC "Comparison of queries with no values"
       it 'supports comparison that references non-existent value' do
         result = described_class.interpret(input, '$.a[?@.b == $.x]')
-        expect(result).to eq([3,5,1,2,4,6]) # order is undefined
+        expect(result).to eq([3, 5, 1, 2, 4, 6]) # order is undefined
       end
 
       it 'compares primitive and structured values' do
@@ -131,44 +131,43 @@ module JsonPath2
       end
 
       it 'does comparison of null with key that has null value' do
-        input = [{"a"=>nil, "d"=>"e"}, {"a"=>"c", "d"=>"f"}]
+        input = [{ 'a' => nil, 'd' => 'e' }, { 'a' => 'c', 'd' => 'f' }]
         result = described_class.interpret(input, '$[?@.a==null]')
-        expect(result).to eq([{"a"=>nil, "d"=>"e"}])
+        expect(result).to eq([{ 'a' => nil, 'd' => 'e' }])
       end
 
       it 'does comparison of false with key that has false value' do
-        input = [{"a"=>false, "d"=>"e"}, {"a"=>"c", "d"=>"f"}]
+        input = [{ 'a' => false, 'd' => 'e' }, { 'a' => 'c', 'd' => 'f' }]
         result = described_class.interpret(input, '$[?@.a==false]')
-        expect(result).to eq([{"a"=>false, "d"=>"e"}])
+        expect(result).to eq([{ 'a' => false, 'd' => 'e' }])
       end
 
       # CTS "filter, exists and not-equals null, absent from data"
       it 'uses correct precedence with logical and comparison operators' do
-        input = [{"d"=>"e"}, {"a"=>"c", "d"=>"f"}]
+        input = [{ 'd' => 'e' }, { 'a' => 'c', 'd' => 'f' }]
         result = described_class.interpret(input, '$[?@.a&&@.a!=null]')
-        expect(result).to eq([{"a"=>"c", "d"=>"f"}])
+        expect(result).to eq([{ 'a' => 'c', 'd' => 'f' }])
       end
 
       # CTS "filter, exists and exists, data false"
       it 'does existence checks on either side of a logical operator' do
-        input = [{"a"=>false, "b"=>false}, {"b"=>false}, {"c"=>false}]
-        input = [{"a"=>false, "b"=>false}]
+        input = [{ 'a' => false, 'b' => false }]
         result = described_class.interpret(input, '$[?@.a&&@.b]')
-        expect(result).to eq([{"a"=>false, "b"=>false}])
+        expect(result).to eq([{ 'a' => false, 'b' => false }])
       end
 
       # CTS "filter, not exists"
       it 'applies not operator to existence check' do
-        input = [{"a"=>"a", "d"=>"e"}, {"d"=>"f"}, {"a"=>"d", "d"=>"f"}]
+        input = [{ 'a' => 'a', 'd' => 'e' }, { 'd' => 'f' }, { 'a' => 'd', 'd' => 'f' }]
         result = described_class.interpret(input, '$[?!@.a]')
-        expect(result).to eq([{"d"=>"f"}])
+        expect(result).to eq([{ 'd' => 'f' }])
       end
 
       # CTS: "filter, not exists, data null"
       it 'applies not operator to existence check on null value' do
-        input = [{"a"=>nil, "d"=>"e"}, {"d"=>"f"}, {"a"=>"d", "d"=>"f"}]
+        input = [{ 'a' => nil, 'd' => 'e' }, { 'd' => 'f' }, { 'a' => 'd', 'd' => 'f' }]
         result = described_class.interpret(input, '$[?!@.a]')
-        expect(result).to eq([{"d"=>"f"}])
+        expect(result).to eq([{ 'd' => 'f' }])
       end
     end
   end

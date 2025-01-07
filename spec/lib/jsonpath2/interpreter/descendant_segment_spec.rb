@@ -13,17 +13,17 @@ module JsonPath2
           [
             [
               [
-                1
-              ]
+                1,
+              ],
             ],
             [
-              2
+              2,
             ],
             [
-              1
+              1,
             ],
             1,
-            2
+            2,
           ]
         expect(described_class.interpret(input, '$..[*]')).to match_array(expected)
       end

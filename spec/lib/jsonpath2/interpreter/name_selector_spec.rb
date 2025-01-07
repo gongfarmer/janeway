@@ -39,7 +39,7 @@ module JsonPath2
       end
 
       it 'interprets query with unicode surrogate pair' do
-        query = "$[\"\\uD834\\uDD1E\"]"
+        query = '$["\\uD834\\uDD1E"]'
         expect(described_class.interpret({}, query)).to eq([])
       end
     end
