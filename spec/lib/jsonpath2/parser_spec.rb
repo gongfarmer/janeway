@@ -54,11 +54,10 @@ module JsonPath2
       end.to raise_error(Parser::Error, 'Comma must be followed by another expression in filter selector')
     end
 
-    # FIXME: try enabling this later
-    xit 'parses child segment that contains a single name selector as just a name selector' do
+    it 'parses child segment that contains a single name selector as just a name selector' do
+      # the point is that there is no AST::ChildSegment here that contains the name selector
       tokens = Lexer.lex('$["abc"]')
       ast = described_class.new(tokens).parse
-      pp ast.expressions
       expect(ast.expressions.first.value).to eq(AST::NameSelector.new('abc'))
     end
   end
