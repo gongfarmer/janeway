@@ -194,7 +194,7 @@ module JsonPath2
     end
 
     # Consume minus operator and apply it to the (expected) number token following it.
-    # Then modify its value.
+    # Don't consume the number token.
     def parse_minus_operator
       log "(#{current})"
       raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :minus
@@ -203,7 +203,7 @@ module JsonPath2
       # Parse number and apply - sign to its literal value
       consume
       parse_number
-      current.literal = 0 - current.literal
+      current.literal *= -1
       current
     end
 
@@ -551,8 +551,19 @@ module JsonPath2
       selector
     end
 
-    # @return [AST::UnaryOperator]
+    # @return [AST::UnaryOperator, AST::Number]
     def parse_unary_operator
+      case current.type
+      when :not then parse_not_operator
+      when :minus
+        parse_minus_operator
+        parse_number
+      else
+        raise "unknown unary operator: #{current.inspect}"
+      end
+    end
+
+    def parse_not_operator
       AST::UnaryOperator.new(current.type).tap do |op|
         consume
         op.operand = parse_expr_recursively(PREFIX_PRECEDENCE)

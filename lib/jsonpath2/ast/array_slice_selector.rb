@@ -56,7 +56,8 @@ module JsonPath2
         arg.literal
       end
 
-      def to_s
+      # ignores the filter: argument, this always needs surrounding brackets
+      def to_s(*)
         str = [@start, @end, @step].map(&:to_s).join(':')
         "[#{str}]"
       end

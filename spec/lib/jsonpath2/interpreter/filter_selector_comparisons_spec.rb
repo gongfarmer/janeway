@@ -160,6 +160,18 @@ module JsonPath2
         result = described_class.interpret(input, '$[? 1 < 5e-2]')
         expect(result).to be_empty
       end
+
+      # CTS: "filter, equals number, negative zero and zero"
+      it 'handles equality test with negative zero' do
+        query = '$[?@.a==-0]'
+        ast = Parser.parse(query)
+        pp ast.expressions
+
+        input = [{ 'a' => 0, 'd' => 'e' }, { 'a' => 0.1, 'd' => 'f' }, { 'a' => '0', 'd' => 'g' }]
+        expected = [{ 'a' => 0, 'd' => 'e' }]
+        result = described_class.interpret(input, query)
+        expect(result).to eq(expected)
+      end
     end
   end
 end
