@@ -12,6 +12,10 @@ module JsonPath2
         @operand = operand
       end
 
+      def to_s
+        "#{@operator} #{operand}"
+      end
+
       def ==(other)
         operator == other&.operator && operand == other&.operand
       end

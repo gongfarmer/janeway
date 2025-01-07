@@ -23,6 +23,7 @@ module JsonPath2
       #   * object - number of members in the object.
       # For any other argument value, the result is the special result Nothing.
       AST::Function.new('length', parameters) do |value|
+        puts "FUNCTION LENGTH(#{value.inspect}"
         if [Array, Hash, String].include?(value.class)
           value.size
         else

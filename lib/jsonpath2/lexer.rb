@@ -38,10 +38,12 @@ module JsonPath2
   KEYWORD = %w[true false null].freeze
   FUNCTIONS = %w[length count match search value].freeze
 
-  # Benchmarking shows it is faster to check membership in a string than an array of char (ruby 3.1.2)
+  # faster to check membership in a string than an array of char (benchmarked ruby 3.1.2)
   ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
   DIGITS = '0123456789'
-  ALPHABET_OR_UNDERSCORE = "#{ALPHABET}_".freeze
+
+  # chars that may be used as the first letter of member-name-shorthand
+  NAME_FIRST = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 
   # Transforms source code into tokens
   class Lexer
@@ -407,7 +409,7 @@ module JsonPath2
     # @param char [String] single character, possibly multi-byte
     # @return [Boolean]
     def name_first_char?(char)
-      ALPHABET_OR_UNDERSCORE.include?(char) \
+      NAME_FIRST.include?(char) \
         || (0x80..0xD7FF).cover?(char.ord) \
         || (0xE000..0x10FFFF).cover?(char.ord)
     end
@@ -417,7 +419,7 @@ module JsonPath2
     # @param char [String] single character, possibly multi-byte
     # @return [Boolean]
     def name_char?(char)
-      ALPHABET_OR_UNDERSCORE.include?(char) \
+      NAME_FIRST.include?(char) \
         || DIGITS.include?(char) \
         || (0x80..0xD7FF).cover?(char.ord) \
         || (0xE000..0x10FFFF).cover?(char.ord)

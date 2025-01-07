@@ -11,8 +11,8 @@ require 'forwardable'
 #    $[name1, [1:10]]
 module JsonPath2
   module AST
-    # Represent a selector, which is an expression that filters nodes from a list based on a predicate.
-    class SelectorList < JsonPath2::AST::Expression
+    # Represent a union of 2 or more selectors.
+    class ChildSegment < JsonPath2::AST::Expression
       extend Forwardable
       def_delegators :@value, :size, :first, :last, :each, :map, :empty?
 
@@ -41,9 +41,13 @@ module JsonPath2
         end
       end
 
-      def to_s
-        format('[%s]%s', @value.map(&:to_s).join(', '), @child)
-      rescue Encoding::CompatibilityError=> e
+      def to_s(with_child: true)
+        if with_child
+          format('[%s]%s', @value.map(&:to_s).join(', '), @child)
+        else
+          format('[%s]', @value.map(&:to_s).join(', '))
+        end
+      rescue Encoding::CompatibilityError
         "[#{@value}]#{@child}"
       end
 

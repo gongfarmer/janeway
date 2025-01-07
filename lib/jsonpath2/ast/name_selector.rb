@@ -11,14 +11,11 @@ module JsonPath2
     # The dot or bracket part is not captured here, only the name
     class NameSelector < JsonPath2::AST::Selector
       alias name value
-      attr_accessor :child
 
       def initialize(value)
         super
         # FIXME: implement name matching requirements here
         raise "Invalid name: #{value.inspect}:#{value.class}" unless value.is_a?(String)
-
-        @child = nil
       end
 
       def to_s

@@ -22,12 +22,10 @@ module JsonPath2
   module AST
     # Represent a selector, which is an expression that filters nodes from a list based on a predicate.
     class Selector < JsonPath2::AST::Expression
+      attr_accessor :child
+
       def ==(other)
         value == other&.value
-      end
-
-      def children
-        [value]
       end
     end
   end

@@ -26,22 +26,20 @@ module JsonPath2
     end
 
     ## from compliance test suite
-    #it 'interprets wildcard shorthand then name shorthand' do
-    #  input = {
-    #    'x' => { 'a' => 'Ax', 'b' => 'Bx' },
-    #    'y' => { 'a' => 'Ay', 'b' => 'By' },
-    #  }
-    #  expected = [['Ax', 'Ay'], ['Ay', 'Ax']]
-    #  expect(described_class.interpret(input, '$.*.a')).to eq(expected)
-    #end
+    it 'interprets wildcard shorthand then name shorthand' do
+      input = {
+        'x' => { 'a' => 'Ax', 'b' => 'Bx' },
+        'y' => { 'a' => 'Ay', 'b' => 'By' },
+      }
+      expect(described_class.interpret(input, '$.*.a')).to eq(['Ax', 'Ay'])
+    end
 
     it 'interprets null' do
-      # FIXME: not sure this expectation is correct, just want it not to crash
       expect(described_class.interpret({}, '$[?@.a==null]')).to eq([])
     end
 
     it 'interprets filter expression with unary operator' do
-      input = {'a' => 'a', 'd' => 'e'}, {'a' =>'b', 'd' => 'f'}, {'a' =>'d', 'd' => 'f'}
+      input = [{'a' => 'a', 'd' => 'e'}, {'a' =>'b', 'd' => 'f'}, {'a' =>'d', 'd' => 'f'}]
       query = "$[?!(@.a=='b')]"
       expected = [
         {'a' => 'a', 'd' => 'e'},

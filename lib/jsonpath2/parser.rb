@@ -158,7 +158,7 @@ module JsonPath2
       elsif UNARY_OPERATORS.include?(current.lexeme)
         :parse_unary_operator
       elsif current.type == :child_start # [
-        :parse_selector_list
+        :parse_child_segment
       elsif current.type == :dot # .
         :parse_dot_notation
       elsif current.type == :descendants # ..
@@ -245,7 +245,7 @@ module JsonPath2
       # Normally the parser makes the selector after S be a child of S.
       # However that is not the desired behavior for DescendantSelector.
       # Consider '$.a..b[1]'. The first element must be taken from the set of all 'b' keys.
-      # If the SelectorList was a child of the `b` NameSelector, then it would be taking
+      # If the ChildSegment was a child of the `b` NameSelector, then it would be taking
       # index 1 from every 'b' found rather than from the set of all 'b's.
       #
       # To get around this, the Parser must embed a Selector object that
@@ -254,7 +254,7 @@ module JsonPath2
       selector =
         case next_token.type
         when :wildcard then parse_wildcard_selector(and_child: false)
-        when :child_start then parse_selector_list(and_child: false)
+        when :child_start then parse_child_segment(and_child: false)
         when :string, :identifier then parse_name_selector(and_child: false)
         else
           raise "Invalid query: descendant segment must have selector, got ..#{next_token.type}"
@@ -311,7 +311,7 @@ module JsonPath2
       selector =
         case next_token.type
         when :dot then parse_dot_notation
-        when :child_start then parse_selector_list
+        when :child_start then parse_child_segment
         when :descendants then parse_descendant_segment
         end
 
@@ -326,7 +326,7 @@ module JsonPath2
       selector =
         case next_token.type
         when :dot then parse_dot_notation
-        when :child_start then parse_selector_list
+        when :child_start then parse_child_segment
         when :descendants then parse_descendant_segment
         end
 
@@ -348,19 +348,25 @@ module JsonPath2
     #     an end position, and an optional step value that moves the position from the start to the end.
     #   * filter expressions select certain children of an object or array, as in:
     #
+    # When there is only a single selector in the list, parse and return that selector only.
+    # When there are multiple selectors, create a ChildSegment that contains all the selectors.
+    #
+    # This is not just a speed optimization. Serial selectors that feed into
+    # each other have different behaviour than serial child segments.
+    #
     # @param and_child [Boolean] make following token a child of this selector list
-    # @return [AST::SelectorList]
-    def parse_selector_list(and_child: true)
+    # @return [AST::ChildSegment]
+    def parse_child_segment(and_child: true)
       consume
       log "current=#{current}, next_token=#{next_token}"
       raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :child_start
 
       consume # "["
 
-      selector_list = AST::SelectorList.new
+      child_segment = AST::ChildSegment.new
       loop do
         selector = parse_selector
-        selector_list << selector if selector # nil selector means empty brackets
+        child_segment << selector if selector # nil selector means empty brackets
 
         break unless current.type == :union # no more selectors in these parentheses
 
@@ -372,7 +378,6 @@ module JsonPath2
           raise Error.new("Comma must be followed by another expression in filter selector")
         end
       end
-      raise Error.new('Empty selector list') if selector_list.empty?
 
       # Do not consume the final ']', the top-level parsing loop will eat that
       unless current.type == :child_end
@@ -380,21 +385,31 @@ module JsonPath2
         raise "expect current token to be ], got #{current.type.inspect}"
       end
 
+      # if the child_segment contains just one selector, then return the selector instead.
+      # This way a series of selectors feed results to each other without
+      # combining results in a node list.
+      node =
+        case child_segment.size
+        when 0 then raise Error.new('Empty child segment')
+        when 1 then child_segment.first
+        else child_segment
+        end
+
       if and_child
-        # Parse any subsequent expression which consumes this selector list
-        selector_list.child = parse_next_selector
+        # Parse any subsequent expression which consumes this child segment
+        node.child = parse_next_selector
       end
 
-      log "return #{selector_list}, current=#{current}"
-      selector_list
+      log "return #{node}, current=#{current}"
+      node
     end
 
     # Parse a selector and return it.
-    # @return [Selector, SelectorList, nil] nil if no more selectors to use
+    # @return [Selector, ChildSegment, nil] nil if no more selectors to use
     def parse_next_selector
       log next_token
       case next_token.type
-      when :child_start then parse_selector_list
+      when :child_start then parse_child_segment
       when :dot then parse_dot_notation
       end
     end
@@ -409,7 +424,7 @@ module JsonPath2
       type.include?('selector') || %w[dot child_start].include?(type)
     end
 
-    # Parse a selector which is inside a selector list (ie. bracket notation.)
+    # Parse a selector which is inside brackets
     def parse_selector
       log "current=#{current}, next_token=#{next_token}"
       case current.type
@@ -500,7 +515,7 @@ module JsonPath2
         # If there is a following expression, parse that too
         case next_token.type
         when :dot then selector.child = parse_dot_notation
-        when :child_start then selector.child = parse_selector_list
+        when :child_start then selector.child = parse_child_segment
         when :descendants then selector.child = parse_descendant_segment
         end
       end
@@ -531,7 +546,7 @@ module JsonPath2
       # #parse_expr_recursively expects its "top-level" loop to consume,
       # so it must leave an already-parsed token to be consumed
       consume
-      log "finished with #{selector.children}, current #{current}"
+      log "finished with child #{selector.child}, current #{current}"
 
       selector
     end

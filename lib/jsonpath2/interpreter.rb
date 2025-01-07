@@ -5,6 +5,8 @@ module JsonPath2
   class Interpreter
     attr_reader :query, :output, :env, :call_stack
 
+    class EmptyNodeList < StandardError; end
+
     # Interpret a query on the given input, return result
     # @param input [Hash, Array]
     # @param query [String]
@@ -31,58 +33,80 @@ module JsonPath2
 
       @query = ast
 
-      result = interpret_nodes(@query.expressions)
-      case result
-      when Array then result.reject { _1 == :none }
-      when :none then []
-      else [result].compact
-      end
+      puts "INTERPRET #{ast}"
+      interpret_nodes(@query.expressions)
     end
 
     private
 
-    # Interpret AST::RootNode, which returns the input
+    # Interpret AST::RootNode, which refers to the complete original input.
+    #
+    # Ignore the given _input from the current interpretation state.
+    # RootNode starts from the top level regardless of current state.
+    # @return [Array]
     def interpret_root_node(node, _input)
-      # Ignore the given _input from the current interpretation state.
-      # RootNode starts from the top level regardless of current state.
-      return [@input] unless node.value
-
-      # If there is a selector list that modifies this node, then apply it
-      case node.value
-      when AST::SelectorList then interpret_selector_list(node.value, @input)
-      when AST::NameSelector then interpret_name_selector(node.value, @input)
+      case node&.value
+      when AST::ChildSegment then interpret_child_segment(node.value, @input)
       when AST::DescendantSegment then interpret_descendant_segment(node.value, @input)
-      when AST::WildcardSelector then interpret_wildcard_selector(node.value, @input)
+      when AST::Selector then interpret_selector(node.value, @input)
+      when nil then [@input]
       else
         raise "don't know how to interpret #{node.value.class}"
       end
     end
 
+    # Prepare a single node from an input node list to be sent to a selector.
+    # (Selectors require a node list as input)
+    # Helper method for interpret_child_segment.
+    #
+    # @param node [Object]
+    def as_node_list(node)
+      # FIXME: method still used?  Can this be delted?
+      result =
+        case node
+        when Array then node
+        when Hash then node
+        else [node]
+        end
+      puts "#as_node_list(#{node.inspect}) -> #{result.inspect}"
+      result
+    end
+
     # Interpret a list of 1 or more selectors, seperated by the union operator.
     #
-    # @param selector_list[AST::SelectorList]
-    # @param input [Array, Hash] data which the jsonpath query is addressing
-    # @return [Array] results
-    def interpret_selector_list(selector_list, input)
-      # This is a list of multiple selectors.
-      # Evaluate each one against the same input, and combine the results.
-      results = selector_list
-        .map { |selector| send(:"interpret_#{selector.type}", selector, input) }
-        .reject { _1 == [] }
-
-      # combine results
-      result =
-        if selector_list.size > 1
-          results.flatten(1).compact
-        else
-          results.empty? ? :none : results.first
+    # @param child_segment [AST::ChildSegment]
+    # @param node_list [Array]
+    # @return [Array]
+    def interpret_child_segment(child_segment , input)
+      puts "#interpret_child_segment(#{child_segment .to_s(with_child: false)}, #{input.inspect})"
+      # For each node in the input nodelist, the resulting nodelist of a child
+      # segment is the concatenation of the nodelists from each of its
+      # selectors in the order that the selectors appear in the list. Note: Any
+      # node matched by more than one selector is kept as many times in the nodelist.
+      # combine results from all selectors
+      results = nil
+      if child_segment .size == 1
+        selector = child_segment .first
+        results = send(:"interpret_#{selector.type}", selector, input)
+      else
+        results = []
+        child_segment .each do |selector|
+          puts "  list sends #{selector} input #{input.inspect}"
+          result = send(:"interpret_#{selector.type}", selector, input)
+          results.concat(result)
         end
+      end
+
+      puts "#interpret_sel_list prelim results #{results.inspect}"
 
       # Send result to the next node in the AST, if any
-      child = selector_list.child
-      return result unless child
+      child = child_segment .child
+      unless child
+        return child_segment .size == 1 ? [results] : results
+      end
 
-      send(:"interpret_#{child.type}", child, result)
+      puts "sending results #{results} to child #{child.type}:#{child.value}"
+      send(:"interpret_#{child.type}", child, results)
     end
 
     # Filter the input by returning the key that has the given name.
@@ -91,60 +115,83 @@ module JsonPath2
     # and a key that does not exist (:none)
     #
     # @param selector [NameSelector]
+    # @return [Array]
     def interpret_name_selector(selector, input)
-      return :none unless input.is_a?(Hash)
-
-      # Determine whether key exists, get key value which may be nil
-      if input.key?(selector.name)
-        node = input[selector.name] # possibly nil
+      puts "#interpret_name_selector(#{selector.name}, #{input.inspect})"
+      if input.is_a?(Hash) && input.key?(selector.name)
+        result = input[selector.name]
       else
-        return :none
+        puts "  #interpret_name_selector -> []"
+        return [] # early exit, no point continuing the chain with no results
       end
-      return node unless selector.child
+
+      puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) -> #{result.inspect}"
+      return [result] unless selector.child
 
       # Interpret child using output of this name selector, and return result
       child = selector.child
-      send(:"interpret_#{child.type}", child, node)
+      results = send(:"interpret_#{child.type}", child, result)
+      puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) --> #{results.inspect}"
+      results
     end
 
     # Filter the input by returning the array element with the given index.
-    # Return nil if input is not an array.
+    # Return empty list if input is not an array, or if array does not contain index.
+    #
+    # Output is an array because all selectors must return node lists, even if
+    # they only select a single element.
+    #
     # @param selector [IndexSelector]
+    # @param input [Array]
+    # @return [Array]
     def interpret_index_selector(selector, input)
-      return nil unless input.is_a?(Array)
+      return [] unless input.is_a?(Array)
 
-      input[selector.value]
+      result = input.fetch(selector.value) # raises IndexError if no such index
+
+      # Interpret child using output of this name selector, and return result
+      child = selector.child
+      return [result] unless child
+
+      results = send(:"interpret_#{child.type}", child, result)
+      puts "#interpret_index_selector(#{selector.name}, #{input.inspect}) --> #{results.inspect}"
+      results
+    rescue IndexError
+      [] # returns empty array if no such index
     end
 
-    # "Filter" the input by returning values, but not keys.
+    # Return values from the input.
+    # For array, return the array.
+    # For Hash, return hash values.
+    # For anything else, return empty list.
     #
     # @param selector [WildcardSelector]
-    # @param input [Hash, Array]
-    # @return [Array, nil] matching values (nil if input is not a composite type)
+    # @param node_list [Array]
+    # @return [Array] matching values
     def interpret_wildcard_selector(selector, input)
-      result =
+      values =
         case input
         when Array then input
         when Hash then input.values
-        else return :none # early exit -- no need to interpret child for this result
+        else []
         end
-      return result unless selector.child
+      return values if values.empty? # early exit, no need for further processing on empty list
+      return values unless selector.child
 
-      # Interpret child using output from this selector, and return result
+      # Interpret child using result from this selector, and return that result
       child = selector.child
-      result.filter_map do |value|
-        send(:"interpret_#{child.type}", child, value)
-      end
+      send(:"interpret_#{child.type}", child, values)
     end
 
     # Filter the input by applying the array slice selector.
     # Returns at most 1 element.
     #
     # @param selector [ArraySliceSelector]
-    # @return [Object, nil] nil if index does not match anything
+    # @param input [Array]
+    # @return [Array]
     def interpret_array_slice_selector(selector, input)
-      return nil unless input.is_a?(Array)
-      return nil if selector.step.zero? # IETF: When step is 0, no elements are selected.
+      return [] unless input.is_a?(Array)
+      return [] if selector.step.zero? # IETF: When step is 0, no elements are selected.
 
       # Convert -1 placeholder to the last index, for positive step
       last_index =
@@ -167,57 +214,60 @@ module JsonPath2
       last_index = last_index.clamp(0, input.size)
 
       # Collect values from target indices.
+      # FIXME: can this go back to Array#map now?
       results = []
       first_index
         .step(to: last_index, by: selector.step)
         .each { |i| results << input[i] } # Enumerator::ArithmeticSequence has no #map, must use #each
-      results.compact!
-      results
+      results.compact! # FIXME: why compact?? Write test where slice range includes nil values
+
+      # Interpret child using output of this name selector, and return result
+      child = selector.child
+      return results unless child
+
+      send(:"interpret_#{child.type}", child, results)
     end
 
-    # Return the set of values from the input for which the filter is true
+    # Return the set of values from the input for which the filter is true.
+    # For array, acts on array values.
+    # For hash, acts on hash values.
+    # Otherwise returns empty node list.
+    #
     # @param selector [AST::FilterSelector]
-    # @param input [Hash, Array]
-    # @return [nil, Array] list of matched values, or nil if no matched values
+    # @param input [Object]
+    # @return [Array] list of matched values, or nil if no matched values
     def interpret_filter_selector(selector, input)
-      # @see IETF 2.3.5.2, filter selector selects nothing when applied to non-composite types.
-      return :none unless [Array, Hash].include?(input.class)
+      puts "#interpret_filter_selector(#{selector}, #{input.inspect})"
+      values =
+        case input
+        when Array then input
+        when Hash then input.values
+        else return []
+        end
 
-      values = input.is_a?(Array) ? input : input.values
+      results = []
+      values.each do |value|
+        puts "  interpret_filter on #{value.inspect}"
 
-      # Current_node operator: just do existence check. Nil values are retained.
-      if selector.value.is_a?(AST::CurrentNode)
-        #return values.map { |value| interpret_node(selector.value, value) }
-        return values.select do |value|
-          result = interpret_node(selector.value, value)
-          result != :none
+        # Run filter and interpret result
+        puts "  filter selector #{selector.value} input #{value.inspect}"
+        result = interpret_node(selector.value, value)
+        puts "  filter selector result #{result.inspect}"
+
+        case result
+        when TrueClass then results << value # comparison test - pass
+        when FalseClass then nil # comparison test - fail
+        when Array then results << value unless result.empty? # existence test - node list
+        else
+          raise "unexpected result from filter #{selector.value}: #{result.inspect} "
         end
       end
 
-      # Comparison operator: discard values with non-truthy result
-      #results = values.select { |value| truthy? interpret_node(selector.value, value) }
-      results = values.select do |value|
-        result = interpret_node(selector.value, value)
-        result != :none && result != false
-      end
-      results.empty? ? nil : results
-    end
+      return results unless selector.child
 
-    # FIXME: no longer used - delete?
-    # True if the value is "truthy" in the context of a filter selector.
-    #
-    # Ruby normally defines truthy as anything besides nil or false.
-    # JsonPath also considers empty arrays and arrays containing only nil / false values not to be truthy.
-    #
-    # Empty Hashes are still "truthy", changing that breaks some tests.
-    #
-    # @return [Boolean]
-    def truthy?(value)
-      case value
-      when Array then value.any? # false for empty array or array that contains only nil / false values
-      else
-        !!value
-      end
+      # Interpret child using output of this name selector, and return result
+      child = selector.child
+      send(:"interpret_#{child.type}", child, results)
     end
 
     # Combine results from selectors into a single list.
@@ -238,7 +288,8 @@ module JsonPath2
     # Find all descendants of the current input that match the selector in the DescendantSegment
     #
     # @param descendant_segment [DescendantSegment]
-    # @param input [Object] ruby object to be indexed
+    # @param input [Object]
+    # @return [Array<AST::Expression>] node list
     def interpret_descendant_segment(descendant_segment, input)
       results = visit(input) { |node| interpret_node(descendant_segment.selector, node) }
 
@@ -275,26 +326,96 @@ module JsonPath2
       last_value
     end
 
-    # Interpret a node.
+    # Interpret an AST node.
+    # Return the result, which may be a node list or basic type.
+    # @return [Object]
     def interpret_node(node, input)
       interpreter_method = "interpret_#{node.type}"
       send(interpreter_method, node, input)
     end
 
-    # Apply selector to each value in the current node and return result
-    # @param node [CurrentNode] current node identifer, "@"
-    # @param input [Hash, Array]
-    def interpret_current_node(node, input)
-      # If there is a selector list that modifies this node, then apply it
-      case node.value
-      when AST::SelectorList then interpret_selector_list(node.value, input)
-      when AST::NameSelector then interpret_name_selector(node.value, input)
-      when AST::WildcardSelector then interpret_wildcard_selector(node.value, input)
-      when AST::DescendantSegment then interpret_descendant_segment(node.value, input)
-      when nil then input
+    # Interpret a node and extract its value, in preparation for using the node
+    # in a comparison operator.
+    # Basic literals such as AST::Number and AST::StringType evaluate to a number or string,
+    # but selectors and segments evaluate to a node list.  Extract the value (if any)
+    # from the node list, or return basic type.
+    #
+    # @param node [AST::Expression]
+    # @param input [Object]
+    def interpret_node_as_value(node, input)
+      puts "#interpret_node_as_value(#{node.inspect}, #{input.inspect})"
+      result = interpret_node(node, input)
+
+      # Return basic types (ie. from AST::Number, AST::StringType)
+      return result unless result.is_a?(Array)
+
+      # Node lists are returned by Selectors, ChildSegment, DescendantSegment.
+      #
+      # This is for a comparison operator.
+      # An empty node list represents a missing element.
+      # This must not match any literal value (including null /nil) but must match another missing value.
+      return result if result.empty?
+
+      # Return the only node in the node list
+      raise "node list contains multiple elements but this is a comparison" unless result.size == 1
+      result.first
+    end
+
+    # Given the result of evaluating an expression which is presumed to be a node list,
+    # convert the result into a basic ruby value (ie. Integer, String, nil)
+    # @param node_list [Array]
+    # @return [String, Integer, Float, nil]
+    def node_result_to_value(node_list)
+      return nil if node_list.empty?
+
+      return node_list.first if node_list.size == 1
+
+      raise "don't know how to handle node list with size > 1: #{node_list.inspect}"
+    end
+
+    # Evaluate a selector and return the result
+    # @return [Array] node list containing evaluation result
+    def interpret_selector(selector, input)
+      case selector
+      when AST::NameSelector then interpret_name_selector(selector, input)
+      when AST::WildcardSelector then interpret_wildcard_selector(selector, input)
+      when AST::IndexSelector then interpret_index_selector(selector, input)
+      when AST::ArraySliceSelector then interpret_array_slice_selector(selector, input)
+      when AST::FilterSelector then interpret_filter_selector(selector, input)
       else
-        raise "don't know how to interpret #{node.value.class}"
+        raise "Not a selector: #{selector.inspect}"
       end
+    end
+
+    # Apply selector to each value in the current node and return result.
+    #
+    # The result is an Array containing all results of evaluating the CurrentNode's selector (if any.)
+    #
+    # If the selector extracted values from nodes such as strings, numbers or nil/null, these will be included in the array.
+    # If the selector did not match any node, the array may be empty.
+    # If there was no selector, then the current input node is returned in the array.
+    #
+    # @param node [CurrentNode] current node identifer
+    # @param input [Hash, Array] current node of the input
+    # @return [Array] Node List containing all results from evaluating this node's selectors.
+    def interpret_current_node(current_node, input)
+      puts "interpret_current_node(#{current_node.inspect}, #{input.inspect})"
+      next_expr = current_node.value
+      result =
+        # All of these return a node list
+        case next_expr
+        when AST::NameSelector then interpret_name_selector(next_expr, input)
+        when AST::WildcardSelector then interpret_wildcard_selector(next_expr, input)
+        when AST::IndexSelector then interpret_index_selector(next_expr, input)
+        when AST::FilterSelector then interpret_filter_selector(next_expr, input)
+        when AST::ChildSegment then interpret_child_segment(next_expr, input)
+        when AST::DescendantSegment then interpret_descendant_segment(next_expr, input)
+        when NilClass then [input]
+        else
+          raise "don't know how to interpret #{next_expr}"
+        end
+      puts "interpret_current_node(#{current_node.inspect}, #{input.inspect}) -> #{result.inspect}"
+      result
     end
 
     def interpret_identifier(identifier, _input)
@@ -310,6 +431,9 @@ module JsonPath2
       end
     end
 
+    # FIXME: Is this used? If so, add a comment explaining what uses this.
+    # Otherwise delete it.
+    #
     # TODO: Empty blocks are accepted both for the IF and for the ELSE.
     # For the IF, the parser returns a block with an empty collection of expressions.
     # For the else, no block is constructed.
@@ -330,13 +454,39 @@ module JsonPath2
       end
     end
 
+    # The binary operators are all comparison operators that test equality.
+    #
+    # The inputs they receive may be one of:
+    #  * boolean values specified in the query
+    #  * JSONPath expressions which must be evaluated
+    #
+    # After a JSONPath expression is evaluated, it results in a node list.
+    # This may contain literal values or nodes, whose value must be extracted before comparison.
+    #
+    # @return [Boolean]
     def interpret_binary_operator(binary_op, input)
-      lhs = interpret_node(binary_op.left, input)
-      rhs = interpret_node(binary_op.right, input)
+      puts "interpret_binary_operator(#{binary_op}, #{input.inspect})"
+      case binary_op.operator
+      when :and, :or
+        # handle node list for existence check
+        lhs = interpret_node(binary_op.left, input)
+        rhs = interpret_node(binary_op.right, input)
+      when :equal, :not_equal, :less_than, :greater_than, :less_than_or_equal, :greater_than_or_equal
+        # handle node values for comparison check
+        lhs = interpret_node_as_value(binary_op.left, input)
+        rhs = interpret_node_as_value(binary_op.right, input)
+      else
+        raise "don't know how to handle binary operator #{binary_op.inspect}"
+      end
       send(:"interpret_#{binary_op.operator}", lhs, rhs)
+    rescue EmptyNodeList
+      # this was a comparison operation, but one of the side evaluated to an empty node list
+      false
     end
 
     def interpret_equal(lhs, rhs)
+      puts "interpret_equal(#{lhs.inspect}, #{rhs.inspect}) -> #{lhs==rhs}"
+
       lhs == rhs
     end
 
@@ -344,17 +494,21 @@ module JsonPath2
       lhs != rhs
     end
 
+    # Interpret && operator
+    # May receive node lists, in which case empty node list == false
     def interpret_and(lhs, rhs)
-      # :none is false within a logical operator
-      lhs = lhs == :none ? false : lhs
-      rhs = rhs == :none ? false : rhs
+      # non-empty array is already truthy, so that works properly without conversion
+      lhs = false if lhs.is_a?(Array) && lhs.empty?
+      rhs = false if rhs.is_a?(Array) && rhs.empty?
       lhs && rhs
     end
 
+    # Interpret || operator
+    # May receive node lists, in which case empty node list == false
     def interpret_or(lhs, rhs)
-      # :none is false within a logical operator
-      lhs = lhs == :none ? false : lhs
-      rhs = rhs == :none ? false : rhs
+      # non-empty array is already truthy, so that works properly without conversion
+      lhs = false if lhs.is_a?(Array) && lhs.empty?
+      rhs = false if rhs.is_a?(Array) && rhs.empty?
       lhs || rhs
     end
 
@@ -413,31 +567,39 @@ module JsonPath2
       nil
     end
 
+    # FIXME: split implementation out into separet methods for not and minus 
+    # because they are so different.
     def interpret_unary_operator(op, input)
-      result = send(:"interpret_#{op.operand.type}", op.operand, input)
-      result = false if result == :none
+      node_list = send(:"interpret_#{op.operand.type}", op.operand, input)
+      #puts "interpret_unary_oprator(#{op.operator}, #{input.inspect}) got node list #{node_list.inspect}"
       case op.operator
-      when :not then !result
-      when :minus then 0 - result
+      when :not then interpret_not(node_list)
+      when :minus then 0 - node_list.first # FIXME: sure hope this is a number!
       else raise "unknown unary operator #{op.inspect}"
       end
     end
 
-    # Interpret unary operator not
+    # Interpret unary operator "!".
+    # For a node list, this is an existence check that just determines if the list is empty.
+    # For a boolean, this inverts the meaning of the input.
+    # @return [Boolean]
     def interpret_not(input)
       case input
-      when :none then true
-      when nil then true
+      when Array then input.empty? # existence check
+      when TrueClass, FalseClass then !input
       else
-        !input
+        raise "don't know how to apply not operator to #{input.inspect}"
       end
     end
 
     # @param function [AST::Function]
     # @param input [Hash, Array]
     def interpret_function(function, input)
+      puts "#interpret_function(#{function}, #{input.inspect})"
       params = evaluate_function_parameters(function.parameters, input)
-      function.body.call(*params)
+      result = function.body.call(*params)
+      puts "#interpret_function(#{function}, #{input.inspect}) -> #{result.inspect}"
+      result
     end
 
     # All jsonpath functions accept 1 or 2 parameters:
