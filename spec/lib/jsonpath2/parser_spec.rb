@@ -35,7 +35,7 @@ module JsonPath2
 
     it 'parses dot notation with wildcard selector' do
       ast = described_class.parse('$.*[1]')
-      expect(ast.to_s).to eq('$*[1]')
+      expect(ast.to_s).to eq('$.*[1]')
     end
 
     it 'parses null' do

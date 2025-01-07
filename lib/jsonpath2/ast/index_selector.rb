@@ -13,8 +13,8 @@ module JsonPath2
         super
       end
 
-      def to_s
-        @value.to_s
+      def to_s(brackets: true)
+        brackets ? "[#{@value}]" : @value.to_s
       end
     end
   end

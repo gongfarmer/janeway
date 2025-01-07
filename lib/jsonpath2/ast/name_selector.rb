@@ -18,19 +18,18 @@ module JsonPath2
         raise "Invalid name: #{value.inspect}:#{value.class}" unless value.is_a?(String)
       end
 
-      def to_s
-        # Add quotes if the name includes chars that require quoting.
+      def to_s(brackets: false)
+        # Add quotes and surrounding brackets if the name includes chars that require quoting.
         # These chars are not allowed in dotted notation, only bracket notation.
         special_chars = [' ', '.']
+        brackets ||= special_chars.any? { |char| @value.include?(char) }
         name_str =
-          if special_chars.any? { |char| @value.include?(char) }
+          if brackets
             quote(@value)
           else
             @value
           end
-        "#{name_str}#{@child}"
-      rescue Encoding::CompatibilityError=> e
-        "#{@value}#{@child}"
+        brackets ? "[#{name_str}]#{@child}" : "#{name_str}#{@child}"
       end
 
       # put surrounding quotes on a string

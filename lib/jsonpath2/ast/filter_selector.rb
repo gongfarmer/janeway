@@ -47,8 +47,8 @@ module JsonPath2
     #
     # @example: $.store[@.price < 10]
     class FilterSelector < JsonPath2::AST::Selector
-      def to_s
-        "?#{value}"
+      def to_s(brackets: true)
+        brackets ? "[?#{value}]" : "?#{value}"
       end
 
       def ==(other)

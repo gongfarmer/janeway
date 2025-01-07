@@ -57,7 +57,8 @@ module JsonPath2
       end
 
       def to_s
-        [@start, @end, @step].map(&:to_s).join(':')
+        str = [@start, @end, @step].map(&:to_s).join(':')
+        "[#{str}]"
       end
 
       # Get lower and upper array indexes for a particular array

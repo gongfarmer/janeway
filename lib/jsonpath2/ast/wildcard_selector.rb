@@ -24,9 +24,13 @@ module JsonPath2
         @child = nil
       end
 
-      def to_s
+      def to_s(brackets: true)
         if @child.is_a?(NameSelector) || @child.is_a?(WildcardSelector)
-          "*.#{@child}"
+          if brackets
+            "[*]#{@child.to_s(brackets: true)}"
+          else
+            "*.#{@child}"
+          end
         else
           "*#{@child}"
         end

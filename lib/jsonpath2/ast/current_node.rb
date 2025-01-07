@@ -31,7 +31,7 @@ module JsonPath2
     class CurrentNode < JsonPath2::AST::Expression
       def to_s
         if @value.is_a?(NameSelector) || @value.is_a?(WildcardSelector)
-          "@.#{@value}"
+          "@.#{@value.to_s(brackets: false)}"
         else
           "@#{@value}"
         end

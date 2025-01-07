@@ -42,13 +42,8 @@ module JsonPath2
       end
 
       def to_s(with_child: true)
-        if with_child
-          format('[%s]%s', @value.map(&:to_s).join(', '), @child)
-        else
-          format('[%s]', @value.map(&:to_s).join(', '))
-        end
-      rescue Encoding::CompatibilityError
-        "[#{@value}]#{@child}"
+        str = @value.map { |selector| selector.to_s(brackets: false) }.join(', ')
+        with_child ? "[#{str}]#{@child}" : "[#{str}]"
       end
 
       # @param level [Integer]
