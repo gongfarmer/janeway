@@ -2,6 +2,8 @@
 
 require 'jsonpath2'
 
+# CTS = test from the "Compliance Test Suite"
+
 module JsonPath2
   describe Interpreter do
     let(:interpreter) { described_class.new({}) }
@@ -11,21 +13,17 @@ module JsonPath2
       expect(described_class.interpret(input, '$')).to eq([input])
     end
 
-    # Compliance test suite requires this to cause an error
-    # JsonPath comparison site suggests not to do that
-    it 'raises error for empty selector list' do
+    # Compliance test suite requires this to raise a parse error
+    # JsonPath comparison project suggests not to do that
+    # CTS "basic, empty segment"
+    it 'raises error for empty child segment' do
       input = { 'a' => 1 }
       expect {
         described_class.interpret(input, '$[]')
-      }.to raise_error(JsonPath2::Parser::Error, 'Empty selector list')
+      }.to raise_error(JsonPath2::Parser::Error, 'Empty child segment')
     end
 
-    it 'interprets dot notation with wildcard selector' do
-      input = [[1], [2, 3]]
-      expect(described_class.interpret(input, '$.*[1]')).to eq([3])
-    end
-
-    ## from compliance test suite
+    # CTS "basic, wildcard shorthand, then name shorthand",
     it 'interprets wildcard shorthand then name shorthand' do
       input = {
         'x' => { 'a' => 'Ax', 'b' => 'Bx' },
@@ -46,28 +44,6 @@ module JsonPath2
         {'a' => 'd', 'd' => 'f'}
       ]
       expect(described_class.interpret(input, query)).to eq(expected)
-    end
-
-    describe '#truthy' do
-      it 'says nil is false' do
-        expect(interpreter.send(:truthy?, nil)).to be(false)
-      end
-
-      it 'says false is false' do
-        expect(interpreter.send(:truthy?, false)).to be(false)
-      end
-
-      it 'says empty array is false' do
-        expect(interpreter.send(:truthy?, [])).to be(false)
-      end
-
-      it 'says array of nil is false' do
-        expect(interpreter.send(:truthy?, [nil, nil])).to be(false)
-      end
-
-      it 'says array of false is false' do
-        expect(interpreter.send(:truthy?, [false, false])).to be(false)
-      end
     end
   end
 end

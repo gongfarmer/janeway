@@ -7,6 +7,18 @@ module JsonPath2
 
     class EmptyNodeList < StandardError; end
 
+    # Specify the parameter types that built-in JsonPath functions require
+    FUNCTION_PARAMETER_TYPES = {
+      length: [:value_type],
+      count: [:nodes_type],
+      match: [:value_type, :value_type],
+      search: [:value_type, :value_type],
+      value: [:nodes_type],
+    }.freeze
+
+    # Functions may accept or return this special value
+    NOTHING = :nothing
+
     # Interpret a query on the given input, return result
     # @param input [Hash, Array]
     # @param query [String]
@@ -125,7 +137,7 @@ module JsonPath2
         return [] # early exit, no point continuing the chain with no results
       end
 
-      puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) -> #{result.inspect}"
+      puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) -> [#{result.inspect}]"
       return [result] unless selector.child
 
       # Interpret child using output of this name selector, and return result
@@ -145,6 +157,7 @@ module JsonPath2
     # @param input [Array]
     # @return [Array]
     def interpret_index_selector(selector, input)
+      puts "#interpret_index_selector(#{input.inspect})"
       return [] unless input.is_a?(Array)
 
       result = input.fetch(selector.value) # raises IndexError if no such index
@@ -175,6 +188,8 @@ module JsonPath2
         when Hash then input.values
         else []
         end
+      puts "#interpret_wildcard_selector(#{input.inspect}) -> #{values.inspect}"
+
       return values if values.empty? # early exit, no need for further processing on empty list
       return values unless selector.child
 
@@ -252,14 +267,14 @@ module JsonPath2
         # Run filter and interpret result
         puts "  filter selector #{selector.value} input #{value.inspect}"
         result = interpret_node(selector.value, value)
-        puts "  filter selector result #{result.inspect}"
+        puts "  filter selector #{selector.value} -> #{result.inspect}"
 
         case result
         when TrueClass then results << value # comparison test - pass
         when FalseClass then nil # comparison test - fail
         when Array then results << value unless result.empty? # existence test - node list
         else
-          raise "unexpected result from filter #{selector.value}: #{result.inspect} "
+          results << value # existence test. Null values here == success.
         end
       end
 
@@ -407,10 +422,11 @@ module JsonPath2
         when AST::NameSelector then interpret_name_selector(next_expr, input)
         when AST::WildcardSelector then interpret_wildcard_selector(next_expr, input)
         when AST::IndexSelector then interpret_index_selector(next_expr, input)
+        when AST::ArraySliceSelector then interpret_array_slice_selector(next_expr, input)
         when AST::FilterSelector then interpret_filter_selector(next_expr, input)
         when AST::ChildSegment then interpret_child_segment(next_expr, input)
         when AST::DescendantSegment then interpret_descendant_segment(next_expr, input)
-        when NilClass then [input]
+        when NilClass then input # FIXME: put it in a node list???
         else
           raise "don't know how to interpret #{next_expr}"
         end
@@ -570,6 +586,7 @@ module JsonPath2
     # FIXME: split implementation out into separet methods for not and minus 
     # because they are so different.
     def interpret_unary_operator(op, input)
+      puts "#interpret_unary_oprator(#{op.operator}, #{input.inspect})"
       node_list = send(:"interpret_#{op.operand.type}", op.operand, input)
       #puts "interpret_unary_oprator(#{op.operator}, #{input.inspect}) got node list #{node_list.inspect}"
       case op.operator
@@ -584,43 +601,80 @@ module JsonPath2
     # For a boolean, this inverts the meaning of the input.
     # @return [Boolean]
     def interpret_not(input)
-      case input
-      when Array then input.empty? # existence check
-      when TrueClass, FalseClass then !input
-      else
-        raise "don't know how to apply not operator to #{input.inspect}"
-      end
+      result =
+        case input
+        when Array then input.empty?
+        when TrueClass, FalseClass then !input
+        else
+          raise "don't know how to apply not operator to #{input.inspect}"
+        end
+      puts "#interpret_not(#{input.inspect}) -> #{result.inspect}"
+      result
     end
 
     # @param function [AST::Function]
     # @param input [Hash, Array]
     def interpret_function(function, input)
-      puts "#interpret_function(#{function}, #{input.inspect})"
-      params = evaluate_function_parameters(function.parameters, input)
+      params = evaluate_function_parameters(function.parameters, function.name, input)
+      puts "#interpret_function(#{function}, #{input.inspect}) with params #{params.inspect}"
       result = function.body.call(*params)
       puts "#interpret_function(#{function}, #{input.inspect}) -> #{result.inspect}"
       result
     end
 
-    # All jsonpath functions accept 1 or 2 parameters:
-    # 1. Expression that evaluates to a node list 
-    # 2. (Optional) regexp
+    # Evaluate the expressions in the parameter list to make the parameter values
+    # to pass in to a JsonPath function.
     #
-    # Parameter 2 may be expressed as a string, or as an expression that takes a
-    # string from the input document.
+    # The node lists returned by a singulare query must be deconstructed into a single value for 
+    # parameters of ValueType, this is done here.
+    # For explanation:
+    # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-
     #
     # @param parameters [Array] parameters before evaluation
+    # @param func [String] function name (eg. "length", "count")
+    # @param input [Object]
     # @return [Array] parameters after evaluation
-    def evaluate_function_parameters(parameters, input)
-      parameters.map do |parameter|
+    def evaluate_function_parameters(parameters, func, input)
+      param_types = FUNCTION_PARAMETER_TYPES[func.to_sym]
+
+      parameters.map.with_index do |parameter, i|
+        type = param_types[i]
         case parameter
-        when AST::CurrentNode then interpret_current_node(parameter, input)
-        when AST::RootNode then interpret_root_node(parameter, input)
-        when AST::StringType then interpret_string_type(parameter, input)
+        when AST::CurrentNode, AST::RootNode
+          # Selectors always return a node list.
+          # Deconstruct the resulting node list if function parameter type is ValueType.
+          result = interpret_node(parameter, input)
+          puts "interepreted node #{parameter} to #{result.inspect}"
+          if type == :value_type && parameter.singular_query?
+            deconstruct(result)
+          else
+            result
+          end
+        when AST::StringType, AST::Number
+          interpret_string_type(parameter, input)
         else
           # invalid parameter type. Function must accept it and return Nothing result
           parameter
         end
+      end
+    end
+
+    # Prepare a value to be passed to as a parameter with type ValueType.
+    # Singular queries (see RFC) produce a node list containing one value.
+    # Return the value.
+    #
+    # @param input [Object] usually an array - sometimes a basic type like String, Numeric
+    # @return [Object] basic type -- string or number
+    def deconstruct(input)
+      puts "#deconstruct(#{input.inspect})"
+      return input unless input.is_a?(Array)
+
+      if input.size == 1
+        input.first
+      elsif input.empty?
+        NOTHING
+      else
+        input # input is a single node, which happens to be an Array
       end
     end
   end

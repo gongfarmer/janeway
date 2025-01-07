@@ -165,7 +165,7 @@ module JsonPath2
       end
 
       # CTS: "filter, not exists, data null"
-      it 'applies not operator to existence check' do
+      it 'applies not operator to existence check on null value' do
         input = [{"a"=>nil, "d"=>"e"}, {"d"=>"f"}, {"a"=>"d", "d"=>"f"}]
         result = described_class.interpret(input, '$[?!@.a]')
         expect(result).to eq([{"d"=>"f"}])

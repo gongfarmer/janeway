@@ -37,6 +37,24 @@ module JsonPath2
         end
       end
 
+      # True if this is the root of a singular-query.
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-
+      #
+      # @return [Boolean]
+      def singular_query?
+        return true unless @value # there are no following selectors
+
+        selector_types = []
+        selector = @value
+        loop do
+          selector_types << selector.class
+          selector = selector.child
+          break unless selector
+        end
+        allowed = [AST::IndexSelector, AST::NameSelector]
+        selector_types.uniq.all? { allowed.include?(_1) }
+      end
+
       # True if this is a bare current node operator, without a following expression
       # @return [Boolean]
       def empty?
