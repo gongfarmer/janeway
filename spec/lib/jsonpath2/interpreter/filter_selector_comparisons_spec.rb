@@ -163,13 +163,9 @@ module JsonPath2
 
       # CTS: "filter, equals number, negative zero and zero"
       it 'handles equality test with negative zero' do
-        query = '$[?@.a==-0]'
-        ast = Parser.parse(query)
-        pp ast.expressions
-
         input = [{ 'a' => 0, 'd' => 'e' }, { 'a' => 0.1, 'd' => 'f' }, { 'a' => '0', 'd' => 'g' }]
         expected = [{ 'a' => 0, 'd' => 'e' }]
-        result = described_class.interpret(input, query)
+        result = described_class.interpret(input, '$[?@.a==-0]')
         expect(result).to eq(expected)
       end
     end

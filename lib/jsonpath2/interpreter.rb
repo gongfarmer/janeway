@@ -38,15 +38,15 @@ module JsonPath2
     # @param ast [AST::Query] abstract syntax tree
     # @return [Object]
     def interpret(ast)
+      @query = ast
       raise "expect AST, got #{ast.inspect}" unless ast.is_a?(AST::Query)
+
       unless @input.is_a?(Hash) || @input.is_a?(Array)
         return [] # can't query on any other types
       end
 
-      @query = ast
-
       puts "INTERPRET #{ast}"
-      interpret_nodes(@query.expressions)
+      interpret_node(ast.root, nil)
     end
 
     private
@@ -444,29 +444,6 @@ module JsonPath2
       else
         # Undefined variable.
         raise JsonPath2::Error::Runtime::UndefinedVariable, identifier.name
-      end
-    end
-
-    # FIXME: Is this used? If so, add a comment explaining what uses this.
-    # Otherwise delete it.
-    #
-    # TODO: Empty blocks are accepted both for the IF and for the ELSE.
-    # For the IF, the parser returns a block with an empty collection of expressions.
-    # For the else, no block is constructed.
-    # The evaluation is already resulting in nil, which is the desired behavior.
-    # It would be better, however, if the parser also returned a block with no expressions
-    # for an ELSE with an empty block, as is the case in an IF with an empty block.
-    # Investigate this nuance of the parser in the future.
-    def interpret_conditional(conditional)
-      evaluated_cond = interpret_node(conditional.condition)
-
-      # We could implement the line below in a shorter way, but better to be explicit about truthiness in JsonPath2.
-      if [nil, false].include?(evaluated_cond)
-        return nil if conditional.when_false.nil?
-
-        interpret_nodes(conditional.when_false.expressions)
-      else
-        interpret_nodes(conditional.when_true.expressions)
       end
     end
 

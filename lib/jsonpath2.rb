@@ -62,7 +62,6 @@ def require_libs(dir)
 end
 
 # These are dependencies of the other AST source files, and must come first
-require_relative 'jsonpath2/ast/shared/expression_collection'
 require_relative 'jsonpath2/ast/expression'
 
 require_libs('jsonpath2/ast')

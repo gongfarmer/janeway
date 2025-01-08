@@ -7,30 +7,30 @@ module JsonPath2
     it 'supports 2 comma-separated selectors in one pair of square brackets' do
       tokens = Lexer.lex('$[1, 2]')
       ast = described_class.new(tokens).parse
-      expect(ast.expressions).to eq(
-        [AST::RootNode.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2)])]
+      expect(ast.root).to eq(
+        AST::RootNode.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2)])
       )
     end
 
     it 'supports 3 comma-separated selectors in one pair of square brackets' do
       tokens = Lexer.lex('$[1, 2, 3]')
       ast = described_class.new(tokens).parse
-      expect(ast.expressions).to eq(
-        [AST::RootNode.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2), AST::IndexSelector.new(3)])]
+      expect(ast.root).to eq(
+        AST::RootNode.new([AST::IndexSelector.new(1), AST::IndexSelector.new(2), AST::IndexSelector.new(3)])
       )
     end
 
     it 'allows a wildcard selector after a dot' do
       tokens = Lexer.lex('$[?@.*]')
       ast = described_class.new(tokens).parse
-      expect(ast.expressions).to eq(
-        [AST::RootNode.new([AST::FilterSelector.new(AST::CurrentNode.new(AST::WildcardSelector.new))])]
+      expect(ast.root).to eq(
+        AST::RootNode.new([AST::FilterSelector.new(AST::CurrentNode.new(AST::WildcardSelector.new))])
       )
     end
 
     it 'combines the minus sign and number into one node in an index selector' do
       ast = described_class.parse('$[-1]')
-      index_selector = ast.expressions.first.value
+      index_selector = ast.root.value
       expect(index_selector.value).to eq(-1)
     end
 
@@ -64,13 +64,13 @@ module JsonPath2
       # the point is that there is no AST::ChildSegment here that contains the name selector
       tokens = Lexer.lex('$["abc"]')
       ast = described_class.new(tokens).parse
-      expect(ast.expressions.first.value).to eq(AST::NameSelector.new('abc'))
+      expect(ast.root.value).to eq(AST::NameSelector.new('abc'))
     end
 
     it 'applies minus operator to the following zero' do
       # parser is expected to combine the "-" and "0" tokens
       ast = described_class.parse('$[?@.a==-0]')
-      equals_operator = ast.expressions.first.value.value
+      equals_operator = ast.root.value.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
         value: 0
@@ -80,7 +80,7 @@ module JsonPath2
     it 'applies minus operator to the following integer' do
       # parser is expected to combine the "-" and number tokens
       ast = described_class.parse('$[?@.a==-1]')
-      equals_operator = ast.expressions.first.value.value
+      equals_operator = ast.root.value.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
         value: -1
@@ -90,7 +90,7 @@ module JsonPath2
     it 'applies minus operator to the following float' do
       # parser is expected to combine the "-" and number tokens
       ast = described_class.parse('$[?@.a==-15.8]')
-      equals_operator = ast.expressions.first.value.value
+      equals_operator = ast.root.value.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
         value: -15.8

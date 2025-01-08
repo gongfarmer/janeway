@@ -6,10 +6,10 @@ module JsonPath2
     # which stands for a nodelist that contains the root node of the
     # query argument, followed by a possibly empty sequence of segments.
     class Query
-      include JsonPath2::AST::Shared::ExpressionCollection
+      attr_accessor :root
 
       def to_s
-        expressions.map(&:to_s).join
+        @root.to_s
       end
 
       # Queries are considered equal if their ASTs evaluate to the same JSONPath string.
@@ -27,7 +27,7 @@ module JsonPath2
       # Print AST in tree format
       # Every AST class prints a 1-line representation of self, with children on separate lines
       def tree
-        result = expressions.first.tree(0)
+        result = @root.tree(0)
 
         result.flatten.join("\n")
       end

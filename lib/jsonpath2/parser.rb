@@ -58,12 +58,18 @@ module JsonPath2
       # This makes it so that root's #to_s cannot tell if it is followed by dot notation or parentheses notation, which makes it impossible to properly implement the #to_s
       #
       # This loop should iterate only twice: once to parse the root (recursively), once to parse the terminator
-      while pending_tokens?
-        consume
-        log "CONSUME, current=#{current}"
-        node = parse_expr_recursively
-        ast << node if node
-      end
+#      while pending_tokens?
+#        consume
+#        log "CONSUME, current=#{current}"
+#        node = parse_expr_recursively
+#        ast << node if node
+#      end
+
+      consume
+      log "CONSUME, current=#{current}"
+      @ast.root = parse_expr_recursively
+      consume
+      raise "unparsed tokens" unless current.type == :eof
 
       ast
     end
