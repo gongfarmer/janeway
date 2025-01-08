@@ -36,6 +36,30 @@ module JsonPath2
       it 'does not crash when applying index selector to string' do
         expect(described_class.interpret('hello world', '$[0]')).to be_empty
       end
+
+      # CTS "index selector, min exact index"
+      it 'handles the minimum possible index value' do
+        expect(described_class.interpret(['one', 'two'], '$[-9007199254740991]')).to be_empty
+      end
+
+      # CTS "index selector, min exact index - 1"
+      it 'raises error given an index that is smaller than minimum' do
+        expect {
+          described_class.interpret([], '$[-9007199254740992]')
+        }.to raise_error(Error, /Index selector value too small/)
+      end
+
+      # CTS "index selector, max exact index"
+      it 'handles the minimum possible index value' do
+        expect(described_class.interpret(['one', 'two'], '$[9007199254740991]')).to be_empty
+      end
+
+      # CTS "index selector, max exact index + 1"
+      it 'raises error given an index that is smaller than minimum' do
+        expect {
+          described_class.interpret([], '$[9007199254740992]')
+        }.to raise_error(Error, /Index selector value too large/)
+      end
     end
   end
 end
