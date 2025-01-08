@@ -210,12 +210,12 @@ module JsonPath2
       when '"', "'", '\\' then char
       when 'u' then consume_unicode_escape_sequence
       else
-        if unescaped?(char)
-          char # unnecessary escape, just return the literal char
-        else
-          # whatever this is, it is not allowed even when escaped
-          raise Error.new("invalid character #{char.inspect}", current_location)
-        end
+        raise Error.new("invalid character #{char.inspect}", current_location) unless unescaped?(char)
+
+        char # unnecessary escape, just return the literal char
+
+        # whatever this is, it is not allowed even when escaped
+
       end
     end
 
@@ -230,7 +230,7 @@ module JsonPath2
     #
     #     HEXDIG              = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
     #
-    # Both lower and uppercase are allowed. The grammar does now show this here 
+    # Both lower and uppercase are allowed. The grammar does now show this here
     # but clarifies that in a following note.
     #
     # The preceding `\u` prefix has already been consumed.
@@ -242,9 +242,7 @@ module JsonPath2
       return hex_str.hex.chr('UTF-8') unless hex_str.upcase.start_with?('D')
 
       # hex string starts with D, but is still non-surrogate
-      if (0..7).cover?(hex_str[1].to_i)
-        return hex_str.hex.chr('UTF-8')
-      end
+      return hex_str.hex.chr('UTF-8') if (0..7).cover?(hex_str[1].to_i)
 
       # hex value is in the high-surrogate or low-surrogate range.
 
@@ -252,18 +250,18 @@ module JsonPath2
         # valid, as long as it is followed by \u low-surrogate
         prefix = [consume, consume].join
         hex_str2 = consume_four_hex_digits
-        if prefix == '\\u' && low_surrogate?(hex_str2)
-          # This is a high-surrogate followed by a low-surrogate, which is valid.
-          # This is the UTF-16 method of representing certain high unicode codepoints.
-          # However this specific byte sequence is not a valid way to represent that same
-          # unicode character in the UTF-8 encoding.
-          # The surrogate pair must be converted into the correct UTF-8 code point.
-          # This returns a UTF-8 string containing a single unicode character.
-          return convert_surrogate_pair_to_codepoint(hex_str, hex_str2)
-        else
-          # Not allowed to have high surrogate that is not followed by low surrogate
-          raise "invalid unicode escape sequence: \\u#{hex_str2.join}"
-        end
+
+        # This is a high-surrogate followed by a low-surrogate, which is valid.
+        # This is the UTF-16 method of representing certain high unicode codepoints.
+        # However this specific byte sequence is not a valid way to represent that same
+        # unicode character in the UTF-8 encoding.
+        # The surrogate pair must be converted into the correct UTF-8 code point.
+        # This returns a UTF-8 string containing a single unicode character.
+        return convert_surrogate_pair_to_codepoint(hex_str, hex_str2) if prefix == '\\u' && low_surrogate?(hex_str2)
+
+        # Not allowed to have high surrogate that is not followed by low surrogate
+        raise "invalid unicode escape sequence: \\u#{hex_str2.join}"
+
       end
       # Not allowed to have low surrogate that is not preceded by high surrogate
       raise "invalid unicode escape sequence: \\u#{hex_str}"
@@ -319,6 +317,7 @@ module JsonPath2
         end
       end
       raise "incomplete unicode escape sequence: \\u#{hex_digits.join}" if hex_digits.size < 4
+
       hex_digits.join
     end
 

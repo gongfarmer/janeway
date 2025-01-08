@@ -27,7 +27,7 @@ This project includes:
 * Optimizing behavior based on [other implementations] (https://cburgmer.github.io/json-path-comparison/)
 
 The JSONPath RFC was in draft status for a long time and has seen many changes.
-There are many implementations of this and which were implemented based on the requirements of older drafts, or which add features that were never in the RFC at all.
+There are many implementations based on older drafts, or which add features that were never in the RFC at all.
 
 The goal here is perfect adherence to [IETF RFC 9535](https://github.com/ietf-wg-jsonpath) rather than adding features that are in other implementations.
 

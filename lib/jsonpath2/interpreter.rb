@@ -11,8 +11,8 @@ module JsonPath2
     FUNCTION_PARAMETER_TYPES = {
       length: [:value_type],
       count: [:nodes_type],
-      match: [:value_type, :value_type],
-      search: [:value_type, :value_type],
+      match: %i[value_type value_type],
+      search: %i[value_type value_type],
       value: [:nodes_type],
     }.freeze
 
@@ -89,20 +89,20 @@ module JsonPath2
     # @param child_segment [AST::ChildSegment]
     # @param node_list [Array]
     # @return [Array]
-    def interpret_child_segment(child_segment , input)
-      puts "#interpret_child_segment(#{child_segment .to_s(with_child: false)}, #{input.inspect})"
+    def interpret_child_segment(child_segment, input)
+      puts "#interpret_child_segment(#{child_segment.to_s(with_child: false)}, #{input.inspect})"
       # For each node in the input nodelist, the resulting nodelist of a child
       # segment is the concatenation of the nodelists from each of its
       # selectors in the order that the selectors appear in the list. Note: Any
       # node matched by more than one selector is kept as many times in the nodelist.
       # combine results from all selectors
       results = nil
-      if child_segment .size == 1
-        selector = child_segment .first
+      if child_segment.size == 1
+        selector = child_segment.first
         results = send(:"interpret_#{selector.type}", selector, input)
       else
         results = []
-        child_segment .each do |selector|
+        child_segment.each do |selector|
           puts "  list sends #{selector} input #{input.inspect}"
           result = send(:"interpret_#{selector.type}", selector, input)
           results.concat(result)
@@ -112,9 +112,9 @@ module JsonPath2
       puts "#interpret_sel_list prelim results #{results.inspect}"
 
       # Send result to the next node in the AST, if any
-      child = child_segment .child
+      child = child_segment.child
       unless child
-        return child_segment .size == 1 ? [results] : results
+        return child_segment.size == 1 ? [results] : results
       end
 
       puts "sending results #{results} to child #{child.type}:#{child.value}"
@@ -130,11 +130,11 @@ module JsonPath2
     # @return [Array]
     def interpret_name_selector(selector, input)
       puts "#interpret_name_selector(#{selector.name}, #{input.inspect})"
-      if input.is_a?(Hash) && input.key?(selector.name)
-        result = input[selector.name]
-      else
-        return [] # early exit, no point continuing the chain with no results
-      end
+      return [] unless input.is_a?(Hash) && input.key?(selector.name)
+
+      result = input[selector.name]
+
+      # early exit, no point continuing the chain with no results
 
       puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) -> [#{result.inspect}]"
       return [result] unless selector.child
@@ -368,9 +368,7 @@ module JsonPath2
       # nodes must be singular queries or literals
       case node
       when AST::CurrentNode, AST::RootNode
-        unless node.singular_query?
-          raise Error, "Expression #{node} does not produce a singular value for comparison"
-        end
+        raise Error, "Expression #{node} does not produce a singular value for comparison" unless node.singular_query?
       when AST::Number, AST::StringType, AST::Null, AST::Function, AST::Boolean then nil
       else
         raise "Invalid expression for comparison: #{node}"
@@ -389,7 +387,8 @@ module JsonPath2
       return result if result.empty?
 
       # Return the only node in the node list
-      raise "node list contains multiple elements but this is a comparison" unless result.size == 1
+      raise 'node list contains multiple elements but this is a comparison' unless result.size == 1
+
       result.first
     end
 
@@ -492,7 +491,7 @@ module JsonPath2
     end
 
     def interpret_equal(lhs, rhs)
-      puts "interpret_equal(#{lhs.inspect}, #{rhs.inspect}) -> #{lhs==rhs}"
+      puts "interpret_equal(#{lhs.inspect}, #{rhs.inspect}) -> #{lhs == rhs}"
 
       # When either side of a comparison results in an empty nodelist or the
       # special result Nothing (see Section 2.4.1):
@@ -581,12 +580,12 @@ module JsonPath2
       nil
     end
 
-    # FIXME: split implementation out into separet methods for not and minus 
+    # FIXME: split implementation out into separet methods for not and minus
     # because they are so different.
     def interpret_unary_operator(op, input)
       puts "#interpret_unary_oprator(#{op.operator}, #{input.inspect})"
       node_list = send(:"interpret_#{op.operand.type}", op.operand, input)
-      #puts "interpret_unary_oprator(#{op.operator}, #{input.inspect}) got node list #{node_list.inspect}"
+      # puts "interpret_unary_oprator(#{op.operator}, #{input.inspect}) got node list #{node_list.inspect}"
       case op.operator
       when :not then interpret_not(node_list)
       when :minus then 0 - node_list.first # FIXME: sure hope this is a number!
@@ -623,7 +622,7 @@ module JsonPath2
     # Evaluate the expressions in the parameter list to make the parameter values
     # to pass in to a JsonPath function.
     #
-    # The node lists returned by a singulare query must be deconstructed into a single value for 
+    # The node lists returned by a singulare query must be deconstructed into a single value for
     # parameters of ValueType, this is done here.
     # For explanation:
     # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-
