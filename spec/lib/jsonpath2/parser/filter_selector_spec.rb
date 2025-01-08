@@ -7,34 +7,10 @@ module JsonPath2
     describe '#parse_filter_selector' do
       let(:query) { '$[?@.price < 10]' }
 
-      it 'parses a filter selector with an "or" expression' do
-        ast = described_class.parse('$[? false || true]')
-        expect(ast).to eq('$[?(false || true)]')
-      end
-
-      it 'parses a filter selector with chained "or" expressions' do
-        ast = described_class.parse('$[? false || false || true]')
-        expect(ast).to eq('$[?((false || false) || true)]')
-      end
-
-      it 'parses a filter selector with an "and" expression' do
-        ast = described_class.parse('$[? false && true]')
-        expect(ast).to eq('$[?(false && true)]')
-      end
-
-      it 'parses a filter selector with chained "and" expressions' do
-        ast = described_class.parse('$[? false && false && true]')
-        expect(ast).to eq('$[?((false && false) && true)]')
-      end
-
-      it 'parses a filter selector with chained "or" and "and" expressions' do
-        ast = described_class.parse('$[? false || false && true]')
-        expect(ast).to eq('$[?(false || (false && true))]')
-      end
-
-      it 'parses a filter selector with chained "and" and "or" expressions' do
-        ast = described_class.parse('$[? false && false || true]')
-        expect(ast).to eq('$[?((false && false) || true)]')
+      it 'raises error when literal is compared literal in logical comparison' do
+        expect {
+          described_class.parse('$[? false || true]')
+        }.to raise_error(Error, /Literal "true" must be compared to an expression/)
       end
 
       it 'parses current node operator' do
@@ -87,11 +63,6 @@ module JsonPath2
       it 'handles comparison of number and name selector on root' do
         ast = described_class.parse('$[? 1 <= $.arr]')
         expect(ast).to eq('$[?(1 <= $.arr)]')
-      end
-
-      it 'handles comparison of booleans' do
-        ast = described_class.parse('$[? true <= true]')
-        expect(ast).to eq('$[?(true <= true)]')
       end
 
       it 'handles numeric comparison with greater-than against a fractional number' do

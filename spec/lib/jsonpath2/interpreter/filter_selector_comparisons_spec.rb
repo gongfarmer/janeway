@@ -41,12 +41,12 @@ module JsonPath2
         expect(result).not_to be_empty
       end
 
-      it 'performs numeric comaprison with <=' do
+      it 'performs numeric comparison with <=' do
         result = described_class.interpret(input, '$[? 1 <= 2]')
         expect(result).not_to be_empty
       end
 
-      it 'performs numeric comaprison with >' do
+      it 'performs numeric comparison with >' do
         result = described_class.interpret(input, '$[? 1 > 2]')
         expect(result).to be_empty
       end
@@ -138,16 +138,6 @@ module JsonPath2
 
       it 'compares number to array with <' do
         result = described_class.interpret(input, '$[? 1 < $.arr]')
-        expect(result).to be_empty
-      end
-
-      it 'compares true with self using <=' do
-        result = described_class.interpret(input, '$[? true <= true]')
-        expect(result).not_to be_empty
-      end
-
-      it 'compares true with self using >' do
-        result = described_class.interpret(input, '$[? true > true]')
         expect(result).to be_empty
       end
 
