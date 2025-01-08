@@ -14,8 +14,11 @@ module JsonPath2
         expect(described_class.interpret(input, '$[2]')).to eq(['c'])
       end
 
-      it 'has same meaning for 0 and negative 0' do
-        expect(described_class.interpret(input, '$[-0]')).to eq(['a'])
+      # CTS "index selector, -0",
+      it 'raises error for negative zero' do
+        expect {
+          described_class.interpret(input, '$[-0]')
+        }.to raise_error(Error, 'Negative zero is not allowed in an index selector')
       end
 
       it 'counts from end for negative index' do

@@ -29,6 +29,20 @@ module JsonPath2
         ast = described_class.parse('$[::-1]')
         expect(ast).to eq('$[-1:0:-1]')
       end
+
+      # CTS "slice selector, start, -0",
+      it 'raises error for negative zero in the start position' do
+        expect {
+          described_class.parse('$[-0::]')
+        }.to raise_error(Error, 'Negative zero is not allowed in an array slice selector')
+      end
+
+      # CTS "slice selector, end, -0",
+      it 'raises error for negative zero in the end position' do
+        expect {
+          described_class.parse('$[:-0:]')
+        }.to raise_error(Error, 'Negative zero is not allowed in an array slice selector')
+      end
     end
   end
 end

@@ -189,8 +189,18 @@ module JsonPath2
     # Consume minus operator and apply it to the (expected) number token following it.
     # Don't consume the number token.
     def parse_minus_operator
-      log "(#{current})"
+      log "(#{current}) previous:#{previous} next:#{next_token}"
       raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :minus
+
+      # RFC: negative 0 is allowed within a filter selector comparison, but is NOT allowed within an index selector or array slice selector.
+      # Detect that condition here
+      if next_token.type == :number && next_token.literal == 0
+        if [previous.type, lookahead(2).type].any? { _1 == :array_slice_separator}
+          raise Error, 'Negative zero is not allowed in an array slice selector'
+        elsif %i[union child_start].include?(previous.type)
+          raise Error, 'Negative zero is not allowed in an index selector'
+        end
+      end
 
       # '-' must be followed by a number token.
       # Parse number and apply - sign to its literal value
