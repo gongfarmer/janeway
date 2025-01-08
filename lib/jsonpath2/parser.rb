@@ -598,7 +598,7 @@ module JsonPath2
     # Parse an expression
     def parse_expr
       parsing_function = determine_parsing_function
-      raise Error::Syntax::UnrecognizedToken.new(current) unless parsing_function
+      raise Error, "Unrecognized token: #{current.lexeme.inspect}" unless parsing_function
 
       send(parsing_function)
     end
