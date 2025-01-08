@@ -535,7 +535,7 @@ module JsonPath2
     def interpret_less_than_or_equal(lhs, rhs)
       # Must be done in 2 comparisons, because the equality comparison is
       # valid for many types that do not support the < operator.
-      return true if lhs == rhs
+      return true if interpret_equal(lhs, rhs)
 
       lhs < rhs
     rescue StandardError
@@ -551,7 +551,7 @@ module JsonPath2
     end
 
     def interpret_greater_than_or_equal(lhs, rhs)
-      return true if lhs == rhs
+      return true if interpret_equal(lhs, rhs)
 
       lhs > rhs
     rescue StandardError
