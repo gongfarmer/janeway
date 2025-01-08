@@ -450,6 +450,20 @@ module JsonPath2
           described_class.lex('$[?@.a==- 1]')
         }.to raise_error(Lexer::Error, 'minus operator must be followed by number, not whitespace')
       end
+
+      # CTS "name selector, double quotes, invalid escaped single quote"
+      it 'raises error when name contains invalid escaped single quote' do
+        expect {
+          described_class.lex("$[\"\\'\"]")
+        }.to raise_error(Error, "Character ' must not be escaped within double quotes")
+      end
+
+      # CTS "name selector, single quotes, invalid escaped double quote",
+      it 'raises error when name contains invalid escaped double quote' do
+        expect {
+          described_class.lex("$['\\\"']")
+        }.to raise_error(Error, 'Character " must not be escaped within single quotes')
+      end
     end
   end
 end

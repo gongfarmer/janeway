@@ -162,6 +162,8 @@ module JsonPath2
     # @param delimiter [String] eg. ' or "
     # @return [Token] string token
     def lex_delimited_string(delimiter)
+      non_delimiter = %w[' "].reject { _1 == delimiter }.first
+
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
         # Transform escaped representation to literal chars
@@ -171,6 +173,9 @@ module JsonPath2
             if lookahead(2) == delimiter
               consume # \
               consume # delimiter
+            elsif lookahead(2) == non_delimiter
+              qtype = delimiter == '"' ? 'double' : 'single'
+              raise Error, "Character #{non_delimiter} must not be escaped within #{qtype} quotes"
             else
               consume_escape_sequence # consumes multiple chars
             end
@@ -210,12 +215,12 @@ module JsonPath2
       when '"', "'", '\\' then char
       when 'u' then consume_unicode_escape_sequence
       else
-        raise Error.new("invalid character #{char.inspect}", current_location) unless unescaped?(char)
-
-        char # unnecessary escape, just return the literal char
-
-        # whatever this is, it is not allowed even when escaped
-
+        if unescaped?(char)
+          char # unnecessary escape, just return the literal char
+        else
+          # whatever this is, it is not allowed even when escaped
+          raise Error.new("invalid character #{char.inspect}", current_location)
+        end
       end
     end
 
