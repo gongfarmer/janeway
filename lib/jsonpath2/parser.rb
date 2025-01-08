@@ -53,18 +53,6 @@ module JsonPath2
     def parse
       log @tokens.map(&:lexeme).join
 
-      # FIXME: change this to parse the root and then feed the next token to root, to make a tree.
-      # Currently, root is just the first token in the list but does not contain anything.
-      # This makes it so that root's #to_s cannot tell if it is followed by dot notation or parentheses notation, which makes it impossible to properly implement the #to_s
-      #
-      # This loop should iterate only twice: once to parse the root (recursively), once to parse the terminator
-#      while pending_tokens?
-#        consume
-#        log "CONSUME, current=#{current}"
-#        node = parse_expr_recursively
-#        ast << node if node
-#      end
-
       consume
       log "CONSUME, current=#{current}"
       @ast.root = parse_expr_recursively

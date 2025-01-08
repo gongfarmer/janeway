@@ -5,7 +5,7 @@ module JsonPath2
   class Interpreter
     attr_reader :query, :output, :env, :call_stack
 
-    class EmptyNodeList < StandardError; end
+    class Error < JsonPathError; end
 
     # Specify the parameter types that built-in JsonPath functions require
     FUNCTION_PARAMETER_TYPES = {
@@ -167,7 +167,7 @@ module JsonPath2
       return [result] unless child
 
       results = send(:"interpret_#{child.type}", child, result)
-      puts "#interpret_index_selector(#{selector.name}, #{input.inspect}) --> #{results.inspect}"
+      puts "#interpret_index_selector(#{selector}, #{input.inspect}) --> #{results.inspect}"
       results
     rescue IndexError
       [] # returns empty array if no such index
@@ -359,6 +359,18 @@ module JsonPath2
     # @param input [Object]
     def interpret_node_as_value(node, input)
       puts "#interpret_node_as_value(#{node.inspect}, #{input.inspect})"
+
+      # nodes must be singular queries or literals
+      case node
+      when AST::CurrentNode, AST::RootNode
+        unless node.singular_query?
+          raise Error, "Expression #{node} does not produce a singular value for comparison"
+        end
+      when AST::Number, AST::StringType, AST::Null, AST::Function, AST::Boolean then nil
+      else
+        raise "Invalid expression for comparison: #{node}"
+      end
+
       result = interpret_node(node, input)
 
       # Return basic types (ie. from AST::Number, AST::StringType)
@@ -472,9 +484,6 @@ module JsonPath2
         raise "don't know how to handle binary operator #{binary_op.inspect}"
       end
       send(:"interpret_#{binary_op.operator}", lhs, rhs)
-    rescue EmptyNodeList
-      # this was a comparison operation, but one of the side evaluated to an empty node list
-      false
     end
 
     def interpret_equal(lhs, rhs)

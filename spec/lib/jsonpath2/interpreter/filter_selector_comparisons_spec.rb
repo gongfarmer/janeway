@@ -168,6 +168,13 @@ module JsonPath2
         result = described_class.interpret(input, '$[?@.a==-0]')
         expect(result).to eq(expected)
       end
+
+      # CTS: "filter, non-singular query in comparison, all children"
+      it 'raises error when a comparison operator gets a non-singular-query expression' do
+        expect {
+          described_class.interpret(input, '$[?@[*]==0]')
+        }.to raise_error(Interpreter::Error, /Expression.* does not produce a singular value/)
+      end
     end
   end
 end

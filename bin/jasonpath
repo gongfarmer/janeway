@@ -144,6 +144,9 @@ end
 begin
   options = parse_args(ARGV.dup)
   main(options)
+rescue JsonPath2::JsonPathError => e
+  puts
+  abort("Error: #{e}")
 rescue Interrupt, Errno::EPIPE
   abort("\n")
 end

@@ -3,7 +3,8 @@
 module JsonPath2
   module AST
     module Helpers
-      # @param str [String] ascii string
+      # @param str [String] ascii string, CamelCase
+      # @return [String] lowercase, with underscores
       def self.camelcase_to_underscore(str)
         found_uppercase = false
         chars = []
@@ -24,4 +25,3 @@ module JsonPath2
     end
   end
 end
-

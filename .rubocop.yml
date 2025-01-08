@@ -22,3 +22,6 @@ AllCops:
 Performance:
   Exclude:
     - 'spec/**/*'
+
+Style/BlockDelimiters:
+  EnforcedStyle: braces_for_chaining
