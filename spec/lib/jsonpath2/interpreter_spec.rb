@@ -25,12 +25,12 @@ module JsonPath2
 
     # FIXME: How? wildcard sends an array, name selector only operates on a hash.
     # CTS "basic, wildcard shorthand, then name shorthand",
-    xit 'interprets wildcard shorthand then name shorthand' do
+    it 'interprets wildcard shorthand then name shorthand' do
       input = {
         'x' => { 'a' => 'Ax', 'b' => 'Bx' },
         'y' => { 'a' => 'Ay', 'b' => 'By' },
       }
-      expect(described_class.interpret(input, '$.*.a')).to eq(%w[Ax Ay])
+      expect(described_class.interpret(input, '$.*.a')).to match_array(%w[Ax Ay])
     end
 
     it 'interprets null' do

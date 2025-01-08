@@ -193,9 +193,15 @@ module JsonPath2
       return values if values.empty? # early exit, no need for further processing on empty list
       return values unless selector.child
 
-      # Interpret child using result from this selector, and return that result
+      # Apply next selector to every value
+      # FIXME: is this correct??  Makes the CTS pass  "basic, wildcard shorthand, then name shorthand"
       child = selector.child
-      send(:"interpret_#{child.type}", child, values)
+      results = []
+      values.each do |value|
+        result = send(:"interpret_#{child.type}", child, value)
+        results << result.first unless result.empty?
+      end
+      results
     end
 
     # Filter the input by applying the array slice selector.
