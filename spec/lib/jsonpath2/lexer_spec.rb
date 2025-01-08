@@ -312,6 +312,12 @@ module JsonPath2
         expect(described_class.lex('$[?@>3.5]')).to eq(expected)
       end
 
+      it 'raises error when number has leading zeros' do
+        expect {
+          described_class.lex('$[?@.a==00]')
+        }.to raise_error(Lexer::Error, 'Number may not start with leading zero: "00"')
+      end
+
       it 'recognizes function "length"' do
         expected = %I[
           root child_start filter function group_start current_node dot
