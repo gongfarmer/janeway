@@ -353,11 +353,8 @@ module JsonPath2
       end
 
       it 'tokenizes exponent' do
-        expected = %I[
-          root child_start filter group_start current_node dot identifier less_than
-          number group_end child_end eof
-        ]
-        expect(described_class.lex('$[?(@.price < 5e2)]')).to eq(expected)
+        token = described_class.lex('$[?(@.price < 5e3)]').find { |tk| tk.type == :number }
+        expect(token.literal).to eq(5000)
       end
 
       it 'tokenizes exponent with explicit +' do
@@ -379,11 +376,8 @@ module JsonPath2
       end
 
       it 'tokenizes exponent with capital E' do
-        expected = %I[
-          root child_start filter group_start current_node dot identifier less_than
-          number group_end child_end eof
-        ]
-        expect(described_class.lex('$[?(@.price < 5E2)]')).to eq(expected)
+        token = described_class.lex('$[?(@.price < 5E2)]').find { |tk| tk.type == :number }
+        expect(token.literal).to eq(500)
       end
 
       it 'tokenizes true in a function call as true type, not a string' do

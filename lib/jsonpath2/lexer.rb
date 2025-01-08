@@ -334,7 +334,7 @@ module JsonPath2
 
       # Look for an exponent part
       if 'Ee'.include?(lookahead)
-        consume # "e"
+        consume # "e", "E"
         if %w[+ -].include?(lookahead)
           consume # "+" / "-"
         end
@@ -343,7 +343,7 @@ module JsonPath2
 
       lexeme = source[lexeme_start_p..(next_p - 1)]
       literal =
-        if lexeme.include?('.') || lexeme.include?('e')
+        if lexeme.include?('.') || lexeme.downcase.include?('e')
           lexeme.to_f
         else
           lexeme.to_i
