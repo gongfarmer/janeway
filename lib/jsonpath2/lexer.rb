@@ -98,7 +98,6 @@ module JsonPath2
         elsif name_first_char?(c)
           lex_member_name_shorthand(ignore_keywords: tokens.last.type == :dot)
         end
-        # FIXME: what about string that starts with unicode?  Seems like #alpha_numeric? does not handle this
 
       raise("Unknown character: #{c.inspect}") unless token
 
@@ -121,6 +120,10 @@ module JsonPath2
     end
 
     def token_from_one_char_lex(lexeme)
+      if lexeme == '-' && WHITESPACE.include?(lookahead)
+        raise Error, 'minus operator must be followed by number, not whitespace'
+      end
+
       Token.new(OPERATORS.key(lexeme), lexeme, nil, current_location)
     end
 

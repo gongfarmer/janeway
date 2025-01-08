@@ -425,6 +425,12 @@ module JsonPath2
           described_class.lex("$[\"\\\0\"]")
         end.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
       end
+
+      it 'raises error when there is space between minus operator and number' do
+        expect {
+          described_class.lex('$[?@.a==- 1]')
+        }.to raise_error(Lexer::Error, 'minus operator must be followed by number, not whitespace')
+      end
     end
   end
 end
