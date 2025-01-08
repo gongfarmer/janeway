@@ -25,3 +25,11 @@ Performance:
 
 Style/BlockDelimiters:
   EnforcedStyle: braces_for_chaining
+
+RSpec/ExampleLength:
+  Max: 6
+
+# Allow rspec test module blocks to be long
+Metrics/ModuleLength:
+  Exclude:
+    - spec/**/*

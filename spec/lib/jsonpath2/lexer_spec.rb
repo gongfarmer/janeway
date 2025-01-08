@@ -76,15 +76,13 @@ module JsonPath2
         expect(described_class.lex('$.["\u263a"]')).to eq([:root, :dot, :child_start, '☺', :child_end, :eof])
       end
 
+      # rubocop: disable RSpec/MultipleExpectations
       it 'converts UTF-16 surrogate pair to UTF-8' do
-        tokens = described_class.lex('$["\\uD83D\\uDE09"]')
-        token = tokens[2]
+        token = described_class.lex('$["\\uD83D\\uDE09"]').find { |tk| tk.type == :string }
         expect(token.literal.encoding).to be(Encoding::UTF_8)
-        expect(token).to have_attributes(
-          type: :string,
-          literal: '😉'
-        )
+        expect(token.literal).to eq('😉')
       end
+      # rubocop: enable RSpec/MultipleExpectations
 
       it 'accepts unicode escape that starts with D but is still non-surrogate' do
         tokens = described_class.lex('$["\\uD7FF"]')
@@ -118,42 +116,59 @@ module JsonPath2
       end
     end
 
-    it 'tokenizes array slice selector' do
-      expect(described_class.lex('$[1:3]')).to eq([:root, :child_start, 1, :array_slice_separator, 3, :child_end, :eof])
-      expect(described_class.lex('$[5:]'))
-        .to eq([:root, :child_start, 5, :array_slice_separator, :child_end, :eof])
-      expect(described_class.lex('$[1:5:2]'))
-        .to eq([:root, :child_start, 1, :array_slice_separator, 5, :array_slice_separator, 2, :child_end, :eof])
-      expect(described_class.lex('$[5:1:-2]'))
-        .to eq([:root, :child_start, 5, :array_slice_separator, 1, :array_slice_separator, :minus, 2, :child_end, :eof])
-      expect(described_class.lex('$[::-1]'))
-        .to eq([:root, :child_start, :array_slice_separator, :array_slice_separator, :minus, 1, :child_end, :eof])
+    context 'when tokenizing array slice selector' do
+      it 'handles start and end' do
+        expected = [:root, :child_start, 1, :array_slice_separator, 3, :child_end, :eof]
+        expect(described_class.lex('$[1:3]')).to eq(expected)
+      end
+
+      it 'handles start only' do
+        expect(described_class.lex('$[5:]'))
+          .to eq([:root, :child_start, 5, :array_slice_separator, :child_end, :eof])
+      end
+
+      it 'handles start, end and step' do
+        expect(described_class.lex('$[1:5:2]'))
+          .to eq([:root, :child_start, 1, :array_slice_separator, 5, :array_slice_separator, 2, :child_end, :eof])
+      end
+
+      it 'handles start, end and negative step' do
+        expected = [
+          :root, :child_start, 5, :array_slice_separator, 1, :array_slice_separator, :minus, 2, :child_end, :eof,
+        ]
+        expect(described_class.lex('$[5:1:-2]')).to eq(expected)
+      end
+
+      it 'handles negative step with nothing else' do
+        expect(described_class.lex('$[::-1]'))
+          .to eq([:root, :child_start, :array_slice_separator, :array_slice_separator, :minus, 1, :child_end, :eof])
+      end
     end
 
     context 'when tokenizing filter selector' do
-      it 'tokenizes equality operator, with brackets' do
+      it 'tokenizes equality operator, with parentheses' do
         expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :equal, :dot, 'two', :group_end,
                     :child_end, :eof,]
         expect(described_class.lex('$[?(.one == .two)]')).to eq(expected)
       end
 
-      it 'tokenizes equality operator, without brackets' do
+      it 'tokenizes equality operator, without parentheses' do
         expected = [:root, :child_start, :filter, :dot, 'one', :equal, :dot, 'two', :child_end, :eof]
         expect(described_class.lex('$[? .one == .two ]')).to eq(expected)
       end
 
-      it 'tokenizes non-equality operator, with brackets' do
+      it 'tokenizes non-equality operator, with parentheses' do
         expected = [:root, :child_start, :filter, :group_start, :dot, 'one', :not_equal, :dot, 'two', :group_end,
                     :child_end, :eof,]
         expect(described_class.lex('$[?(.one != .two)]')).to eq(expected)
       end
 
-      it 'tokenizes non-equality operator, without brackets' do
+      it 'tokenizes non-equality operator, without parentheses' do
         expected = [:root, :child_start, :filter, :dot, 'one', :not_equal, :dot, 'two', :child_end, :eof]
         expect(described_class.lex('$[? .one != .two ]')).to eq(expected)
       end
 
-      it 'tokenizes less-than operator, with brackets' do
+      it 'tokenizes less-than operator, with parentheses' do
         expected = [
           :root, :child_start, :filter, :group_start, :dot, 'one',
           :less_than, :dot, 'two', :group_end, :child_end, :eof,
@@ -161,12 +176,12 @@ module JsonPath2
         expect(described_class.lex('$[?(.one < .two)]')).to eq(expected)
       end
 
-      it 'tokenizes less-than operator, without brackets' do
+      it 'tokenizes less-than operator, without parentheses' do
         expected = [:root, :child_start, :filter, :dot, 'one', :less_than, :dot, 'two', :child_end, :eof]
         expect(described_class.lex('$[? .one < .two]')).to eq(expected)
       end
 
-      it 'tokenizes less-than-or-equal operator, with brackets' do
+      it 'tokenizes less-than-or-equal operator, with parentheses' do
         expected = [
           :root, :child_start, :filter, :group_start, :dot, 'one', :less_than_or_equal,
           :dot, 'two', :group_end, :child_end, :eof,
@@ -174,12 +189,12 @@ module JsonPath2
         expect(described_class.lex('$[?(.one <= .two)]')).to eq(expected)
       end
 
-      it 'tokenizes less-than-or-equal operator, without brackets' do
+      it 'tokenizes less-than-or-equal operator, without parentheses' do
         expected = [:root, :child_start, :filter, :dot, 'one', :less_than_or_equal, :dot, 'two', :child_end, :eof]
         expect(described_class.lex('$[? .one <= .two ]')).to eq(expected)
       end
 
-      it 'tokenizes greater-than operator, with brackets' do
+      it 'tokenizes greater-than operator, with parentheses' do
         expected = [
           :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than,
           :dot, 'two', :group_end, :child_end, :eof,
@@ -187,23 +202,15 @@ module JsonPath2
         expect(described_class.lex('$[?(.one > .two)]')).to eq(expected)
       end
 
-      it 'tokenizes greater-than operator, without brackets' do
+      it 'tokenizes greater-than operator, without parentheses' do
         expected = [
-          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than,
-          :dot, 'two', :group_end, :child_end, :eof,
+          :root, :child_start, :filter, :dot, 'one', :greater_than,
+          :dot, 'two', :child_end, :eof,
         ]
-        expect(described_class.lex('$[?(.one > .two)]')).to eq(expected)
+        expect(described_class.lex('$[?.one > .two]')).to eq(expected)
       end
 
-      it 'tokenizes greater-than-or-equal operator, with brackets' do
-        expected = [
-          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal,
-          :dot, 'two', :group_end, :child_end, :eof,
-        ]
-        expect(described_class.lex('$[?(.one >= .two)]')).to eq(expected)
-      end
-
-      it 'tokenizes greater-than-or-equal operator, without brackets' do
+      it 'tokenizes greater-than-or-equal operator, with parentheses' do
         expected = [
           :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal,
           :dot, 'two', :group_end, :child_end, :eof,
@@ -211,42 +218,42 @@ module JsonPath2
         expect(described_class.lex('$[?(.one >= .two)]')).to eq(expected)
       end
 
-      it 'tokenizes not operator, with brackets' do
+      it 'tokenizes greater-than-or-equal operator, without parentheses' do
+        expected = [
+          :root, :child_start, :filter, :dot, 'one', :greater_than_or_equal,
+          :dot, 'two', :child_end, :eof,
+        ]
+        expect(described_class.lex('$[?.one>=.two]')).to eq(expected)
+      end
+
+      it 'tokenizes not operator, with parentheses' do
         expected = [:root, :child_start, :filter, :group_start, :not, 'property', :group_end, :child_end, :eof]
         expect(described_class.lex('$[?(!property)]')).to eq(expected)
       end
 
-      it 'tokenizes not operator, without brackets' do
+      it 'tokenizes not operator, without parentheses' do
         expected = [:root, :child_start, :filter, :not, 'property', :child_end, :eof]
         expect(described_class.lex('$[?!property]')).to eq(expected)
       end
 
-      it 'tokenizes and operator, with brackets' do
+      it 'tokenizes and operator, with parentheses' do
         expected = %I[root child_start filter group_start true and false group_end child_end eof]
         expect(described_class.lex('$[?(true && false)]')).to eq(expected)
       end
 
-      it 'tokenizes and operator, without brackets' do
+      it 'tokenizes and operator, without parentheses' do
         expected = %I[root child_start filter true and false child_end eof]
         expect(described_class.lex('$[? true && false]')).to eq(expected)
       end
 
-      it 'tokenizes or operator, with brackets' do
+      it 'tokenizes or operator, with parentheses' do
         expected = %I[root child_start filter group_start true or false group_end child_end eof]
         expect(described_class.lex('$[?(true || false)]')).to eq(expected)
       end
 
-      it 'tokenizes or operator, without brackets' do
+      it 'tokenizes or operator, without parentheses' do
         expected = %I[root child_start filter true or false child_end eof]
         expect(described_class.lex('$[? true || false]')).to eq(expected)
-      end
-
-      it 'tokenizes grouping function expressions' do
-        expected = [
-          :root, :child_start, :filter, :group_start, :dot, 'one', :greater_than_or_equal,
-          :dot, 'two', :group_end, :child_end, :eof,
-        ]
-        expect(described_class.lex('$[?(.one >= .two)]')).to eq(expected)
       end
 
       it 'tokenizes true' do
@@ -427,15 +434,15 @@ module JsonPath2
       end
 
       it 'raises error when given a char that is not allowed' do
-        expect do
+        expect {
           described_class.lex("$[\"\0\"]")
-        end.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
+        }.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
       end
 
       it 'raises error when given an escaped char that is not allowed' do
-        expect do
+        expect {
           described_class.lex("$[\"\\\0\"]")
-        end.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
+        }.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
       end
 
       it 'raises error when there is space between minus operator and number' do

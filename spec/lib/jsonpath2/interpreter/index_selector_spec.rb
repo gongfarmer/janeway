@@ -4,6 +4,7 @@ require 'jsonpath2'
 
 module JsonPath2
   describe Interpreter do
+    # rubocop: disable RSpec/MultipleExpectations
     describe '#interpret_index_selector' do
       let(:input) { ('a'..'c').to_a }
 
@@ -39,7 +40,7 @@ module JsonPath2
 
       # CTS "index selector, min exact index"
       it 'handles the minimum possible index value' do
-        expect(described_class.interpret(['one', 'two'], '$[-9007199254740991]')).to be_empty
+        expect(described_class.interpret(%w[one two], '$[-9007199254740991]')).to be_empty
       end
 
       # CTS "index selector, min exact index - 1"
@@ -50,16 +51,17 @@ module JsonPath2
       end
 
       # CTS "index selector, max exact index"
-      it 'handles the minimum possible index value' do
-        expect(described_class.interpret(['one', 'two'], '$[9007199254740991]')).to be_empty
+      it 'handles the maximum possible index value' do
+        expect(described_class.interpret(%w[one two], '$[9007199254740991]')).to be_empty
       end
 
       # CTS "index selector, max exact index + 1"
-      it 'raises error given an index that is smaller than minimum' do
+      it 'raises error given an index that is larger than maximum' do
         expect {
           described_class.interpret([], '$[9007199254740992]')
         }.to raise_error(Error, /Index selector value too large/)
       end
     end
+    # rubocop: enable RSpec/MultipleExpectations
   end
 end

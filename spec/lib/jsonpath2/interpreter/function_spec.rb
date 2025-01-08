@@ -5,6 +5,7 @@ require 'jsonpath2'
 
 # Examples from https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.5.3-8
 module JsonPath2
+  # rubocop: disable RSpec/ExampleLength
   describe Interpreter do
     describe '#interpret_filter_selector' do
       let(:input) do
@@ -97,6 +98,7 @@ module JsonPath2
           expect(result).to eq([{ 'b' => 'j' }, { 'b' => 'k' }])
         end
 
+        # CTS "functions, match, regex from the document",
         it 'reads iregexp from the input document' do
           query = '$.values[?match(@, $.regex)]'
           input =
@@ -109,7 +111,7 @@ module JsonPath2
         end
       end
 
-      describe 'jsonpath function "match"' do
+      describe 'jsonpath function "search"' do
         it 'supports regular expression search of array values' do
           # substring match
           result = described_class.interpret(input, '$.a[?search(@.b, "[jk]")]')
@@ -117,6 +119,7 @@ module JsonPath2
         end
       end
 
+      # CTS "functions, value, single-value nodelist",
       it 'interprets the value() function' do
         query = '$[?value(@.*)==4]'
         input = [[4], { 'foo' => 4 }, [5], { 'foo' => 5 }, 4]
@@ -124,6 +127,7 @@ module JsonPath2
         expect(described_class.interpret(input, query)).to eq(expected)
       end
 
+      # CTS "filter, equals, special nothing",
       it 'interprets usage of the root node in a function call' do
         query = '$.values[?length(@.a) == value($..c)]'
         input =
@@ -140,4 +144,5 @@ module JsonPath2
       end
     end
   end
+  # rubocop: enable RSpec/ExampleLength
 end

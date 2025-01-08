@@ -40,7 +40,8 @@ module JsonPath2
         expect(result).to eq([5, 4, 6])
       end
 
-      it 'tests array value existence' do
+      # rubocop: disable RSpec/ExampleLength
+      it 'tests key existence on array values' do
         result = described_class.interpret(input, '$.a[?@.b]')
         expect(result).to eq(
           [
@@ -51,6 +52,7 @@ module JsonPath2
           ]
         )
       end
+      # rubocop: enable RSpec/ExampleLength
 
       it 'does existence check using only the current_node operator' do
         input = { 'a' => 1, 'b' => nil }
@@ -63,6 +65,7 @@ module JsonPath2
         expect(described_class.interpret(input, '$[?@.a]')).to match_array(expected)
       end
 
+      # rubocop: disable RSpec/ExampleLength
       it 'does non-singular queries' do
         result = described_class.interpret(input, '$[?@.*]')
         expect(result).to eq(
@@ -78,6 +81,7 @@ module JsonPath2
           ]
         )
       end
+      # rubocop: enable RSpec/ExampleLength
 
       it 'supports nested filter selectors' do
         result = described_class.interpret(input, '$[?@[?@.b]]')
@@ -117,6 +121,7 @@ module JsonPath2
         expect(result).to eq([3, 5, 1, 2, 4, 6]) # order is undefined
       end
 
+      # rubocop: disable RSpec/ExampleLength
       it 'compares primitive and structured values' do
         result = described_class.interpret(input, '$.a[?@ == @]')
         expect(result).to eq(
@@ -129,6 +134,7 @@ module JsonPath2
           ]
         )
       end
+      # rubocop: enable RSpec/ExampleLength
 
       it 'does comparison of null with key that has null value' do
         input = [{ 'a' => nil, 'd' => 'e' }, { 'a' => 'c', 'd' => 'f' }]

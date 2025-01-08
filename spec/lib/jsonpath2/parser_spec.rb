@@ -55,9 +55,9 @@ module JsonPath2
     end
 
     it 'raises error on trailing comma' do
-      expect do
+      expect {
         described_class.parse('$[0,]')
-      end.to raise_error(Parser::Error, 'Comma must be followed by another expression in filter selector')
+      }.to raise_error(Parser::Error, 'Comma must be followed by another expression in filter selector')
     end
 
     it 'parses child segment that contains a single name selector as just a name selector' do

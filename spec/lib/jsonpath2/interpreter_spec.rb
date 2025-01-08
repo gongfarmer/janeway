@@ -18,9 +18,9 @@ module JsonPath2
     # CTS "basic, empty segment"
     it 'raises error for empty child segment' do
       input = { 'a' => 1 }
-      expect do
+      expect {
         described_class.interpret(input, '$[]')
-      end.to raise_error(JsonPath2::Parser::Error, 'Empty child segment')
+      }.to raise_error(JsonPath2::Parser::Error, 'Empty child segment')
     end
 
     # FIXME: How? wildcard sends an array, name selector only operates on a hash.
@@ -37,13 +37,11 @@ module JsonPath2
       expect(described_class.interpret({}, '$[?@.a==null]')).to eq([])
     end
 
+    # CTS "filter, not expression",
     it 'interprets filter expression with unary operator' do
       input = [{ 'a' => 'a', 'd' => 'e' }, { 'a' => 'b', 'd' => 'f' }, { 'a' => 'd', 'd' => 'f' }]
       query = "$[?!(@.a=='b')]"
-      expected = [
-        { 'a' => 'a', 'd' => 'e' },
-        { 'a' => 'd', 'd' => 'f' },
-      ]
+      expected = [{ 'a' => 'a', 'd' => 'e' }, { 'a' => 'd', 'd' => 'f' }]
       expect(described_class.interpret(input, query)).to eq(expected)
     end
   end
