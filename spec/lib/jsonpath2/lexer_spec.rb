@@ -464,6 +464,20 @@ module JsonPath2
           described_class.lex("$['\\\"']")
         }.to raise_error(Error, 'Character " must not be escaped within single quotes')
       end
+
+      # CTS "basic, no leading whitespace",
+      it 'raises error when query starts with whitesapce' do
+        expect {
+          described_class.lex(' $')
+        }.to raise_error(Error, 'JSONPath query may not start or end with whitespace')
+      end
+
+      # CTS "basic, no trailing whitespace",
+      it 'raises error when query ends with whitesapce' do
+        expect {
+          described_class.lex('$ ')
+        }.to raise_error(Error, 'JSONPath query may not start or end with whitespace')
+      end
     end
   end
 end

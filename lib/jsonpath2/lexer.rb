@@ -72,6 +72,9 @@ module JsonPath2
     end
 
     def start_tokenization
+      if WHITESPACE.include?(@source[0]) || WHITESPACE.include?(@source[-1])
+        raise Error, 'JSONPath query may not start or end with whitespace'
+      end
       tokenize while source_uncompleted?
 
       tokens << Token.new(:eof, '', nil, after_source_end_location)
