@@ -27,6 +27,14 @@ module JsonPath2
       def tree(level)
         [indented(level, to_s)]
       end
+
+      # True if this is the root of a singular-query.
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-
+      #
+      # @return [Boolean]
+      def singular_query?
+        true
+      end
     end
   end
 end

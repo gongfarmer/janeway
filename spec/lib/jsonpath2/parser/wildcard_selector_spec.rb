@@ -14,11 +14,6 @@ module JsonPath2
         ast = described_class.parse('$.o[*, *]')
         expect(ast).to eq('$.o[*, *]')
       end
-
-      it 'parses dotted name selector after wildcard' do
-        ast = described_class.parse('$[? @.*.price >= 5]')
-        expect(ast.to_s).to eq('$[?(@.*.price >= 5)]')
-      end
     end
   end
 end

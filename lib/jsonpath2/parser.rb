@@ -59,7 +59,7 @@ module JsonPath2
       consume
       raise "unparsed tokens" unless current.type == :eof
 
-      ast
+      @ast
     end
 
     private

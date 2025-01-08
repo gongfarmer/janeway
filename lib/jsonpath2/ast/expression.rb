@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'helpers'
+require_relative 'error'
 
 module JsonPath2
   module AST
@@ -38,6 +39,20 @@ module JsonPath2
       # @return [Array]
       def tree(level)
         [indented(level, to_s)]
+      end
+
+      # Return true if this is a literal expression
+      # @return [Boolean]
+      def literal?
+        false
+      end
+
+      # True if this is the root of a singular-query.
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-
+      #
+      # @return [Boolean]
+      def singular_query?
+        false
       end
     end
   end

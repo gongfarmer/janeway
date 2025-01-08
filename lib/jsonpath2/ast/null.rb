@@ -2,17 +2,19 @@
 
 module JsonPath2
   module AST
-    class StringType < JsonPath2::AST::Expression
+    class Null < JsonPath2::AST::Expression
       def ==(other)
-        value == other&.value
+        self.class == other.class
       end
 
       def to_s
-        if @value.include?("'")
-          %("#{@value}"')
-        else
-          "'#{@value}'"
-        end
+        'null'
+      end
+
+      # @param level [Integer]
+      # @return [Array]
+      def tree(level = 0)
+        indented(level, 'null')
       end
 
       # Return true if this is a literal expression

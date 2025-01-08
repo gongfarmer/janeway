@@ -14,6 +14,12 @@ module JsonPath2
       def to_s
         @value.to_s
       end
+
+      # Return true if this is a literal expression
+      # @return [Boolean]
+      def literal?
+        true
+      end
     end
   end
 end

@@ -128,6 +128,13 @@ module JsonPath2
         ast = described_class.parse('$[? 1 <= 5e-2]')
         expect(ast).to eq('$[?(1 <= 0.05)]')
       end
+
+      # CTS: "filter, non-singular query in comparison, all children"
+      it 'raises error when a comparison operator gets a non-singular-query expression' do
+        expect {
+          described_class.parse('$[?@[*]==0]')
+        }.to raise_error(StandardError, /Expression.* does not produce a singular value/)
+      end
     end
   end
 end
