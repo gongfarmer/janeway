@@ -341,6 +341,10 @@ module JsonPath2
         if %w[+ -].include?(lookahead)
           consume # "+" / "-"
         end
+        unless digit?(lookahead)
+          lexeme = source[lexeme_start_p..(next_p - 1)]
+          raise Error, "Exponent 'e' must be followed by number: #{lexeme.inspect}"
+        end
         consume_digits
       end
 

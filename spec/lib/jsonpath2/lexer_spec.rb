@@ -386,6 +386,12 @@ module JsonPath2
         expect(token.literal).to eq(500)
       end
 
+      it 'raises error when exponent lacks trailing number' do
+        expect {
+          described_class.lex('$[?@.a == 1e]')
+        }.to raise_error(Lexer::Error, /Exponent 'e' must be followed by number/)
+      end
+
       it 'tokenizes true in a function call as true type, not a string' do
         expected = %I[
           root child_start filter function group_start true group_end greater_than
