@@ -7,16 +7,6 @@ module JsonPath2
     describe '#parse_filter_selector' do
       let(:query) { '$[?@.price < 10]' }
 
-      it 'parses a filter selector with a boolean true' do
-        ast = described_class.parse('$[? true]')
-        expect(ast).to eq('$[?true]')
-      end
-
-      it 'parses a filter selector with a boolean false' do
-        ast = described_class.parse('$[? false]')
-        expect(ast).to eq('$[?false]')
-      end
-
       it 'parses a filter selector with an "or" expression' do
         ast = described_class.parse('$[? false || true]')
         expect(ast).to eq('$[?(false || true)]')
@@ -129,11 +119,18 @@ module JsonPath2
         expect(ast).to eq('$[?(1 <= 0.05)]')
       end
 
-      # CTS: "filter, non-singular query in comparison, all children"
+      # CTS "filter, non-singular query in comparison, all children"
       it 'raises error when a comparison operator gets a non-singular-query expression' do
         expect {
           described_class.parse('$[?@[*]==0]')
         }.to raise_error(StandardError, /Expression.* does not produce a singular value/)
+      end
+
+      # CTS "filter, literal true must be compared",
+      it 'raises error when a boolean literal is the entire condition' do
+        expect {
+          described_class.parse('$[? true]')
+        }.to raise_error(Error, /Literal .* must be used within a comparison/)
       end
     end
   end

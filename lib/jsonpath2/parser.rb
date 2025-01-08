@@ -537,8 +537,11 @@ module JsonPath2
         selector.value = node
       end
 
-      # #parse_expr_recursively expects its "top-level" loop to consume,
-      # so it must leave an already-parsed token to be consumed
+      # Check for literal, they are not allowed to be a complete condition in a filter selector
+      if selector.value.literal?
+        raise Error, "Literal #{selector.value} must be used within a comparison"
+      end
+
       consume
       log "finished with child #{selector.child}, current #{current}"
 
