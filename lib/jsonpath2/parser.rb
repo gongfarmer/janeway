@@ -6,9 +6,9 @@ require_relative 'functions'
 module JsonPath2
   # Transform a list of tokens into an Abstract Syntax Tree
   class Parser
-    class Error < JsonPathError; end
+    class Error < JsonPath2::Error; end
 
-    attr_accessor :tokens, :ast, :errors
+    attr_accessor :tokens, :ast
 
     include Functions
 
@@ -46,7 +46,6 @@ module JsonPath2
       @tokens = tokens
       @ast = AST::Query.new
       @next_p = 0
-      @errors = []
       @log = logger
     end
 
@@ -127,12 +126,12 @@ module JsonPath2
       OPERATOR_PRECEDENCE[next_token.lexeme] || LOWEST_PRECEDENCE
     end
 
-    def unrecognized_token_error
-      errors << Error::Syntax::UnrecognizedToken.new(current)
-    end
-
     def unexpected_token_error(expected = nil)
-      errors << Error::Syntax::UnexpectedToken.new(current, next_token, expected)
+      if expected
+        raise Error, "Unexpected token #{current.lexeme.inspect} (expected #{expected.inspect}) (next is #{next_token.inspect})"
+      else
+        raise Error, "Unexpected token #{current.lexeme.inspect} (next is #{next_token.inspect})"
+      end
     end
 
     def check_syntax_compliance(ast_node)
@@ -596,7 +595,7 @@ module JsonPath2
 
     def parse_expr_recursively(precedence = LOWEST_PRECEDENCE)
       parsing_function = determine_parsing_function
-      return unrecognized_token_error unless parsing_function
+      raise Error, "Unrecognized token: #{current.lexeme.inspect}" unless parsing_function
 
       tk = current
       log "with #{tk} will call #{parsing_function}"

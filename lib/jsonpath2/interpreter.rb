@@ -5,7 +5,7 @@ module JsonPath2
   class Interpreter
     attr_reader :query, :output, :env, :call_stack
 
-    class Error < JsonPathError; end
+    class Error < JsonPath2::Error; end
 
     # Specify the parameter types that built-in JsonPath functions require
     FUNCTION_PARAMETER_TYPES = {

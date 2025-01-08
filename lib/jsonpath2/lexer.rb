@@ -47,7 +47,7 @@ module JsonPath2
 
   # Transforms source code into tokens
   class Lexer
-    class Error < JsonPathError; end
+    class Error < JsonPath2::Error; end
 
     attr_reader :source, :tokens
     attr_accessor :next_p, :lexeme_start_p

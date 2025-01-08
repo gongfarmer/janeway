@@ -3,7 +3,8 @@
 require_relative 'location'
 
 module JsonPath2
-  class JsonPathError < StandardError
+  # Base class for JSONPath query errors
+  class Error < StandardError
     # @param message [String] error message
     # @param query [String] entire query string
     # @param location [Location] location of error

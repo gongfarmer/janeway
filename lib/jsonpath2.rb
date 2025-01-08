@@ -65,6 +65,4 @@ end
 require_relative 'jsonpath2/ast/expression'
 
 require_libs('jsonpath2/ast')
-require_libs('jsonpath2/error/runtime')
-require_libs('jsonpath2/error/syntax')
 require_libs('jsonpath2')
