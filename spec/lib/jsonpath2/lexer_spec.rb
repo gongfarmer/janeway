@@ -415,6 +415,7 @@ module JsonPath2
         expect(described_class.lex('$[?length(null) > 5]')).to eq(expected)
       end
 
+      # CTS "name selector, double quotes, escaped solidus",
       it 'tokenizes escaped slash character in a double quoted string' do
         tokens = described_class.lex('$["\\/"]')
         expect(tokens[2]).to have_attributes(
@@ -442,7 +443,7 @@ module JsonPath2
       it 'raises error when given an escaped char that is not allowed' do
         expect {
           described_class.lex("$[\"\\\0\"]")
-        }.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
+        }.to raise_error(Lexer::Error, 'Invalid character "\\u0000"')
       end
 
       it 'raises error when there is space between minus operator and number' do
@@ -463,6 +464,13 @@ module JsonPath2
         expect {
           described_class.lex("$['\\\"']")
         }.to raise_error(Error, 'Character " must not be escaped within single quotes')
+      end
+
+      # CTS "name selector, double quotes, question mark escape"
+      it 'raises error when name contains an unnecessarily escaped character' do
+        expect {
+          described_class.lex("$[\"\\?\"]")
+        }.to raise_error(Error, 'Character ? must not be escaped')
       end
 
       # CTS "basic, no leading whitespace",

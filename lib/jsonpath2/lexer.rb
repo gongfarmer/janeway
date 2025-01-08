@@ -211,18 +211,19 @@ module JsonPath2
       char = consume
       case char
       when 'b' then "\b"
-      when 't' then "\t"
-      when 'n' then "\n"
       when 'f' then "\f"
+      when 'n' then "\n"
       when 'r' then "\r"
-      when '"', "'", '\\' then char
+      when 't' then "\t"
+      when '/', '\\', '"', "'" then char
       when 'u' then consume_unicode_escape_sequence
       else
         if unescaped?(char)
-          char # unnecessary escape, just return the literal char
+          # unnecessary escape
+          raise Error.new("Character #{char} must not be escaped")
         else
           # whatever this is, it is not allowed even when escaped
-          raise Error.new("invalid character #{char.inspect}", current_location)
+          raise Error.new("Invalid character #{char.inspect}", current_location)
         end
       end
     end
