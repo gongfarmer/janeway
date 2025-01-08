@@ -124,7 +124,7 @@ module JsonPath2
     # Filter the input by returning the key that has the given name.
     #
     # Must differentiate between a null value of a key that exists (nil)
-    # and a key that does not exist (:none)
+    # and a key that does not exist ([])
     #
     # @param selector [NameSelector]
     # @return [Array]
@@ -133,7 +133,6 @@ module JsonPath2
       if input.is_a?(Hash) && input.key?(selector.name)
         result = input[selector.name]
       else
-        puts "  #interpret_name_selector -> []"
         return [] # early exit, no point continuing the chain with no results
       end
 
@@ -495,19 +494,26 @@ module JsonPath2
     def interpret_equal(lhs, rhs)
       puts "interpret_equal(#{lhs.inspect}, #{rhs.inspect}) -> #{lhs==rhs}"
 
+      # When either side of a comparison results in an empty nodelist or the
+      # special result Nothing (see Section 2.4.1):
+      # A comparison using the operator == yields true if and only if the other
+      # side also results in an empty nodelist or the special result Nothing.
+      lhs = NOTHING if lhs == []
+      rhs = NOTHING if rhs == []
+
       lhs == rhs
     end
 
     def interpret_not_equal(lhs, rhs)
-      lhs != rhs
+      !interpret_equal(lhs, rhs)
     end
 
     # Interpret && operator
     # May receive node lists, in which case empty node list == false
     def interpret_and(lhs, rhs)
       # non-empty array is already truthy, so that works properly without conversion
-      lhs = false if lhs.is_a?(Array) && lhs.empty?
-      rhs = false if rhs.is_a?(Array) && rhs.empty?
+      lhs = false if lhs == []
+      rhs = false if rhs == []
       lhs && rhs
     end
 

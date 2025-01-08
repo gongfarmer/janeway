@@ -352,6 +352,7 @@ module JsonPath2
       if lexeme.start_with?('0') && lexeme.size > 1
         raise Error, "Number may not start with leading zero: #{lexeme.inspect}"
       end
+
       literal =
         if lexeme.include?('.') || lexeme.downcase.include?('e')
           lexeme.to_f

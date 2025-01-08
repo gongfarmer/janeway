@@ -168,6 +168,12 @@ module JsonPath2
         result = described_class.interpret(input, '$[?@.a==-0]')
         expect(result).to eq(expected)
       end
+
+      it 'considers an empty node list to be equal to the special Nothing value' do
+        input = [{ 'b' => 2 }]
+        result = described_class.interpret(input, '$[?@.a == length(@.b)]')
+        expect(result).to eq(input)
+      end
     end
   end
 end
