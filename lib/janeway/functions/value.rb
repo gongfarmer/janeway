@@ -37,7 +37,6 @@ module Janeway
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
       AST::Function.new('value', parameters) do |nodes|
-        puts "FUNCTION VALUE(#{nodes.inspect})"
         if nodes.is_a?(Array) && nodes.size == 1
           nodes.first
         else

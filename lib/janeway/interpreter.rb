@@ -45,7 +45,6 @@ module Janeway
         return [] # can't query on any other types
       end
 
-      puts "INTERPRET #{ast}"
       interpret_node(ast.root, nil)
     end
 
@@ -80,7 +79,6 @@ module Janeway
         when Hash then node
         else [node]
         end
-      puts "#as_node_list(#{node.inspect}) -> #{result.inspect}"
       result
     end
 
@@ -90,7 +88,6 @@ module Janeway
     # @param input [Array, Hash]
     # @return [Array]
     def interpret_child_segment(child_segment, input)
-      puts "#interpret_child_segment(#{child_segment.to_s(with_child: false)}, #{input.inspect})"
       # For each node in the input nodelist, the resulting nodelist of a child
       # segment is the concatenation of the nodelists from each of its
       # selectors in the order that the selectors appear in the list. Note: Any
@@ -103,13 +100,11 @@ module Janeway
       else
         results = []
         child_segment.each do |selector|
-          puts "  list sends #{selector} input #{input.inspect}"
           result = send(:"interpret_#{selector.type}", selector, input)
           results.concat(result)
         end
       end
 
-      puts "#interpret_sel_list prelim results #{results.inspect}"
 
       # Send result to the next node in the AST, if any
       child = child_segment.child
@@ -117,7 +112,6 @@ module Janeway
         return child_segment.size == 1 ? [results] : results
       end
 
-      puts "sending results #{results} to child #{child.type}:#{child.value}"
       send(:"interpret_#{child.type}", child, results)
     end
 
@@ -129,20 +123,17 @@ module Janeway
     # @param selector [NameSelector]
     # @return [Array]
     def interpret_name_selector(selector, input)
-      puts "#interpret_name_selector(#{selector.name}, #{input.inspect})"
       return [] unless input.is_a?(Hash) && input.key?(selector.name)
 
       result = input[selector.name]
 
       # early exit, no point continuing the chain with no results
 
-      puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) -> [#{result.inspect}]"
       return [result] unless selector.child
 
       # Interpret child using output of this name selector, and return result
       child = selector.child
       results = send(:"interpret_#{child.type}", child, result)
-      puts "#interpret_name_selector(#{selector.name}, #{input.inspect}) --> #{results.inspect}"
       results
     end
 
@@ -156,7 +147,6 @@ module Janeway
     # @param input [Array]
     # @return [Array]
     def interpret_index_selector(selector, input)
-      puts "#interpret_index_selector(#{input.inspect})"
       return [] unless input.is_a?(Array)
 
       result = input.fetch(selector.value) # raises IndexError if no such index
@@ -166,7 +156,6 @@ module Janeway
       return [result] unless child
 
       results = send(:"interpret_#{child.type}", child, result)
-      puts "#interpret_index_selector(#{selector}, #{input.inspect}) --> #{results.inspect}"
       results
     rescue IndexError
       [] # returns empty array if no such index
@@ -187,7 +176,6 @@ module Janeway
         when Hash then input.values
         else []
         end
-      puts "#interpret_wildcard_selector(#{input.inspect}) -> #{values.inspect}"
 
       return values if values.empty? # early exit, no need for further processing on empty list
       return values unless selector.child
@@ -217,7 +205,6 @@ module Janeway
       start_index = selector.start_index(input.size)
       last_index = selector.end_index(input.size)
 
-      puts "interpret_array_slice_selector with #{start_index}:#{last_index}:#{selector.step}"
 
       # Collect values from target indices.
       results = start_index
@@ -240,7 +227,6 @@ module Janeway
     # @param input [Object]
     # @return [Array] list of matched values, or nil if no matched values
     def interpret_filter_selector(selector, input)
-      puts "#interpret_filter_selector(#{selector}, #{input.inspect})"
       values =
         case input
         when Array then input
@@ -250,12 +236,9 @@ module Janeway
 
       results = []
       values.each do |value|
-        puts "  interpret_filter on #{value.inspect}"
 
         # Run filter and interpret result
-        puts "  filter selector #{selector.value} input #{value.inspect}"
         result = interpret_node(selector.value, value)
-        puts "  filter selector #{selector.value} -> #{result.inspect}"
 
         case result
         when TrueClass then results << value # comparison test - pass
@@ -346,7 +329,6 @@ module Janeway
     # @param node [AST::Expression]
     # @param input [Object]
     def interpret_node_as_value(node, input)
-      puts "#interpret_node_as_value(#{node.inspect}, #{input.inspect})"
 
       # nodes must be singular queries or literals
       case node
@@ -413,7 +395,6 @@ module Janeway
     # @param input [Hash, Array]
     # @return [Array] Node List containing all results from evaluating this node's selectors.
     def interpret_current_node(current_node, input)
-      puts "interpret_current_node(#{current_node.inspect}, #{input.inspect})"
       next_expr = current_node.value
       result =
         # All of these return a node list
@@ -429,7 +410,6 @@ module Janeway
         else
           raise "don't know how to interpret #{next_expr}"
         end
-      puts "interpret_current_node(#{current_node.inspect}, #{input.inspect}) -> #{result.inspect}"
       result
     end
 
@@ -448,7 +428,6 @@ module Janeway
 
     # The binary operators are all comparison operators that test equality.
     #
-    # The inputs they receive may be one of:
     #  * boolean values specified in the query
     #  * JSONPath expressions which must be evaluated
     #
@@ -457,7 +436,6 @@ module Janeway
     #
     # @return [Boolean]
     def interpret_binary_operator(binary_op, input)
-      puts "interpret_binary_operator(#{binary_op}, #{input.inspect})"
       case binary_op.operator
       when :and, :or
         # handle node list for existence check
@@ -474,7 +452,6 @@ module Janeway
     end
 
     def interpret_equal(lhs, rhs)
-      puts "interpret_equal(#{lhs.inspect}, #{rhs.inspect}) -> #{lhs == rhs}"
 
       # When either side of a comparison results in an empty nodelist or the
       # special result Nothing (see Section 2.4.1):
@@ -567,9 +544,7 @@ module Janeway
     # FIXME: split implementation out into separate methods for not and minus
     # because they are so different.
     def interpret_unary_operator(op, input)
-      puts "#interpret_unary_oprator(#{op.operator}, #{input.inspect})"
       node_list = send(:"interpret_#{op.operand.type}", op.operand, input)
-      # puts "interpret_unary_oprator(#{op.operator}, #{input.inspect}) got node list #{node_list.inspect}"
       case op.operator
       when :not then interpret_not(node_list)
       when :minus then 0 - node_list.first # FIXME: sure hope this is a number!
@@ -589,7 +564,6 @@ module Janeway
         else
           raise "don't know how to apply not operator to #{input.inspect}"
         end
-      puts "#interpret_not(#{input.inspect}) -> #{result.inspect}"
       result
     end
 
@@ -597,9 +571,7 @@ module Janeway
     # @param input [Hash, Array]
     def interpret_function(function, input)
       params = evaluate_function_parameters(function.parameters, function.name, input)
-      puts "#interpret_function(#{function}, #{input.inspect}) with params #{params.inspect}"
       result = function.body.call(*params)
-      puts "#interpret_function(#{function}, #{input.inspect}) -> #{result.inspect}"
       result
     end
 
@@ -625,7 +597,6 @@ module Janeway
           # Selectors always return a node list.
           # Deconstruct the resulting node list if function parameter type is ValueType.
           result = interpret_node(parameter, input)
-          puts "interepreted node #{parameter} to #{result.inspect}"
           if type == :value_type && parameter.singular_query?
             deconstruct(result)
           else
@@ -658,7 +629,6 @@ module Janeway
     # @param input [Object] usually an array - sometimes a basic type like String, Numeric
     # @return [Object] basic type -- string or number
     def deconstruct(input)
-      puts "#deconstruct(#{input.inspect})"
       return input unless input.is_a?(Array)
 
       if input.size == 1
