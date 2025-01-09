@@ -7,10 +7,6 @@ module JsonPath2
     # frac                = "." 1*DIGIT                  ; decimal fraction
     # exp                 = "e" [ "-" / "+" ] 1*DIGIT    ; decimal exponent
     class Number < JsonPath2::AST::Expression
-      def ==(other)
-        value == other&.value
-      end
-
       def to_s
         @value.to_s
       end

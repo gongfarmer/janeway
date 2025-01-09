@@ -51,12 +51,6 @@ module JsonPath2
         brackets ? "[?#{value}]" : "?#{value}"
       end
 
-      def ==(other)
-        return @value == other.value if other.class == FilterSelector
-
-        raise "don't know how to compare FilterSelector to #{other.class}"
-      end
-
       # @param level [Integer]
       # @return [Array]
       def tree(level)

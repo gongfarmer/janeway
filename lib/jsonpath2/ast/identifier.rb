@@ -22,10 +22,6 @@ module JsonPath2
         ||
       ].freeze
 
-      def ==(other)
-        name == other&.name
-      end
-
       # @return [String]
       def to_s
         @value

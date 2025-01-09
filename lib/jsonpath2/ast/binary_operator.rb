@@ -14,10 +14,6 @@ module JsonPath2
         self.right = right if right
       end
 
-      def ==(other)
-        operator == other&.operator && left == other.left && right == other.right
-      end
-
       # Set the left-hand-side value
       # @param expr [AST::Expression]
       def left=(expr)

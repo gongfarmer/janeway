@@ -14,10 +14,6 @@ module JsonPath2
     #   $(? $.key1 == $.key2 )
     #
     class RootNode < JsonPath2::AST::Expression
-      def ==(other)
-        self.class == other.class
-      end
-
       def to_s
         if @value.is_a?(NameSelector) || @value.is_a?(WildcardSelector)
           "$.#{@value}"

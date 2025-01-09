@@ -32,15 +32,6 @@ module JsonPath2
         @value << selector
       end
 
-      def ==(other)
-        case other
-        when Array then @value == other
-        when SelectorList then @value == other.value
-        else
-          false
-        end
-      end
-
       def to_s(with_child: true)
         str = @value.map { |selector| selector.to_s(brackets: false) }.join(', ')
         with_child ? "[#{str}]#{@child}" : "[#{str}]"

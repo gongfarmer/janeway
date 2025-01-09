@@ -16,10 +16,6 @@ module JsonPath2
         @value = val unless val.nil?  # false must be stored though!
       end
 
-      def ==(other)
-        raise NotImplementedError # subclass must implement
-      end
-
       # @return [String]
       def type
         name = self.class.to_s.split('::').last # eg. JsonPath2::AST::FunctionCall => "FunctionCall"

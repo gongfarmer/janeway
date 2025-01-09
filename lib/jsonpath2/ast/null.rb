@@ -3,10 +3,6 @@
 module JsonPath2
   module AST
     class Null < JsonPath2::AST::Expression
-      def ==(other)
-        self.class == other.class
-      end
-
       def to_s
         'null'
       end
