@@ -44,6 +44,13 @@ module Janeway
       #
       # @return [Integer]
       def step
+        # The iteration behavior of jsonpath does not match that of ruby Integer#step.
+        # Support the behavior of Integer#step, which needs this:
+        #   1. for stepping forward between positive numbers, use a positive number
+        #   2. for stepping backward between positive numbers, use a negative number
+        #   3. for stepping backward from positive to negative, use a negative number
+        #   4. for stepping backward from negative to negative, use a positive number
+        # Case #4 has to be detected and the sign of step inverted
         @step || 1
       end
 
@@ -77,7 +84,7 @@ module Janeway
         end
       end
 
-      # ignores the filter: argument, this always needs surrounding brackets
+      # ignores the brackets: argument, this always needs surrounding brackets
       # @return [String]
       def to_s(*)
         if @step
@@ -85,13 +92,6 @@ module Janeway
         else
           "[#{@start}:#{@end}]"
         end
-      end
-
-      def ==(other)
-        self.class == other.class &&
-          @start == other.start &&
-          @end == other.end &&
-          @step == other.step
       end
 
       # @param level [Integer]

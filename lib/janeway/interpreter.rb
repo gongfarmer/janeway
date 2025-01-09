@@ -217,6 +217,8 @@ module Janeway
       start_index = selector.start_index(input.size)
       last_index = selector.end_index(input.size)
 
+      puts "interpret_array_slice_selector with #{start_index}:#{last_index}:#{selector.step}"
+
       # Collect values from target indices.
       results = start_index
         .step(to: last_index, by: selector.step)

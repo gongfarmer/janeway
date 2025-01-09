@@ -19,11 +19,9 @@ module Janeway
         expect(described_class.interpret(input, '$[1:5:2]')).to eq(%w[b d])
       end
 
-#      it 'counts backwards by 2 when slice has negative step' do
-#        #[a b c d e f g]
-#        # 5,2,-2
-#        expect(described_class.interpret(input, '$[5:1:-2]')).to eq(%w[f d])
-#      end
+      it 'counts backwards by 2 when slice has negative step' do
+        expect(described_class.interpret(input, '$[5:1:-2]')).to eq(%w[f d])
+      end
 
       it 'selects nothing when step is 0' do
         expect(described_class.interpret(input, '$[::0]')).to be_empty
@@ -53,6 +51,12 @@ module Janeway
         input = [0, 1, 2, 3]
         expected = [3, 2, 1]
         expect(described_class.interpret(input, '$[:0:-1]')).to eq(expected)
+      end
+
+      # CTS "slice selector, negative range with negative step"
+      xit 'selects elements in reverse with negative start and end indexes' do
+        input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        expect(described_class.interpret(input, '$[-1:-3:-1]')).to eq([9, 8])
       end
     end
   end
