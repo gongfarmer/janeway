@@ -46,7 +46,6 @@ module Janeway
         when :current_node then parse_current_node
         when :root then parse_root
         else
-          log("invalid function parameter: #{current.inspect}", level: :warn)
           # Invalid, no function uses this.
           # Instead of crashing here, accept it and let the function return an empty result.
           parse_expr

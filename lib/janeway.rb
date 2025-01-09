@@ -26,10 +26,9 @@ module Janeway
   #
   # @param query [String] jsonpath query
   # @return [Janeway::AST::Query]
-  def self.compile(query, logger = nil)
-    logger ||= Logger.new(IO::NULL)
+  def self.compile(query)
     tokens = Janeway::Lexer.lex(query)
-    Janeway::Parser.new(tokens, logger).parse
+    Janeway::Parser.new(tokens).parse
   end
 
   # Apply Janeway::AST::Query to input and return the results.

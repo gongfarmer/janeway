@@ -3,7 +3,6 @@
 # frozen_string_literal: true
 
 require 'json'
-require 'logger'
 require 'optparse'
 
 # FIXME: delete from final version?
@@ -60,7 +59,6 @@ def parse_options(argv)
     opts.separator('Options:')
 
     opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
-    opts.on('-v', '--verbose', 'Emit log messages during query parsing') { options.verbose = true }
     opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
     opts.on('--version', 'Show version number') { abort(Janeway::VERSION) }
     opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
@@ -110,25 +108,9 @@ rescue JSON::JSONError => e
   abort "Input is not valid JSON: #{msg}"
 end
 
-# Create a logger that writes to STDERR.
-# This can be used to print the log messages emitted by the parser.
-#
-# Log messages are not on STDOUT because STDOUT needs to produce valid JSON.
-#
-# @return [Logger]
-def make_logger
-  Logger.new($stderr, level: :debug).tap do |logger|
-    logger.formatter = proc { |severity, _time, progname, msg|
-      # include severity to distinguish log messages from debug print statements
-      format("%-5s -- %s: %s\n", severity, progname, msg)
-    }
-  end
-end
-
 def main(options)
   # Compile JsonPath query
-  logger = options.verbose ? make_logger : nil
-  query = Janeway.compile(options.query, logger)
+  query = Janeway.compile(options.query)
 
   # Apply query to data
   result = Janeway.apply(options.input, query)

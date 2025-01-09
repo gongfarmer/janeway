@@ -7,7 +7,6 @@ module Janeway
     #
     # JSONPath return type: ValueType
     def parse_function_length
-      log "current=#{current}, next_token=#{next_token}"
       consume # function
       raise "expect group_start token, found #{current}" unless current.type == :group_start
 

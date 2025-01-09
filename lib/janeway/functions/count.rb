@@ -18,7 +18,6 @@ module Janeway
     #
     # @example $[?count(@.*.author) >= 5]
     def parse_function_count
-      log "current=#{current}, next_token=#{next_token}"
       consume # function
       raise "expect group_start token, found #{current}" unless current.type == :group_start
 

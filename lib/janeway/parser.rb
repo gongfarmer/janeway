@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'logger'
 require_relative 'functions'
 
 module Janeway
@@ -32,28 +31,24 @@ module Janeway
     }.freeze
 
     # @param query [String] jsonpath query to be lexed and parsed
-    # @param logger [Logger]
     #
     # @return [AST]
-    def self.parse(query, logger = Logger.new(IO::NULL))
+    def self.parse(query)
       raise ArgumentError, "expect string, got #{query.inspect}" unless query.is_a?(String)
 
       tokens = Janeway::Lexer.lex(query)
-      new(tokens, logger).parse
+      new(tokens).parse
     end
 
-    def initialize(tokens, logger = Logger.new(IO::NULL))
+    def initialize(tokens)
       @tokens = tokens
       @ast = AST::Query.new
       @next_p = 0
-      @log = logger
     end
 
     def parse
-      log @tokens.map(&:lexeme).join
 
       consume
-      log "CONSUME, current=#{current}"
       @ast.root = parse_expr_recursively
       consume
       raise "unparsed tokens" unless current.type == :eof
@@ -189,7 +184,6 @@ module Janeway
     # Consume minus operator and apply it to the (expected) number token following it.
     # Don't consume the number token.
     def parse_minus_operator
-      log "(#{current}) previous:#{previous} next:#{next_token}"
       raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :minus
 
       # RFC: negative 0 is allowed within a filter selector comparison, but is NOT allowed within an index selector or array slice selector.
@@ -241,7 +235,6 @@ module Janeway
     #  Note: .. on its own is not a valid segment.
     def parse_descendant_segment
       consume # '..'
-      log "current=#{current}, next_token=#{next_token}"
 
       # DescendantSegment must be followed by a selector S which it applies to all descendants.
       #
@@ -281,7 +274,6 @@ module Janeway
       consume # "."
       raise "#parse_dot_notation expects to consume :dot, got #{current}" unless current.type == :dot
 
-      log "current=#{current}, next_token=#{next_token}"
 
       case next_token.type
       # FIXME: implement a different name lexer which is limited to only the chars allowed under dot notation
@@ -308,7 +300,6 @@ module Janeway
     end
 
     def parse_root
-      log "current=#{current}, next_token=#{next_token}"
 
       # detect optional following selector
       selector =
@@ -323,7 +314,6 @@ module Janeway
 
     # Parse the current node operator "@", and optionally a selector which is applied to it
     def parse_current_node
-      log "current=#{current}, next_token=#{next_token}"
 
       # detect optional following selector
       selector =
@@ -361,7 +351,6 @@ module Janeway
     # @return [AST::ChildSegment]
     def parse_child_segment(and_child: true)
       consume
-      log "current=#{current}, next_token=#{next_token}"
       raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :child_start
 
       consume # "["
@@ -403,14 +392,12 @@ module Janeway
         node.child = parse_next_selector
       end
 
-      log "return #{node}, current=#{current}"
       node
     end
 
     # Parse a selector and return it.
     # @return [Selector, ChildSegment, nil] nil if no more selectors to use
     def parse_next_selector
-      log next_token
       case next_token.type
       when :child_start then parse_child_segment
       when :dot then parse_dot_notation
@@ -429,7 +416,6 @@ module Janeway
 
     # Parse a selector which is inside brackets
     def parse_selector
-      log "current=#{current}, next_token=#{next_token}"
       case current.type
       when :array_slice_separator then parse_array_slice_selector
       when :filter then parse_filter_selector
@@ -455,7 +441,6 @@ module Janeway
     # Parse wildcard selector and any following selector
     # @param and_child [Boolean] make following token a child of this selector
     def parse_wildcard_selector(and_child: true)
-      log "current=#{current}, next_token=#{next_token}"
       selector = AST::WildcardSelector.new
       consume
       selector.child = parse_next_selector if and_child
@@ -475,10 +460,8 @@ module Janeway
     #
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
-      log "current=#{current}, next_token=#{next_token}"
       start, end_, step = Array.new(3) { parse_array_slice_component }.map { _1&.literal }
 
-      log "got [#{start.inspect},#{end_.inspect},#{step.inspect}] (current=#{current})"
 
       raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
 
@@ -490,7 +473,6 @@ module Janeway
     # If no number is found, return nil.
     # @return [Number, nil] nil if the start is implicit
     def parse_array_slice_component
-      log "current=#{current}, next_token=#{next_token}"
       token =
         case current.type
         when :array_slice_separator, :child_end, :union then nil
@@ -513,7 +495,6 @@ module Janeway
     # @return [AST::NameSelector]
     def parse_name_selector(and_child: true)
       consume
-      log "current=#{current}, next_token=#{next_token}"
       selector = AST::NameSelector.new(current.lexeme)
       if and_child
         # If there is a following expression, parse that too
@@ -528,20 +509,17 @@ module Janeway
 
     # Feed tokens to the FilterSelector until hitting a terminator
     def parse_filter_selector
-      log "current=#{current}, next_token=#{next_token}"
 
       selector = AST::FilterSelector.new
       terminator_types = %I[child_end union eof]
       while next_token && !terminator_types.include?(next_token.type)
         consume
-        log "(loop) parse current=#{current}, have #{selector}"
         node =
           if BINARY_OPERATORS.include?(current.lexeme)
             parse_binary_operator(selector.value)
           else
             parse_expr_recursively
           end
-        log "(loop) got node #{node}, next_token is #{next_token}"
 
         # may replace existing node with a binary operator that incorporates the original node
         selector.value = node
@@ -553,7 +531,6 @@ module Janeway
       end
 
       consume
-      log "finished with child #{selector.child}, current #{current}"
 
       selector
     end
@@ -590,9 +567,7 @@ module Janeway
     # Parse a JSONPath function call
     def parse_function
       parsing_function = "parse_function_#{current.literal}"
-      log "with #{current} -> #{parsing_function} "
       result = send(parsing_function)
-      log "returns #{result.inspect}"
       result
     end
 
@@ -609,35 +584,22 @@ module Janeway
       raise Error, "Unrecognized token: #{current.lexeme.inspect}" unless parsing_function
 
       tk = current
-      log "with #{tk} will call #{parsing_function}"
       expr = send(parsing_function)
-      log "with #{tk} called #{parsing_function}, current #{current}, expr #{expr.inspect}"
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.
       if next_not_terminator? && precedence < next_precedence
-        log "will loop, current:#{current} checking #{next_token}, precedence " + [precedence, next_precedence].inspect
       end
       while next_not_terminator? && precedence < next_precedence
         infix_parsing_function = determine_infix_function(next_token)
-        log "(loop) next token #{next_token.lexeme}, will parse with #{infix_parsing_function.inspect}(#{expr.inspect})"
 
         return expr if infix_parsing_function.nil?
 
-        log "(loop) infix current #{current}, send #{infix_parsing_function}(#{expr.inspect})"
         consume
         expr = send(infix_parsing_function, expr)
       end
 
-      log "returns #{expr.inspect}, current #{current}"
       expr
-    end
-
-    def log(msg, level: :info)
-      raise ArgumentError, "invalid log level: #{level.inspect}" unless %I[info debug warn error].include?(level.to_sym)
-
-      caller = caller_locations(1..1).first.label
-      @log.send(level.to_sym, "##{caller}") { msg }
     end
 
     alias parse_true parse_boolean

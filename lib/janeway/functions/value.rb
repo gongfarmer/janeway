@@ -26,7 +26,6 @@ module Janeway
     # Note: A singular query may be used anywhere where a ValueType is
     # expected, so there is no need to use the value() function extension with a singular query.
     def parse_function_value
-      log "current=#{current}, next_token=#{next_token}"
       consume # function
       raise "expect group_start token, found #{current}" unless current.type == :group_start
 

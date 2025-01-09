@@ -33,7 +33,6 @@ module Janeway
     # tl;dr: How is this different from the search function?
     # "match" must match the entire string, "search" matches a substring.
     def parse_function_match
-      log "current=#{current}, next_token=#{next_token}"
       consume # function
       raise "expect group_start token, found #{current}" unless current.type == :group_start
 
