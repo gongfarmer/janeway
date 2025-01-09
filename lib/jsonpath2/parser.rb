@@ -476,8 +476,9 @@ module JsonPath2
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       log "current=#{current}, next_token=#{next_token}"
-      start, end_, step = Array.new(3) { parse_array_slice_component }
-      log "got [#{start&.lexeme},#{end_&.lexeme},#{step&.lexeme}] (current=#{current})"
+      start, end_, step = Array.new(3) { parse_array_slice_component }.map { _1&.literal }
+
+      log "got [#{start.inspect},#{end_.inspect},#{step.inspect}] (current=#{current})"
 
       raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
 

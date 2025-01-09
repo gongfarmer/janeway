@@ -87,7 +87,7 @@ module JsonPath2
     # Interpret a list of 1 or more selectors, seperated by the union operator.
     #
     # @param child_segment [AST::ChildSegment]
-    # @param node_list [Array]
+    # @param input [Array, Hash]
     # @return [Array]
     def interpret_child_segment(child_segment, input)
       puts "#interpret_child_segment(#{child_segment.to_s(with_child: false)}, #{input.inspect})"
@@ -177,8 +177,8 @@ module JsonPath2
     # For Hash, return hash values.
     # For anything else, return empty list.
     #
-    # @param selector [WildcardSelector]
-    # @param node_list [Array]
+    # @param selector [AST::WildcardSelector]
+    # @param input [Object] usually Array or Hash
     # @return [Array] matching values
     def interpret_wildcard_selector(selector, input)
       values =
@@ -211,35 +211,16 @@ module JsonPath2
     # @return [Array]
     def interpret_array_slice_selector(selector, input)
       return [] unless input.is_a?(Array)
-      return [] if selector.step.zero? # IETF: When step is 0, no elements are selected.
+      return [] if selector.step && selector.step.zero? # IETF: When step is 0, no elements are selected.
 
-      # Convert -1 placeholder to the last index, for positive step
-      last_index =
-        if selector.step.positive?
-          selector.end == -1 ? (input.size - 1) : selector.end - 1
-        else
-          selector.end.zero? ? 0 : selector.end + 1
-        end
-
-      # Convert -1 placeholder to the first index, for negative step
-      first_index =
-        if selector.step.negative? && selector.start == -1
-          input.size - 1
-        else
-          selector.start
-        end
-
-      # Put bounds on integer indices. There's no reason to check a million indices for small array.
-      first_index = first_index.clamp(0, input.size)
-      last_index = last_index.clamp(0, input.size)
+      # Calculate the "real" start and end index based on the array size
+      start_index = selector.start_index(input.size)
+      last_index = selector.end_index(input.size)
 
       # Collect values from target indices.
-      # FIXME: can this go back to Array#map now?
-      results = []
-      first_index
+      results = start_index
         .step(to: last_index, by: selector.step)
-        .each { |i| results << input[i] } # Enumerator::ArithmeticSequence has no #map, must use #each
-      results.compact! # FIXME: why compact?? Write test where slice range includes nil values
+        .map { |i| input[i] }
 
       # Interpret child using output of this name selector, and return result
       child = selector.child
@@ -426,8 +407,8 @@ module JsonPath2
     # If the selector did not match any node, the array may be empty.
     # If there was no selector, then the current input node is returned in the array.
     #
-    # @param node [CurrentNode] current node identifer
-    # @param input [Hash, Array] current node of the input
+    # @param current_node [CurrentNode] current node identifer
+    # @param input [Hash, Array]
     # @return [Array] Node List containing all results from evaluating this node's selectors.
     def interpret_current_node(current_node, input)
       puts "interpret_current_node(#{current_node.inspect}, #{input.inspect})"
@@ -575,12 +556,13 @@ module JsonPath2
       string.value
     end
 
-    # @param null [AST::Null]
+    # @param _null [AST::Null] ignored
+    # @param _input [Object] ignored
     def interpret_null(_null, _input)
       nil
     end
 
-    # FIXME: split implementation out into separet methods for not and minus
+    # FIXME: split implementation out into separate methods for not and minus
     # because they are so different.
     def interpret_unary_operator(op, input)
       puts "#interpret_unary_oprator(#{op.operator}, #{input.inspect})"

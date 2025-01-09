@@ -12,22 +12,22 @@ module JsonPath2
 
       it 'defaults to step 1' do
         ast = described_class.parse('$[6:12]')
-        expect(ast).to eq('$[6:12:1]')
+        expect(ast.to_s).to eq('$[6:12]')
       end
 
       it 'ends at the last index if step is positive' do
         ast = described_class.parse('$[6::1]')
-        expect(ast).to eq('$[6:-1:1]')
+        expect(ast.to_s).to eq('$[6::1]')
       end
 
       it 'ends at the start index if step is negative' do
         ast = described_class.parse('$[6::-1]')
-        expect(ast).to eq('$[6:0:-1]')
+        expect(ast.to_s).to eq('$[6::-1]')
       end
 
       it 'iterates from end to start if only negative step is given' do
         ast = described_class.parse('$[::-1]')
-        expect(ast).to eq('$[-1:0:-1]')
+        expect(ast).to eq('$[::-1]')
       end
 
       # CTS "slice selector, start, -0",

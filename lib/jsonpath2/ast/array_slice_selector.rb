@@ -16,93 +16,75 @@ module JsonPath2
     #   $[5:1:-2]
     #   $[::-1]
     #   $[:]
+    #
+    # ArraySliceSelector needs to store "default" arguments differently from
+    # "explicit" arguments, since they're interpreted differently.
+    #
     class ArraySliceSelector < JsonPath2::AST::Selector
-      attr_accessor :start, :end, :step
-
-      # @param start [Token]
-      # @param end_ [Token]
-      # @param step [Token]
+      # @param start [Integer, nil]
+      # @param end_ [Integer, nil]
+      # @param step [Integer, nil]
       def initialize(start = nil, end_ = nil, step = nil)
-        super(nil)
-        @start = normalize_arg(start)
-        @end = normalize_arg(end_)
+        [start, end_, step].each do |arg|
+          next if arg.nil? || arg.is_a?(Integer)
 
-        # The default value for step is 1. The default values for start and end depend on the sign of step,
-        @step = normalize_arg(step, 1)
-        if @step >= 0
-          @start ||= 0
-          @end ||= -1
-        else
-          @start ||= -1 # len - 1
-          @end ||= 0 # -len - 1 FIXME
+          raise ArgumentError, "Expect Integer or nil, got #{arg.inspect}"
         end
-        # FIXME: check for invalid conditions.
-        # eg. 0 start? end < start with positive step? ...
+        super(nil)
+
+        # Nil values are kept to indicate that the "default" values is to be used.
+        # The interpreter selects the actual values.
+        @start = start
+        @end = end_
+        @step = step
       end
 
-      # Normalize argument to an integer by extracting literal value from token.
-      # Return nil if given nil.
-      # @param arg [Token, Integer]
+      # Return the step size to use for stepping through the array.
+      # Defaults to 1 if it was not given to the constructor.
+      #
       # @return [Integer]
-      def normalize_arg(arg, default = nil)
-        case arg
-        when Integer then return arg
-        when nil then return default
+      def step
+        @step || 1
+      end
+
+      # Return the start index to use for stepping through the array, based on a specified array size
+      #
+      # @param input_size [Integer]
+      # @return [Integer]
+      def start_index(input_size)
+        if @start
+          @start.clamp(0, input_size)
+        elsif step.positive?
+          0
+        else # negative step
+          input_size - 1 # last index of input
         end
-        raise ArgumentError, "Expect token, got #{arg.inspect}" unless arg.is_a?(Token)
+      end
 
-        raise "Expect token type :number, got #{arg.inspect}" unless arg.type == :number
-
-        arg.literal
+      # Return the end index to use for stepping through the array, based on a specified array size
+      # End index is calculated to omit the final index value, as per the RFC.
+      #
+      # @param input_size [Integer]
+      # @return [Integer]
+      def end_index(input_size)
+        if @end
+          value = @end.clamp(0, input_size)
+          step.positive? ? value - 1 : value + 1 # +/- to exclude the final element
+        elsif step.positive?
+          input_size - 1 # last index of input
+        else
+          0
+        end
       end
 
       # ignores the filter: argument, this always needs surrounding brackets
+      # @return [String]
       def to_s(*)
-        str = [@start, @end, @step].map(&:to_s).join(':')
-        "[#{str}]"
-      end
-
-      # Get lower and upper array indexes for a particular array
-      # @param len [Integer] input array size
-      def get_bounds(len)
-        bounds(@start, @end, @step, len)
-      end
-
-      # NOTE: Conversion of start:end:step to array indexes is defined as pseudocode
-      # in the IETF spec.
-      # The methods #normalize and #bounds are ruby implementations of that code.
-      # Don't make changes here without referring to the original code in the spec.
-      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-6
-
-      # IETF: Slice expression parameters start and end are not directly usable
-      # as slice bounds and must first be normalized.
-      #
-      # @param index [Integer]
-      # @param len [Integer]
-      def normalize(index, len)
-        return index if index.positive?
-
-        len + index
-      end
-
-      # IETF: Slice expression parameters start and end are used to derive
-      # slice bounds lower and upper. The direction of the iteration, defined
-      # by the sign of step, determines which of the parameters is the lower
-      # bound and which is the upper bound:¶
-      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-9
-      def bounds(start, end_, step, len)
-        n_start = normalize(start, len)
-        n_end = normalize(end_, len)
-
-        if step >= 0
-          lower = n_start.clamp(0, len)
-          upper = n_end.clamp(0, len)
+        if @step
+          "[#{@start}:#{@end}:#{@step}]"
         else
-          lower = n_start.clamp(-1, len - 1)
-          upper = n_end.clamp(-1, len - 1)
+          "[#{@start}:#{@end}]"
         end
-
-        [lower, upper]
       end
 
       def ==(other)
