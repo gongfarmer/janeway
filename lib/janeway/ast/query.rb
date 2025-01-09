@@ -12,7 +12,7 @@ module Janeway
       #
       # @param input [Object] ruby object to be searched
       # @return [Array] all matched objects
-      def find_all(object)
+      def find_all(input)
         Janeway::Interpreter.new(input).interpret(self)
       end
 

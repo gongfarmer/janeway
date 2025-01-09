@@ -42,19 +42,19 @@ module Janeway
       end
 
       # CTS "index selector, min exact index"
-      it 'handles the minimum possible index value' do
+      it 'handles the minimum possible index value', skip: on_truffleruby do
         expect(described_class.interpret(%w[one two], '$[-9007199254740991]')).to be_empty
       end
 
       # CTS "index selector, min exact index - 1"
-      it 'raises error given an index that is smaller than minimum' do
+      it 'raises error given an index that is smaller than minimum', skip: on_truffleruby  do
         expect {
           described_class.interpret([], '$[-9007199254740992]')
         }.to raise_error(Error, /Index selector value too small/)
       end
 
       # CTS "index selector, max exact index"
-      it 'handles the maximum possible index value' do
+      it 'handles the maximum possible index value', skip: on_truffleruby  do
         expect(described_class.interpret(%w[one two], '$[9007199254740991]')).to be_empty
       end
 
