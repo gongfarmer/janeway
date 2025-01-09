@@ -102,9 +102,11 @@ module Janeway
           lex_member_name_shorthand(ignore_keywords: tokens.last.type == :dot)
         end
 
-      raise("Unknown character: #{c.inspect}") unless token
-
-      tokens << token
+      if token
+        tokens << token
+      else
+        raise Error.new("Unknown character: #{c.inspect}", @source, current_location)
+      end
     end
 
     def digit?(lexeme)
@@ -157,7 +159,7 @@ module Janeway
 
     def consume
       c = lookahead
-      self.next_p += 1
+      @next_p += 1
       c
     end
 
@@ -222,7 +224,6 @@ module Janeway
       when 'u' then consume_unicode_escape_sequence
       else
         if unescaped?(char)
-          # unnecessary escape
           raise Error.new("Character #{char} must not be escaped")
         else
           # whatever this is, it is not allowed even when escaped
@@ -294,7 +295,7 @@ module Janeway
       high = high_surrogate_hex.hex
       low = low_surrogate_hex.hex
       codepoint = ((high - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000
-      [codepoint].pack('U')
+      [codepoint].pack('U') # convert integer codepoint to single character string
     end
 
     # Return true if the given 4 char hex string is "high-surrogate"

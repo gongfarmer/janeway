@@ -8,40 +8,24 @@ module Janeway
   module AST
   end
 
-  # Apply a JsonPath query to the givein input, and return the result.
+  # Apply a JsonPath query to the input, and return the result.
   #
-  # @param input [Object] ruby object to be indexed
   # @param query [String] jsonpath query
-  # @return [Object] result of applying query to input
-  def self.on(input, query)
+  # @param input [Object] ruby object to be searched
+  # @return [Array] all matched objects
+  def self.find_all(query, input)
     query = compile(query)
     Janeway::Interpreter.new(input).interpret(query)
   end
 
   # Compile a JsonPath query into an Abstract Syntax Tree.
-  # This can applied to inputs using the 'apply' method.
   #
-  # Use this to compile the query once and then re-use it for
-  # multiple inputs later.
+  # This can be used and re-used later on multiple inputs.
   #
   # @param query [String] jsonpath query
   # @return [Janeway::AST::Query]
   def self.compile(query)
-    tokens = Janeway::Lexer.lex(query)
-    Janeway::Parser.new(tokens).parse
-  end
-
-  # Apply Janeway::AST::Query to input and return the results.
-  #
-  # This does not accept a string query.
-  # Use this to apply the result of Janeway.compile to various inputs.
-  #
-  # @param input [Object] ruby object to be indexed
-  # @param ast [Janeway::AST::Query]
-  def self.apply(input, ast)
-    raise ArgumentError, "expect Janeway::AST::Query, got #{ast.inspect}" unless ast.is_a?(Janeway::AST::Query)
-
-    Janeway::Interpreter.new(input).interpret(ast)
+    Janeway::Parser.parse(query)
   end
 end
 

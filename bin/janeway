@@ -108,18 +108,14 @@ rescue JSON::JSONError => e
   abort "Input is not valid JSON: #{msg}"
 end
 
+# @param options [Options]
 def main(options)
-  # Compile JsonPath query
-  query = Janeway.compile(options.query)
+  results = Janeway.find_all(options.query, options.input)
 
-  # Apply query to data
-  result = Janeway.apply(options.input, query)
-
-  # Print result
   if options.compact_output
-    puts JSON.generate(result)
+    puts JSON.generate(results)
   else
-    puts JSON.pretty_generate(result)
+    puts JSON.pretty_generate(results)
   end
 end
 
