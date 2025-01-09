@@ -22,7 +22,7 @@ task :coverage do
   Rake::Task[:spec].invoke
 end
 
-CLEAN.include %w[coverage doc *.gem .yardoc]
+CLEAN.include %w[coverage doc pkg *.gem .yardoc]
 
 RSpec::Core::RakeTask.new(:spec)
 RuboCop::RakeTask.new
