@@ -1,8 +1,10 @@
 source 'https://rubygems.org'
+gemspec
 
-gem 'rspec', require: false, group: :development
-gem 'rubocop', require: false, group: :development
-gem 'rubocop-performance', require: false, group: :development
-gem 'rubocop-rspec', require: false, group: :development
-gem 'simplecov', require: false, group: :development
-gem 'yard', require: false, group: :development
+gem 'rspec', group: :development
+gem 'rubocop', group: :development
+gem 'rubocop-performance', group: :development
+gem 'rubocop-rspec', group: :development
+gem 'simplecov', group: :development
+gem 'yard', group: :development
+gem 'rake', require: true, group: :development
