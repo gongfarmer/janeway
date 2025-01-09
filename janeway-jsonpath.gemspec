@@ -3,7 +3,7 @@
 require_relative 'lib/janeway/version'
 
 Gem::Specification.new do |s|
-  s.name = 'janeway'
+  s.name = 'janeway-jsonpath'
   s.version = Janeway::VERSION
   s.required_ruby_version = '>= 2.7.0'
   s.authors = ['Fraser Hanson']
@@ -11,9 +11,9 @@ Gem::Specification.new do |s|
   s.description = <<~DESCRIPTION
     JSONPath is a query language for selecting and extracting values from a JSON text.
     It does for JSON the same job that XPath does for XML.
-    This is a fast JSONPath parser in pure ruby.
 
-    This jsonpath parser is:
+    This is a fast JSONPath parser in pure ruby.
+    It is:
       * a complete implementation of the JSONPath standard, IETF RFC 9535
       * based on the finalized RFC released in 2024, not an older draft (there were changes)
       * written in ruby 3 with frozen string literals
