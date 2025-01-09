@@ -8,7 +8,7 @@ require 'optparse'
 
 # FIXME: delete from final version?
 $LOAD_PATH << "#{__dir__}/../lib/"
-require 'jsonpath2'
+require 'janeway'
 
 SCRIPT_NAME = File.basename($PROGRAM_NAME)
 HELP = <<~HELP_TEXT.freeze
@@ -62,7 +62,7 @@ def parse_options(argv)
     opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
     opts.on('-v', '--verbose', 'Emit log messages during query parsing') { options.verbose = true }
     opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
-    opts.on('--version', 'Show version number') { abort(JsonPath2::VERSION) }
+    opts.on('--version', 'Show version number') { abort(Janeway::VERSION) }
     opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
   end
   op.parse!(argv)
@@ -128,10 +128,10 @@ end
 def main(options)
   # Compile JsonPath query
   logger = options.verbose ? make_logger : nil
-  query = JsonPath2.compile(options.query, logger)
+  query = Janeway.compile(options.query, logger)
 
   # Apply query to data
-  result = JsonPath2.apply(options.input, query)
+  result = Janeway.apply(options.input, query)
 
   # Print result
   if options.compact_output
@@ -144,7 +144,7 @@ end
 begin
   options = parse_args(ARGV.dup)
   main(options)
-rescue JsonPath2::Error => e
+rescue Janeway::Error => e
   puts
   abort("Error: #{e}")
 rescue Interrupt, Errno::EPIPE

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'jsonpath2/ast/helpers'
+require 'janeway/ast/helpers'
 
-module JsonPath2
+module Janeway
   module AST
     describe Helpers do
       describe '#camelcase_to_underscore' do
