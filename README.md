@@ -1,8 +1,8 @@
-# jsonpath parser
+# Janeway JSONPath parser
 
 ### Purpose
 
-This is a [JsonPath](https://goessner.net/articles/JsonPath/) interpreter.
+This is a [JsonPath](https://goessner.net/articles/JsonPath/) parser.
 
 It reads a JSON input file and a query.
 It uses the query to find and return a set of matching values from the input.
@@ -24,7 +24,7 @@ This project includes:
 
 ### Non-goals
 
-* Optimizing behavior based on [other implementations] (https://cburgmer.github.io/json-path-comparison/)
+* Changing behavior to follow [other implementations] (https://cburgmer.github.io/json-path-comparison/)
 
 The JSONPath RFC was in draft status for a long time and has seen many changes.
 There are many implementations based on older drafts, or which add features that were never in the RFC at all.
@@ -40,4 +40,4 @@ With these tools it is possible to have JSONPath implementations in many languag
 Functionality is based on [IETF RFC 9535, "JSONPath: Query Expressions for JSON"](https://www.rfc-editor.org/rfc/rfc9535.html#filter-selector)
 The examples in the RFC have been implemented as unit tests.
 
-For details not covered in the RFC, it does the most reasonable thing based on [what other JSONPath parsers do.](https://cburgmer.github.io/json-path-comparison/). However, this is always secondary to following the RFC. Many of the recommended behaviors there contradict the RFC.
+For details not covered in the RFC, it does the most reasonable thing based on [what other JSONPath parsers do.](https://cburgmer.github.io/json-path-comparison/). However, this is always secondary to following the RFC. Many of the recommended behaviors there contradict the RFC, so it is one or the other.
