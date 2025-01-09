@@ -42,6 +42,12 @@ module Janeway
         ast = described_class.parse('$[?length(null) >= 5]')
         expect(ast.to_s).to eq('$[?(length(null) >= 5)]')
       end
+
+      it 'raises error when there is space between function name and parentheses' do
+        expect {
+          described_class.parse('$[?length (@.authors) >= 5]')
+        }.to raise_error(Error, 'Function name "length" must not be followed by whitespace')
+      end
     end
   end
 end

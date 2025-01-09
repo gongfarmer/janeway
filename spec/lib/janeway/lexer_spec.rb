@@ -449,7 +449,7 @@ module Janeway
       it 'raises error when there is space between minus operator and number' do
         expect {
           described_class.lex('$[?@.a==- 1]')
-        }.to raise_error(Lexer::Error, 'minus operator must be followed by number, not whitespace')
+        }.to raise_error(Lexer::Error, 'Operator "-" must not be followed by whitespace')
       end
 
       # CTS "name selector, double quotes, invalid escaped single quote"
@@ -485,6 +485,12 @@ module Janeway
         expect {
           described_class.lex('$ ')
         }.to raise_error(Error, 'JSONPath query may not start or end with whitespace')
+      end
+
+      it 'raises error when descendant segment is followed by space' do
+        expect {
+          described_class.lex('$.. a')
+        }.to raise_error(Error, 'Operator ".." must not be followed by whitespace')
       end
     end
   end

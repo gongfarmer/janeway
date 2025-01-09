@@ -123,8 +123,8 @@ module Janeway
     end
 
     def token_from_one_char_lex(lexeme)
-      if lexeme == '-' && WHITESPACE.include?(lookahead)
-        raise Error, 'minus operator must be followed by number, not whitespace'
+      if %w[. -].include?(lexeme) && WHITESPACE.include?(lookahead)
+        raise Error, "Operator #{lexeme.inspect} must not be followed by whitespace"
       end
 
       Token.new(OPERATORS.key(lexeme), lexeme, nil, current_location)
@@ -136,6 +136,9 @@ module Janeway
       next_two_chars = [lexeme, lookahead].join
       if TWO_CHAR_LEX.include?(next_two_chars)
         consume
+        if next_two_chars == '..' && WHITESPACE.include?(lookahead)
+          raise Error, "Operator #{next_two_chars.inspect} must not be followed by whitespace"
+        end
         Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
       else
         token_from_one_char_lex(lexeme)
@@ -485,6 +488,9 @@ module Janeway
         else
           :identifier
         end
+      if type == :function && WHITESPACE.include?(lookahead)
+        raise Error, "Function name \"#{identifier}\" must not be followed by whitespace"
+      end
       Token.new(type, identifier, identifier, current_location)
     end
 
