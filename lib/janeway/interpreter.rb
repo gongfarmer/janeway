@@ -605,6 +605,8 @@ module Janeway
           else
             result
           end
+        when AST::Function
+          interpret_function(parameter, input)
         when AST::StringType, AST::Number
           interpret_string_type(parameter, input)
         else

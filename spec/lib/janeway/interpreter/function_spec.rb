@@ -64,6 +64,13 @@ module Janeway
         it 'returns empty result when given bad parameter that is a null' do
           expect(described_class.interpret(input, '$[?(length(null) == 4)]')).to be_empty
         end
+
+        # CTS "functions, length, arg is a function expression"
+        it 'can use the return from a ValueType function as a parameter' do
+          query = '$.values[?length(@.a)==length(value($..c))]'
+          input = {'c' => 'cd', 'values' => [{'a' => 'ab'}, {'a' => 'd'}]}
+          expect(described_class.interpret(input, query)).to eq([{"a" => "ab"}])
+        end
       end
 
       describe 'jsonpath function "count"' do
