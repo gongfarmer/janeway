@@ -73,10 +73,10 @@ module Janeway
 
     def start_tokenization
       if WHITESPACE.include?(@source[0]) || WHITESPACE.include?(@source[-1])
-        raise Error, 'JSONPath query may not start or end with whitespace'
+        raise err('JSONPath query may not start or end with whitespace')
       end
-      tokenize while source_uncompleted?
 
+      tokenize while source_uncompleted?
       tokens << Token.new(:eof, '', nil, after_source_end_location)
     end
 
@@ -105,7 +105,7 @@ module Janeway
       if token
         tokens << token
       else
-        raise Error.new("Unknown character: #{c.inspect}", @source, current_location)
+        raise err("Unknown character: #{c.inspect}")
       end
     end
 
@@ -126,7 +126,7 @@ module Janeway
 
     def token_from_one_char_lex(lexeme)
       if %w[. -].include?(lexeme) && WHITESPACE.include?(lookahead)
-        raise Error, "Operator #{lexeme.inspect} must not be followed by whitespace"
+        raise err("Operator #{lexeme.inspect} must not be followed by whitespace")
       end
 
       Token.new(OPERATORS.key(lexeme), lexeme, nil, current_location)
@@ -139,7 +139,7 @@ module Janeway
       if TWO_CHAR_LEX.include?(next_two_chars)
         consume
         if next_two_chars == '..' && WHITESPACE.include?(lookahead)
-          raise Error, "Operator #{next_two_chars.inspect} must not be followed by whitespace"
+          raise err("Operator #{next_two_chars.inspect} must not be followed by whitespace")
         end
         Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
       else
@@ -151,7 +151,7 @@ module Janeway
     # @return [Token]
     def token_from_two_char_lex(lexeme)
       next_two_chars = [lexeme, lookahead].join
-      raise Error.new("Unknown operator \"#{next_two_chars}\"", @source) unless TWO_CHAR_LEX.include?(next_two_chars)
+      raise err("Unknown operator \"#{next_two_chars}\"") unless TWO_CHAR_LEX.include?(next_two_chars)
 
       consume
       Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
@@ -183,7 +183,7 @@ module Janeway
               consume # delimiter
             elsif lookahead(2) == non_delimiter
               qtype = delimiter == '"' ? 'double' : 'single'
-              raise Error, "Character #{non_delimiter} must not be escaped within #{qtype} quotes"
+              raise err("Character #{non_delimiter} must not be escaped within #{qtype} quotes")
             else
               consume_escape_sequence # consumes multiple chars
             end
@@ -192,10 +192,10 @@ module Janeway
           elsif %w[' "].include?(next_char) && next_char != delimiter
             consume
           else
-            raise Error.new("invalid character #{next_char.inspect}", current_location)
+            raise err("invalid character #{next_char.inspect}")
           end
       end
-      raise Error.new("Unterminated string error: #{literal_chars.join.inspect}") if source_completed?
+      raise err("Unterminated string error: #{literal_chars.join.inspect}") if source_completed?
 
       consume # closing delimiter
 
@@ -211,7 +211,7 @@ module Janeway
     # Read escape char literals, and transform them into the described character
     # @return [String] single character (possibly multi-byte)
     def consume_escape_sequence
-      raise 'not an escape sequence' unless consume == '\\'
+      raise err('Expect escape sequence') unless consume == '\\'
 
       char = consume
       case char
@@ -224,10 +224,10 @@ module Janeway
       when 'u' then consume_unicode_escape_sequence
       else
         if unescaped?(char)
-          raise Error.new("Character #{char} must not be escaped")
+          raise err("Character #{char} must not be escaped")
         else
           # whatever this is, it is not allowed even when escaped
-          raise Error.new("Invalid character #{char.inspect}", current_location)
+          raise err("Invalid character #{char.inspect}")
         end
       end
     end
@@ -273,11 +273,11 @@ module Janeway
         return convert_surrogate_pair_to_codepoint(hex_str, hex_str2) if prefix == '\\u' && low_surrogate?(hex_str2)
 
         # Not allowed to have high surrogate that is not followed by low surrogate
-        raise Error, "Invalid unicode escape sequence: \\u#{hex_str2}"
+        raise err("Invalid unicode escape sequence: \\u#{hex_str2}")
 
       end
       # Not allowed to have low surrogate that is not preceded by high surrogate
-      raise Error, "Invalid unicode escape sequence: \\u#{hex_str}"
+      raise err("Invalid unicode escape sequence: \\u#{hex_str}")
     end
 
     # Convert a valid UTF-16 surrogate pair into a UTF-8 string containing a single code point.
@@ -326,10 +326,10 @@ module Janeway
         when 0x40..0x46 then next # 'A'..'F'
         when 0x61..0x66 then next # 'a'..'f'
         else
-          raise Error, "Invalid unicode escape sequence: \\u#{hex_digits.join}"
+          raise err("Invalid unicode escape sequence: \\u#{hex_digits.join}")
         end
       end
-      raise Error, "Incomplete unicode escape sequence: \\u#{hex_digits.join}" if hex_digits.size < 4
+      raise err("Incomplete unicode escape sequence: \\u#{hex_digits.join}") if hex_digits.size < 4
 
       hex_digits.join
     end
@@ -355,14 +355,14 @@ module Janeway
         end
         unless digit?(lookahead)
           lexeme = source[lexeme_start_p..(next_p - 1)]
-          raise Error, "Exponent 'e' must be followed by number: #{lexeme.inspect}"
+          raise err("Exponent 'e' must be followed by number: #{lexeme.inspect}")
         end
         consume_digits
       end
 
       lexeme = source[lexeme_start_p..(next_p - 1)]
       if lexeme.start_with?('0') && lexeme.size > 1
-        raise Error, "Number may not start with leading zero: #{lexeme.inspect}"
+        raise err("Number may not start with leading zero: #{lexeme.inspect}")
       end
 
       literal =
@@ -490,8 +490,9 @@ module Janeway
           :identifier
         end
       if type == :function && WHITESPACE.include?(lookahead)
-        raise Error, "Function name \"#{identifier}\" must not be followed by whitespace"
+        raise err("Function name \"#{identifier}\" must not be followed by whitespace")
       end
+
       Token.new(type, identifier, identifier, current_location)
     end
 
@@ -509,6 +510,14 @@ module Janeway
 
     def after_source_end_location
       Location.new(next_p, 1)
+    end
+
+    # Return a Lexer::Error with the specified message, include the query and location
+    #
+    # @param msg [String] error message
+    # @return [Lexer::Error]
+    def err(msg)
+      Error.new(msg, @query, current_location)
     end
   end
 end

@@ -17,8 +17,8 @@ module Janeway
   # @param input [Object] ruby object to be searched
   # @return [Array] all matched objects
   def self.find_all(query, input)
-    query = compile(query)
-    Janeway::Interpreter.new(input).interpret(query)
+    ast = compile(query)
+    Janeway::Interpreter.new(input).interpret(ast, query)
   end
 
   # Compile a JsonPath query into an Abstract Syntax Tree.

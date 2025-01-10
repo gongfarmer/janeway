@@ -38,21 +38,21 @@ module Janeway
       raise ArgumentError, "expect string, got #{query.inspect}" unless query.is_a?(String)
 
       tokens = Janeway::Lexer.lex(query)
-      new(tokens).parse
+      new(tokens, query).parse
     end
 
-    def initialize(tokens)
+    def initialize(tokens, query = nil)
       @tokens = tokens
       @ast = AST::Query.new
       @next_p = 0
+      @query = query
     end
 
     def parse
-
       consume
       @ast.root = parse_expr_recursively
       consume
-      raise "unparsed tokens" unless current.type == :eof
+      raise err("Unparsed tokens: #{tokens.map(&:lexeme).inspect}") unless current.type == :eof
 
       @ast
     end
@@ -124,10 +124,12 @@ module Janeway
 
     def unexpected_token_error(expected = nil)
       if expected
-        raise Error, "Unexpected token #{current.lexeme.inspect} (expected #{expected.inspect}) (next is #{next_token.inspect})"
-      else
-        raise Error, "Unexpected token #{current.lexeme.inspect} (next is #{next_token.inspect})"
+        raise err(
+          "Unexpected token #{current.lexeme.inspect} " \
+          "(expected #{expected.inspect}, got #{next_token.lexeme.inspect} )"
+        )
       end
+      raise err("Unexpected token #{current.lexeme.inspect} (next is #{next_token.inspect})")
     end
 
     def check_syntax_compliance(ast_node)
@@ -157,7 +159,7 @@ module Janeway
       elsif current.type == :null # null
         :parse_null
       else
-        raise "Don't know how to parse #{current}"
+        raise err("Don't know how to parse #{current}")
       end
     end
 
@@ -185,15 +187,15 @@ module Janeway
     # Consume minus operator and apply it to the (expected) number token following it.
     # Don't consume the number token.
     def parse_minus_operator
-      raise "Expect token '-', got #{current.lexeme.inspect}" unless current.type == :minus
+      raise err("Expect token '-', got #{current.lexeme.inspect}") unless current.type == :minus
 
       # RFC: negative 0 is allowed within a filter selector comparison, but is NOT allowed within an index selector or array slice selector.
       # Detect that condition here
       if next_token.type == :number && next_token.literal == 0
         if [previous.type, lookahead(2).type].any? { _1 == :array_slice_separator}
-          raise Error, 'Negative zero is not allowed in an array slice selector'
+          raise err('Negative zero is not allowed in an array slice selector')
         elsif %i[union child_start].include?(previous.type)
-          raise Error, 'Negative zero is not allowed in an index selector'
+          raise err('Negative zero is not allowed in an index selector')
         end
       end
 
@@ -202,7 +204,7 @@ module Janeway
       consume
       parse_number
       unless current.literal.is_a?(Numeric)
-        raise Error, "Minus operator \"-\" must be followed by number, got #{current.lexeme.inspect}"
+        raise err("Minus operator \"-\" must be followed by number, got #{current.lexeme.inspect}")
       end
 
       current.literal *= -1
@@ -261,7 +263,7 @@ module Janeway
         else
           msg = 'Descendant segment ".." must be followed by selector'
           msg += ", got ..#{next_token.type}" unless next_token.type == :eof
-          raise Error, msg
+          raise err(msg)
         end
 
       AST::DescendantSegment.new(selector).tap do |ds|
@@ -289,7 +291,7 @@ module Janeway
             'Dot "." begins a name selector, and must be followed by an ' \
               "object member name, #{next_token.lexeme.inspect} is invalid here"
           end
-        raise Error, msg
+        raise err(msg)
       end
 
       case next_token.type
@@ -298,9 +300,10 @@ module Janeway
       when :identifier then parse_name_selector
       when :wildcard then parse_wildcard_selector
       else
-        raise Error,
+        raise err(
           'Dot "." begins a name selector, and must be followed by an ' \
           "object member name, #{next_token.lexeme.inspect} is invalid here"
+        )
       end
     end
 
@@ -369,7 +372,7 @@ module Janeway
     # @return [AST::ChildSegment]
     def parse_child_segment(and_child: true)
       consume
-      raise "Expect token [, got #{current.lexeme.inspect}" unless current.type == :child_start
+      raise err("Expect token [, got #{current.lexeme.inspect}") unless current.type == :child_start
 
       consume # "["
 
@@ -385,12 +388,12 @@ module Janeway
 
         # not allowed to have comma with nothing after it
         if current.type == :child_end
-          raise Error.new("Comma must be followed by another expression in filter selector")
+          raise err("Comma must be followed by another expression in filter selector")
         end
       end
 
       # Expect ']' after the selector definitions
-      raise Error, "Unexpected character #{current.lexeme.inspect} within brackets" unless current.type == :child_end
+      raise err("Unexpected character #{current.lexeme.inspect} within brackets") unless current.type == :child_end
 
       # if the child_segment contains just one selector, then return the selector instead.
       # This way a series of selectors feed results to each other without
@@ -449,7 +452,7 @@ module Janeway
         AST::NameSelector.new(current_literal_and_consume)
       when :child_end then nil # empty brackets, do nothing.
       else
-        raise Error, "Expect selector, got #{current.lexeme.inspect}"
+        raise err("Expect selector, got #{current.lexeme.inspect}")
       end
     end
 
@@ -476,7 +479,7 @@ module Janeway
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       start, end_, step = Array.new(3) { parse_array_slice_component }.map { _1&.literal }
-      raise Error, "After array slice selector, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
+      raise err("After array slice selector, expect ], got #{current.lexeme}") unless current.type == :child_end # ]
 
       AST::ArraySliceSelector.new(start, end_, step)
     end
@@ -493,7 +496,7 @@ module Janeway
           parse_minus_operator
           parse_array_slice_component
         when :number then current
-        else raise Error, "Unexpected token in array slice selector: #{current.lexeme.inspect}"
+        else raise err("Unexpected token in array slice selector: #{current.lexeme.inspect}")
         end
       consume if current.type == :number
       consume if current.type == :array_slice_separator
@@ -540,7 +543,7 @@ module Janeway
       # Check for literal, they are not allowed to be a complete condition in a filter selector
       # This includes jsonpath functions that return a numeric value.
       if selector.value.literal?
-        raise Error, "Literal value #{selector.value} must be used within a comparison"
+        raise err("Literal value #{selector.value} must be used within a comparison")
       end
 
       consume
@@ -556,7 +559,7 @@ module Janeway
         parse_minus_operator
         parse_number
       else
-        raise "unknown unary operator: #{current.inspect}"
+        raise err("Unknown unary operator: #{current.lexeme.inspect}")
       end
     end
 
@@ -587,14 +590,14 @@ module Janeway
     # Parse an expression
     def parse_expr
       parsing_function = determine_parsing_function
-      raise Error, "Unrecognized token: #{current.lexeme.inspect}" unless parsing_function
+      raise err("Unrecognized token: #{current.lexeme.inspect}") unless parsing_function
 
       send(parsing_function)
     end
 
     def parse_expr_recursively(precedence = LOWEST_PRECEDENCE)
       parsing_function = determine_parsing_function
-      raise Error, "Unrecognized token: #{current.lexeme.inspect}" unless parsing_function
+      raise err("Unrecognized token: #{current.lexeme.inspect}") unless parsing_function
 
       tk = current
       expr = send(parsing_function)
@@ -613,6 +616,14 @@ module Janeway
       end
 
       expr
+    end
+
+    # Return a Parser::Error with the specified message, include the query.
+    #
+    # @param msg [String] error message
+    # @return [Parser::Error]
+    def err(msg)
+      Error.new(msg, @query)
     end
 
     alias parse_true parse_boolean

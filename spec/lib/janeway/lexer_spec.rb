@@ -322,7 +322,7 @@ module Janeway
       it 'raises error when number has leading zeros' do
         expect {
           described_class.lex('$[?@.a==00]')
-        }.to raise_error(Lexer::Error, 'Number may not start with leading zero: "00"')
+        }.to raise_error(Error, 'Number may not start with leading zero: "00"')
       end
 
       it 'recognizes function "length"' do
@@ -396,7 +396,7 @@ module Janeway
       it 'raises error when exponent lacks trailing number' do
         expect {
           described_class.lex('$[?@.a == 1e]')
-        }.to raise_error(Lexer::Error, /Exponent 'e' must be followed by number/)
+        }.to raise_error(Error, /Exponent 'e' must be followed by number/)
       end
 
       it 'tokenizes true in a function call as true type, not a string' do
@@ -437,19 +437,19 @@ module Janeway
       it 'raises error when given a char that is not allowed' do
         expect {
           described_class.lex("$[\"\0\"]")
-        }.to raise_error(Lexer::Error, 'invalid character "\\u0000"')
+        }.to raise_error(Error, 'invalid character "\\u0000"')
       end
 
       it 'raises error when given an escaped char that is not allowed' do
         expect {
           described_class.lex("$[\"\\\0\"]")
-        }.to raise_error(Lexer::Error, 'Invalid character "\\u0000"')
+        }.to raise_error(Error, 'Invalid character "\\u0000"')
       end
 
       it 'raises error when there is space between minus operator and number' do
         expect {
           described_class.lex('$[?@.a==- 1]')
-        }.to raise_error(Lexer::Error, 'Operator "-" must not be followed by whitespace')
+        }.to raise_error(Error, 'Operator "-" must not be followed by whitespace')
       end
 
       # CTS "name selector, double quotes, invalid escaped single quote"

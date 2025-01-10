@@ -28,20 +28,24 @@ module Janeway
       raise ArgumentError, "expect query string, got #{query.inspect}" unless query.is_a?(String)
 
       tokens = Lexer.lex(query)
-      ast = Parser.new(tokens).parse
-      new(input).interpret(ast)
+      ast = Parser.new(tokens, query).parse
+      new(input).interpret(ast, query)
     end
 
     # @param input [Array,Hash] tree of data which the jsonpath query is addressing
     def initialize(input)
       @input = input
+      @query = nil
     end
 
     # @param ast [AST::Query] abstract syntax tree
+    # @param query [String] the original JSONPath string, for use in error messages
     # @return [Object]
-    def interpret(ast)
-      @query = ast
-      raise "expect AST, got #{ast.inspect}" unless ast.is_a?(AST::Query)
+    def interpret(ast, query)
+      raise ArgumentError, "expect AST, got #{ast.inspect}" unless ast.is_a?(AST::Query)
+      raise ArgumentError, "expect query string, got #{query.inspect}" unless query.is_a?(String)
+
+      @query = query
 
       unless @input.is_a?(Hash) || @input.is_a?(Array)
         return [] # can't query on any other types
@@ -64,7 +68,7 @@ module Janeway
       when AST::Selector then interpret_selector(node.value, @input)
       when nil then [@input]
       else
-        raise "don't know how to interpret #{node.value.class}"
+        raise err("don't know how to interpret #{node.value.class}")
       end
     end
 
@@ -336,10 +340,10 @@ module Janeway
       # nodes must be singular queries or literals
       case node
       when AST::CurrentNode, AST::RootNode
-        raise Error, "Expression #{node} does not produce a singular value for comparison" unless node.singular_query?
+        raise err("Expression #{node} does not produce a singular value for comparison") unless node.singular_query?
       when AST::Number, AST::StringType, AST::Null, AST::Function, AST::Boolean then nil
       else
-        raise "Invalid expression for comparison: #{node}"
+        raise err("Invalid expression for comparison: #{node}")
       end
 
       result = interpret_node(node, input)
@@ -355,7 +359,7 @@ module Janeway
       return result if result.empty?
 
       # Return the only node in the node list
-      raise 'node list contains multiple elements but this is a comparison' unless result.size == 1
+      raise err('node list contains multiple elements but this is a comparison') unless result.size == 1
 
       result.first
     end
@@ -369,7 +373,7 @@ module Janeway
 
       return node_list.first if node_list.size == 1
 
-      raise "don't know how to handle node list with size > 1: #{node_list.inspect}"
+      raise err("don't know how to handle node list with size > 1: #{node_list.inspect}")
     end
 
     # Evaluate a selector and return the result
@@ -382,7 +386,7 @@ module Janeway
       when AST::ArraySliceSelector then interpret_array_slice_selector(selector, input)
       when AST::FilterSelector then interpret_filter_selector(selector, input)
       else
-        raise "Not a selector: #{selector.inspect}"
+        raise err("Not a selector: #{selector.inspect}")
       end
     end
 
@@ -411,7 +415,7 @@ module Janeway
         when AST::DescendantSegment then interpret_descendant_segment(next_expr, input)
         when NilClass then input # FIXME: put it in a node list???
         else
-          raise "don't know how to interpret #{next_expr}"
+          raise err("don't know how to interpret @#{next_expr}")
         end
       result
     end
@@ -425,7 +429,7 @@ module Janeway
         call_stack.last.env[identifier.name]
       else
         # Undefined variable.
-        raise Janeway::Error::Runtime::UndefinedVariable, identifier.name
+        raise err("Undefined identifier: #{identifier.name}")
       end
     end
 
@@ -449,7 +453,7 @@ module Janeway
         lhs = interpret_node_as_value(binary_op.left, input)
         rhs = interpret_node_as_value(binary_op.right, input)
       else
-        raise "don't know how to handle binary operator #{binary_op.inspect}"
+        raise err("Don't know how to handle binary operator #{binary_op.inspect}")
       end
       send(:"interpret_#{binary_op.operator}", lhs, rhs)
     end
@@ -551,7 +555,7 @@ module Janeway
       case op.operator
       when :not then interpret_not(node_list)
       when :minus then 0 - node_list.first # FIXME: sure hope this is a number!
-      else raise "unknown unary operator #{op.inspect}"
+      else raise err("unknown unary operator #{op.inspect}")
       end
     end
 
@@ -565,7 +569,7 @@ module Janeway
         when Array then input.empty?
         when TrueClass, FalseClass then !input
         else
-          raise "don't know how to apply not operator to #{input.inspect}"
+          raise err("don't know how to apply not operator to #{input.inspect}")
         end
       result
     end
@@ -644,6 +648,14 @@ module Janeway
       else
         input # input is a single node, which happens to be an Array
       end
+    end
+
+    # Return an Interpreter::Error with the specified message, include the query.
+    #
+    # @param msg [String] error message
+    # @return [Parser::Error]
+    def err(msg)
+      Error.new(msg, @query)
     end
   end
 end
