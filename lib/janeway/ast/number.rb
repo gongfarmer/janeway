@@ -2,7 +2,7 @@
 
 module Janeway
   module AST
-    # Represent a number.  From the BNF grammer:
+    # Represent a number.  From the ABNF grammar:
     # number              = (int / "-0") [ frac ] [ exp ] ; decimal number
     # frac                = "." 1*DIGIT                  ; decimal fraction
     # exp                 = "e" [ "-" / "+" ] 1*DIGIT    ; decimal exponent

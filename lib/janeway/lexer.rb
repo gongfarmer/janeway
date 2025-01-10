@@ -313,7 +313,7 @@ module Janeway
     end
 
     # Consume and return 4 hex digits from the source. Either upper or lower case is accepted.
-    # No judgement is made here on whether the resulting sequence is valid,
+    # No judgment is made here on whether the resulting sequence is valid,
     # as long as it is 4 hex digits.
     #
     # @return [String]
@@ -375,7 +375,7 @@ module Janeway
     end
 
     # Consume an alphanumeric string.
-    # If `ignore_keywords`, the result is alway an :identifier token.
+    # If `ignore_keywords`, the result is always an :identifier token.
     # Otherwise, keywords and function names will be recognized and tokenized as those types.
     #
     # @param ignore_keywords [Boolean]
@@ -445,7 +445,7 @@ module Janeway
     # True if character is suitable as the first character in a name selector
     # using shorthand notation (ie. no bracket notation.)
     #
-    # Defined in RFC9535 by ths ABNF grammar:
+    # Defined in RFC9535 by this ABNF grammar:
     # name-first    = ALPHA /
     #                 "_"   /
     #                 %x80-D7FF /

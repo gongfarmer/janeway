@@ -262,7 +262,7 @@ module Janeway
       end
     end
 
-    # Dot notation reprsents a name selector, and is an alternative to bracket notation.
+    # Dot notation represents a name selector, and is an alternative to bracket notation.
     # These examples are equivalent:
     #   $.store
     #   $[store]
@@ -273,7 +273,6 @@ module Janeway
     def parse_dot_notation
       consume # "."
       raise "#parse_dot_notation expects to consume :dot, got #{current}" unless current.type == :dot
-
 
       case next_token.type
       # FIXME: implement a different name lexer which is limited to only the chars allowed under dot notation

@@ -58,14 +58,8 @@ module Janeway
       #
       # @param input_size [Integer]
       # @return [Integer]
-      def start_index(input_size)
-        if @start
-          @start.clamp(0, input_size)
-        elsif step.positive?
-          0
-        else # negative step
-          input_size - 1 # last index of input
-        end
+      def upper_index(input_size)
+        calculate_index_values(input_size).last
       end
 
       # Return the end index to use for stepping through the array, based on a specified array size
@@ -73,15 +67,65 @@ module Janeway
       #
       # @param input_size [Integer]
       # @return [Integer]
-      def end_index(input_size)
-        if @end
-          value = @end.clamp(0, input_size)
-          step.positive? ? value - 1 : value + 1 # +/- to exclude the final element
-        elsif step.positive?
-          input_size - 1 # last index of input
+      def lower_index(input_size)
+        calculate_index_values(input_size).first
+      end
+
+      # Assign lower and upper bounds to instance variables, based on the input array size.
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-3
+      #
+      # @param input_size [Integer]
+      def calculate_index_values(input_size)
+        if step >= 0
+          start = @start || 0
+          end_ = @end || input_size
         else
-          0
+          start = @start || (input_size - 1)
+          end_ = @end || ((-1 * input_size) - 1)
         end
+
+        bounds(start, end_, step, input_size)
+      end
+
+      # NOTE: Conversion of start:end:step to array indexes is defined as pseudocode
+      # in the IETF spec.
+      # The methods #normalize and #bounds are ruby implementations of that code.
+      # Don't make changes here without referring to the original code in the spec.
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-6
+
+      # IETF: Slice expression parameters start and end are not directly usable
+      # as slice bounds and must first be normalized.
+      #
+      # @param index [Integer]
+      # @param len [Integer]
+      def normalize(index, len)
+        return index if index >= 0
+
+        len + index
+      end
+
+      # IETF: Slice expression parameters start and end are used to derive
+      # slice bounds lower and upper. The direction of the iteration, defined
+      # by the sign of step, determines which of the parameters is the lower
+      # bound and which is the upper bound:¶
+      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.3.4.2.2-9
+      # @param start [Integer] start index, normalized
+      # @param end_ [Integer] end index, normalized
+      # @param step [Integer] step value
+      # @param len [Integer] length of input array
+      def bounds(start, end_, step, len)
+        n_start = normalize(start, len)
+        n_end = normalize(end_, len)
+
+        if step >= 0
+          lower = n_start.clamp(0, len)
+          upper = n_end.clamp(0, len)
+        else
+          upper = n_start.clamp(-1, len - 1)
+          lower = n_end.clamp(-1, len - 1)
+        end
+
+        [lower, upper]
       end
 
       # ignores the brackets: argument, this always needs surrounding brackets

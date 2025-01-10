@@ -201,15 +201,17 @@ module Janeway
       return [] unless input.is_a?(Array)
       return [] if selector.step && selector.step.zero? # IETF: When step is 0, no elements are selected.
 
-      # Calculate the "real" start and end index based on the array size
-      start_index = selector.start_index(input.size)
-      last_index = selector.end_index(input.size)
+      # Calculate the upper and lower indices of the target range
+      lower = selector.lower_index(input.size)
+      upper = selector.upper_index(input.size)
 
-
-      # Collect values from target indices.
-      results = start_index
-        .step(to: last_index, by: selector.step)
-        .map { |i| input[i] }
+      # Collect values from target indices. Omit the value from the final index.
+      results =
+        if selector.step.positive?
+          lower.step(to: upper - 1, by: selector.step).map { input[_1] }
+        else
+          upper.step(to: lower + 1, by: selector.step).map { input[_1] }
+        end
 
       # Interpret child using output of this name selector, and return result
       child = selector.child
@@ -231,12 +233,11 @@ module Janeway
         case input
         when Array then input
         when Hash then input.values
-        else return []
+        else return [] # early exit
         end
 
       results = []
       values.each do |value|
-
         # Run filter and interpret result
         result = interpret_node(selector.value, value)
 
@@ -578,7 +579,7 @@ module Janeway
     # Evaluate the expressions in the parameter list to make the parameter values
     # to pass in to a JsonPath function.
     #
-    # The node lists returned by a singulare query must be deconstructed into a single value for
+    # The node lists returned by a singular query must be deconstructed into a single value for
     # parameters of ValueType, this is done here.
     # For explanation:
     # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-

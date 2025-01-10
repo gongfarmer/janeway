@@ -54,9 +54,15 @@ module Janeway
       end
 
       # CTS "slice selector, negative range with negative step"
-      xit 'selects elements in reverse with negative start and end indexes' do
+      it 'selects elements in reverse with negative start and end indexes' do
         input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         expect(described_class.interpret(input, '$[-1:-3:-1]')).to eq([9, 8])
+      end
+
+      # CTS "filter, non-singular existence, slice"
+      it 're-calculates the bounds for different sized inputs' do
+        input = [1, [], [2], [2, 3, 4], {}, { 'a' => 3 }]
+        expect(described_class.interpret(input, '$[?@[0:2]]')).to eq([[2], [2, 3, 4]])
       end
     end
   end
