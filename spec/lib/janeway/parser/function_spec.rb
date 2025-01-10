@@ -43,6 +43,13 @@ module Janeway
         expect(ast.to_s).to eq('$[?(length(null) >= 5)]')
       end
 
+      # CTS "functions, length, non-singular query arg"
+      it 'raises error when length() function parameter is a query that is not singular' do
+        expect {
+          described_class.parse('$[?length(@.*)<3]')
+        }.to raise_error(Error, /Invalid parameter - length\(\) expects literal value or singular query/)
+      end
+
       it 'raises error when there is space between function name and parentheses' do
         expect {
           described_class.parse('$[?length (@.authors) >= 5]')

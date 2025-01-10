@@ -13,7 +13,11 @@ module Janeway
       consume # (
 
       # Read parameter
-      parameters = [parse_function_parameter]
+      arg = parse_function_parameter
+      parameters = [arg]
+      unless arg.singular_query? || arg.literal?
+        raise Error, "Invalid parameter - length() expects literal value or singular query, got #{arg.value.inspect}"
+      end
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
       # Meaning of return value depends on the JSON type:
