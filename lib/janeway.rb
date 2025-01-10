@@ -6,6 +6,9 @@ require 'English'
 module Janeway
   # Abstract Syntax Tree
   module AST
+    # These are the limits of what javascript's Number type can represent
+    INTEGER_MIN = -9_007_199_254_740_991
+    INTEGER_MAX = 9_007_199_254_740_991
   end
 
   # Apply a JsonPath query to the input, and return the result.

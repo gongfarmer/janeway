@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'janeway'
 require_relative 'selector'
 
 module Janeway
@@ -7,14 +8,10 @@ module Janeway
     # An index selector, e.g. 3, selects an indexed child of an array
     # @example: $.store.book[2].title
     class IndexSelector < Janeway::AST::Selector
-      # These are the limits of what javascript's Number type can represent
-      MIN = -9_007_199_254_740_991
-      MAX = 9_007_199_254_740_991
-
       def initialize(index)
         raise Error, "Invalid value for index selector: #{index.inspect}" unless index.is_a?(Integer)
-        raise Error, "Index selector value too small: #{index.inspect}" if index < MIN
-        raise Error, "Index selector value too large: #{index.inspect}" if index > MAX
+        raise Error, "Index selector value too small: #{index.inspect}" if index < INTEGER_MIN
+        raise Error, "Index selector value too large: #{index.inspect}" if index > INTEGER_MAX
 
         super
       end

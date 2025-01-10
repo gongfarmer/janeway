@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'janeway'
 require_relative 'selector'
 
 module Janeway
@@ -25,12 +26,19 @@ module Janeway
       # @param end_ [Integer, nil]
       # @param step [Integer, nil]
       def initialize(start = nil, end_ = nil, step = nil)
-        [start, end_, step].each do |arg|
-          next if arg.nil? || arg.is_a?(Integer)
-
-          raise ArgumentError, "Expect Integer or nil, got #{arg.inspect}"
-        end
         super(nil)
+
+        # Check arguments
+        [start, end_, step].each do |arg|
+          unless [NilClass, Integer].include?(arg.class)
+            raise ArgumentError, "Expect Integer or nil, got #{arg.inspect}"
+          end
+          next unless arg
+
+          # Check integer size limits
+          raise Error, "Array slice selector value too small: #{arg.inspect}" if arg < INTEGER_MIN
+          raise Error, "Array slice selector value too large: #{arg.inspect}" if arg > INTEGER_MAX
+        end
 
         # Nil values are kept to indicate that the "default" values is to be used.
         # The interpreter selects the actual values.
