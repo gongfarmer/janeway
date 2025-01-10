@@ -46,7 +46,7 @@ module Janeway
       if current.type == :union
         consume # ,
       else
-        raise "expect comma token, found #{current}" 
+        raise "expect comma token, found #{current}"
       end
 
       # Read second parameter (the regexp)

@@ -17,12 +17,12 @@ module Janeway
       in_char_class = false
       indexes = []
       chars.each_with_index do |char, i|
-        # FIXME: does not handle escaped '[', ']', or '.'
         case char
         when '[' then in_char_class = true
-        when ']' then in_char_class = false
+        when ']'
+          in_char_class = false unless chars[i - 1] == '\\' # escaped ] does not close char class
         when '.'
-          next if in_char_class || chars[i-1] == '\\' # escaped dot
+          next if in_char_class || chars[i - 1] == '\\' # escaped dot
 
           indexes << i # replace this dot
         end

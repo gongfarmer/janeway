@@ -116,6 +116,13 @@ module Janeway
           expected = ['bab']
           expect(described_class.interpret(input, query)).to eq(expected)
         end
+
+        # CTS "functions, match, escaped right square bracket"
+        it 'can match a regexp with an escaped right square bracket inside a character class' do
+          input = ['abc', 'a.c', "a\u2028c", 'a]c']
+          result = described_class.interpret(input, "$[?match(@, 'a[\\\\].]c')]")
+          expect(result).to eq(['a.c', 'a]c'])
+        end
       end
 
       describe 'jsonpath function "search"' do
