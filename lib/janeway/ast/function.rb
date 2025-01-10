@@ -8,7 +8,6 @@ module Janeway
 
       attr_reader :parameters, :body
 
-      # FIXME: provide function body too as a proc?
       def initialize(name, parameters, &body)
         raise ArgumentError, "expect string, got #{name.inspect}" unless name.is_a?(String)
 

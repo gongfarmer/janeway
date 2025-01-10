@@ -48,6 +48,13 @@ module Janeway
           described_class.parse('$[?length (@.authors) >= 5]')
         }.to raise_error(Error, 'Function name "length" must not be followed by whitespace')
       end
+
+      # CTS "functions, count, non-query arg, number",
+      it 'raises error when count function receives numeric parameter' do
+        expect {
+          described_class.parse('$[?count(1)>2]')
+        }.to raise_error(Error, /Invalid parameter - count\(\) expects node list/)
+      end
     end
   end
 end

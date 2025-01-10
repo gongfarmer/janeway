@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'functions'
+require_relative 'lexer'
 
 module Janeway
   # Transform a list of tokens into an Abstract Syntax Tree

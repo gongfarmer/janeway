@@ -24,14 +24,17 @@ module Janeway
       consume # (
 
       # Read parameter
-      parameters = [parse_function_parameter]
+      arg = parse_function_parameter
+      parameters = [arg]
+      raise Error, "Invalid parameter - count() expects node list, got #{arg.value.inspect}" if arg.literal?
       raise "expect group_end token, found #{current}" unless current.type == :group_end
 
+      # Define function body
       AST::Function.new('count', parameters) do |node_list|
         if node_list.is_a?(Array)
           node_list.size
         else
-          1
+          1 # The count of a non-empty singulare noselist such as count(@) is always 1
         end
       end
     end

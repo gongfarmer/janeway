@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'parser'
+
 module Janeway
   # Tree-walk interpreter to apply the operations from the abstract syntax tree to the input value
   class Interpreter

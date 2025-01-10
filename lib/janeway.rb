@@ -47,8 +47,5 @@ def require_libs(dir)
   end
 end
 
-# These are dependencies of the other AST source files, and must come first
-require_relative 'janeway/ast/expression'
-
 require_libs('janeway/ast')
 require_libs('janeway')
