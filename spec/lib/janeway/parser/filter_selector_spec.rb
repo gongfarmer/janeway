@@ -101,7 +101,7 @@ module Janeway
       it 'raises error when a boolean literal is the entire condition' do
         expect {
           described_class.parse('$[? true]')
-        }.to raise_error(Error, /Literal .* must be used within a comparison/)
+        }.to raise_error(Error, /Literal value .* must be used within a comparison/)
       end
     end
   end

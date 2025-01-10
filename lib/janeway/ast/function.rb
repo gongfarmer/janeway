@@ -34,6 +34,16 @@ module Janeway
       def singular_query?
         true
       end
+
+      # True if the function's return value is a literal
+      def literal?
+        case name
+        when 'length', 'count', 'value' then true
+        when 'search', 'match' then false
+        else
+          raise "Unknown jsonpath function #{name}"
+        end
+      end
     end
   end
 end

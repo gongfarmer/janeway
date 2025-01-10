@@ -509,7 +509,6 @@ module Janeway
 
     # Feed tokens to the FilterSelector until hitting a terminator
     def parse_filter_selector
-
       selector = AST::FilterSelector.new
       terminator_types = %I[child_end union eof]
       while next_token && !terminator_types.include?(next_token.type)
@@ -526,8 +525,9 @@ module Janeway
       end
 
       # Check for literal, they are not allowed to be a complete condition in a filter selector
+      # This includes jsonpath functions that return a numeric value.
       if selector.value.literal?
-        raise Error, "Literal #{selector.value} must be used within a comparison"
+        raise Error, "Literal value #{selector.value} must be used within a comparison"
       end
 
       consume

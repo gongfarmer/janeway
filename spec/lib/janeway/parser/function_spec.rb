@@ -55,6 +55,13 @@ module Janeway
           described_class.parse('$[?count(1)>2]')
         }.to raise_error(Error, /Invalid parameter - count\(\) expects node list/)
       end
+
+      # CTS functions, count, result must be compared
+      it 'raises error when a function that returns a ValueType is not part of a comparison' do
+        expect {
+          described_class.parse('$[?count(@..*)]')
+        }.to raise_error(Error, 'Literal value count(@..*) must be used within a comparison')
+      end
     end
   end
 end
