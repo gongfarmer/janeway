@@ -492,6 +492,20 @@ module Janeway
           described_class.lex('$.. a')
         }.to raise_error(Error, 'Operator ".." must not be followed by whitespace')
       end
+
+      # "name selector, double quotes, unicode escape no hex"
+      it 'raises error when string contains unicode escape prefix \u without hex code' do
+        expect {
+          described_class.lex('$["\u"]')
+        }.to raise_error(Error, 'Invalid unicode escape sequence: \u"')
+      end
+
+      # CTS name selector, double quotes, single low surrogate"
+      it 'raises error when low surrogate is not preceded by high surrogate ' do
+        expect {
+          described_class.lex("$[\"\\uDC00\"]")
+        }.to raise_error(Error, 'Invalid unicode escape sequence: \uDC00')
+      end
     end
   end
 end

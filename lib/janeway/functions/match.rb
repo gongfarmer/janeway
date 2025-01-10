@@ -46,7 +46,7 @@ module Janeway
       if current.type == :union
         consume # ,
       else
-        raise "expect comma token, found #{current}"
+        raise Error, 'Not enough parameters for match() function call'
       end
 
       # Read second parameter (the regexp)
@@ -54,7 +54,9 @@ module Janeway
       # Otherwise it is an expression that takes the regexp from the input document,
       # and the iregexp will not be available until interpretation.
       parameters << parse_function_parameter
-      raise "expect group_end token, found #{current}" unless current.type == :group_end
+      unless current.type == :group_end
+        raise Error, 'Too many parameters for match() function call'
+      end
 
       AST::Function.new('match', parameters) do |str, str_iregexp|
         if str.is_a?(String) && str_iregexp.is_a?(String)

@@ -255,7 +255,7 @@ module Janeway
       return hex_str.hex.chr('UTF-8') unless hex_str.upcase.start_with?('D')
 
       # hex string starts with D, but is still non-surrogate
-      return hex_str.hex.chr('UTF-8') if (0..7).cover?(hex_str[1].to_i)
+      return [hex_str.hex].pack('U') if '01234567'.include?(hex_str[1])
 
       # hex value is in the high-surrogate or low-surrogate range.
 
@@ -273,11 +273,11 @@ module Janeway
         return convert_surrogate_pair_to_codepoint(hex_str, hex_str2) if prefix == '\\u' && low_surrogate?(hex_str2)
 
         # Not allowed to have high surrogate that is not followed by low surrogate
-        raise "invalid unicode escape sequence: \\u#{hex_str2.join}"
+        raise Error, "Invalid unicode escape sequence: \\u#{hex_str2}"
 
       end
       # Not allowed to have low surrogate that is not preceded by high surrogate
-      raise "invalid unicode escape sequence: \\u#{hex_str}"
+      raise Error, "Invalid unicode escape sequence: \\u#{hex_str}"
     end
 
     # Convert a valid UTF-16 surrogate pair into a UTF-8 string containing a single code point.
@@ -326,10 +326,10 @@ module Janeway
         when 0x40..0x46 then next # 'A'..'F'
         when 0x61..0x66 then next # 'a'..'f'
         else
-          raise "invalid unicode escape sequence: \\u#{hex_digits.join}"
+          raise Error, "Invalid unicode escape sequence: \\u#{hex_digits.join}"
         end
       end
-      raise "incomplete unicode escape sequence: \\u#{hex_digits.join}" if hex_digits.size < 4
+      raise Error, "Incomplete unicode escape sequence: \\u#{hex_digits.join}" if hex_digits.size < 4
 
       hex_digits.join
     end

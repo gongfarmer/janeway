@@ -27,7 +27,9 @@ module Janeway
       arg = parse_function_parameter
       parameters = [arg]
       raise Error, "Invalid parameter - count() expects node list, got #{arg.value.inspect}" if arg.literal?
-      raise "expect group_end token, found #{current}" unless current.type == :group_end
+      unless current.type == :group_end
+        raise Error, 'Too many parameters for count() function call'
+      end
 
       # Define function body
       AST::Function.new('count', parameters) do |node_list|

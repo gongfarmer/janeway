@@ -201,6 +201,10 @@ module Janeway
       # Parse number and apply - sign to its literal value
       consume
       parse_number
+      unless current.literal.is_a?(Numeric)
+        raise Error, "Minus operator \"-\" must be followed by number, got #{current.lexeme.inspect}"
+      end
+
       current.literal *= -1
       current
     end
@@ -210,6 +214,7 @@ module Janeway
       AST::Null.new
     end
 
+    # @return [AST::Boolean]
     def parse_boolean
       AST::Boolean.new(current.literal == 'true')
     end
@@ -254,7 +259,9 @@ module Janeway
         when :child_start then parse_child_segment(and_child: false)
         when :string, :identifier then parse_name_selector(and_child: false)
         else
-          raise "Invalid query: descendant segment must have selector, got ..#{next_token.type}"
+          msg = 'Descendant segment ".." must be followed by selector'
+          msg += ", got ..#{next_token.type}" unless next_token.type == :eof
+          raise Error, msg
         end
 
       AST::DescendantSegment.new(selector).tap do |ds|
@@ -273,7 +280,17 @@ module Janeway
     #   * member name (with only certain chars useable. For example, names containing dots are not allowed here.)
     def parse_dot_notation
       consume # "."
-      raise "#parse_dot_notation expects to consume :dot, got #{current}" unless current.type == :dot
+      unless current.type == :dot
+        # Parse error, determine most useful error message
+        msg =
+          if current.type == :number
+            "Decimal point must be preceded by number, got \".#{current.lexeme}\""
+          else
+            'Dot "." begins a name selector, and must be followed by an ' \
+              "object member name, #{next_token.lexeme.inspect} is invalid here"
+          end
+        raise Error, msg
+      end
 
       case next_token.type
       # FIXME: implement a different name lexer which is limited to only the chars allowed under dot notation
@@ -281,7 +298,9 @@ module Janeway
       when :identifier then parse_name_selector
       when :wildcard then parse_wildcard_selector
       else
-        raise "cannot parse #{current.type}"
+        raise Error,
+          'Dot "." begins a name selector, and must be followed by an ' \
+          "object member name, #{next_token.lexeme.inspect} is invalid here"
       end
     end
 
@@ -300,7 +319,6 @@ module Janeway
     end
 
     def parse_root
-
       # detect optional following selector
       selector =
         case next_token.type
@@ -371,11 +389,8 @@ module Janeway
         end
       end
 
-      # Do not consume the final ']', the top-level parsing loop will eat that
-      unless current.type == :child_end
-        # developer error, check the parsing function
-        raise "expect current token to be ], got #{current.type.inspect}"
-      end
+      # Expect ']' after the selector definitions
+      raise Error, "Unexpected character #{current.lexeme.inspect} within brackets" unless current.type == :child_end
 
       # if the child_segment contains just one selector, then return the selector instead.
       # This way a series of selectors feed results to each other without
@@ -434,7 +449,7 @@ module Janeway
         AST::NameSelector.new(current_literal_and_consume)
       when :child_end then nil # empty brackets, do nothing.
       else
-        raise "Unhandled selector: #{current}"
+        raise Error, "Expect selector, got #{current.lexeme.inspect}"
       end
     end
 
@@ -461,9 +476,7 @@ module Janeway
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       start, end_, step = Array.new(3) { parse_array_slice_component }.map { _1&.literal }
-
-
-      raise "After array slice, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
+      raise Error, "After array slice selector, expect ], got #{current.lexeme}" unless current.type == :child_end # ]
 
       AST::ArraySliceSelector.new(start, end_, step)
     end
@@ -480,7 +493,7 @@ module Janeway
           parse_minus_operator
           parse_array_slice_component
         when :number then current
-        else raise "Unexpected token in array slice selector: #{current}"
+        else raise Error, "Unexpected token in array slice selector: #{current.lexeme.inspect}"
         end
       consume if current.type == :number
       consume if current.type == :array_slice_separator

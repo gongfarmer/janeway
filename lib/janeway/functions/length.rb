@@ -18,7 +18,9 @@ module Janeway
       unless arg.singular_query? || arg.literal?
         raise Error, "Invalid parameter - length() expects literal value or singular query, got #{arg.value.inspect}"
       end
-      raise "expect group_end token, found #{current}" unless current.type == :group_end
+      unless current.type == :group_end
+        raise Error, 'Too many parameters for length() function call'
+      end
 
       # Meaning of return value depends on the JSON type:
       #   * string - number of Unicode scalar values in the string.

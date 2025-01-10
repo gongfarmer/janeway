@@ -90,5 +90,104 @@ module Janeway
         value: -15.8
       )
     end
+
+    # CTS "basic, name shorthand, number"
+    it 'raises error when number follows dot' do
+      err = 'Dot "." begins a name selector, and must be followed by an object member name, "1" is invalid here'
+      expect {
+        described_class.parse('$.1')
+      }.to raise_error(Error, err)
+    end
+
+    # CTS "basic, multiple selectors, space instead of comma"
+    it 'raises error when query contains space separated selectors' do
+      expect {
+        described_class.parse('$[0 2]')
+      }.to raise_error(Error, 'Unexpected character "2" within brackets')
+    end
+
+    # CTS "basic, selector, leading comma"
+    it 'raises error when child segment starts with comma' do
+      expect {
+        described_class.parse('$[,0]')
+      }.to raise_error(Error, 'Expect selector, got ","')
+    end
+
+    # CTS "basic, bald descendant segment"
+    it 'raises error when descendant segment is not followed by anything' do
+      expect {
+        described_class.parse('$..')
+      }.to raise_error(Error, 'Descendant segment ".." must be followed by selector')
+    end
+
+    # CTS "filter, equals number, invalid double minus"
+    it 'raises error when numeric comparison includes double minus' do
+      expect {
+        described_class.parse('$[?@.a==--1]')
+      }.to raise_error(Error, 'Minus operator "-" must be followed by number, got "-"')
+    end
+
+    # CTS "filter, equals number, invalid no int digit"
+    it 'raises error when fractional number begins with decimal point' do
+      expect {
+        described_class.parse('$[?@.a==.1]')
+      }.to raise_error(Error, 'Decimal point must be preceded by number, got ".1"')
+    end
+
+    # CTS "functions, count, no params"
+    it 'raises error when count() function call has no parameters' do
+      expect {
+        described_class.parse('$[?count()==1]')
+      }.to raise_error(Error, 'Function call is missing parameter')
+    end
+
+    # CTS "functions, count, too many params"
+    it 'raises error when count() function call has too many parameters' do
+      expect {
+        described_class.parse('$[?count(@.a,@.b)==1]')
+      }.to raise_error(Error, 'Too many parameters for count() function call')
+    end
+
+    # CTS "functions, length, too many params"
+    it 'raises error when length() function call has too many parameters' do
+      expect {
+        described_class.parse('$[?length(@.a,@.b)==1]')
+      }.to raise_error(Error, 'Too many parameters for length() function call')
+    end
+
+    # CTS "functions, match, too few params"
+    it 'raises error when function call has no parameters' do
+      expect {
+        described_class.parse('$[?match(@.a)==1]')
+      }.to raise_error(Error, 'Not enough parameters for match() function call')
+    end
+
+    # CTS "functions, match, too many params"
+    it 'raises error when match() function call has too many parameters' do
+      expect {
+        described_class.parse('$[?match(@.a,@.b,@.c)==1]')
+      }.to raise_error(Error, 'Too many parameters for match() function call')
+    end
+
+    # CTS "functions, search, too few params"
+    it 'raises error when search() function call has no parameters' do
+      expect {
+        described_class.parse('$[?search(@.a)]')
+      }.to raise_error(Error, 'Insufficient parameters for search() function call')
+    end
+
+    # CTS "functions, search, too many params"
+    it 'raises error when search() function call has no parameters' do
+      expect {
+        described_class.parse('$[?search(@.a,@.b,@.c)]')
+      }.to raise_error(Error, 'Too many parameters for match() function call')
+    end
+
+    # CTS "functions, value, too many params"
+    it 'raises error when search() function call has no parameters' do
+      expect {
+        described_class.parse('$[?value(@.a,@.b)==4]')
+      }.to raise_error(Error, 'Too many parameters for value() function call')
+    end
   end
 end

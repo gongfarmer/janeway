@@ -33,7 +33,9 @@ module Janeway
 
       # Read parameter
       parameters = [parse_function_parameter]
-      raise "expect group_end token, found #{current}" unless current.type == :group_end
+      unless current.type == :group_end
+        raise Error, 'Too many parameters for value() function call'
+      end
 
       AST::Function.new('value', parameters) do |nodes|
         if nodes.is_a?(Array) && nodes.size == 1

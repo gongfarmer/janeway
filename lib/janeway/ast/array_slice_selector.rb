@@ -31,7 +31,7 @@ module Janeway
         # Check arguments
         [start, end_, step].each do |arg|
           unless [NilClass, Integer].include?(arg.class)
-            raise ArgumentError, "Expect Integer or nil, got #{arg.inspect}"
+            raise Error, "Array slice selector index must be integer or nothing, got #{arg.inspect}"
           end
           next unless arg
 
