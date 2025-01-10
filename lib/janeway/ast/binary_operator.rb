@@ -19,6 +19,9 @@ module Janeway
       def left=(expr)
         if comparison_operator? && !(expr.literal? || expr.singular_query?)
           raise Error, "Expression #{expr} does not produce a singular value for #{operator_to_s} comparison"
+        elsif comparison_operator? && expr.is_a?(AST::Function) && !expr.literal?
+          msg = "Function #{expr} returns a non-comparable value which is not usable for #{operator_to_s} comparison"
+          raise Error, msg
         end
 
         # Compliance test suite requires error for this, but don't have go so far as to bar every literal

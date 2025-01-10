@@ -69,6 +69,13 @@ module Janeway
           described_class.parse('$[?count(@..*)]')
         }.to raise_error(Error, 'Literal value count(@..*) must be used within a comparison')
       end
+
+      # CTS "functions, match, result cannot be compared"
+      it 'raises error when a function that returns LogicalType is part of a comparison' do
+        expect {
+          described_class.parse("$[?match(@.a, 'a.*')==true]")
+        }.to raise_error(Error, /Function.* returns a non-comparable value which is not usable for == comparison/)
+      end
     end
   end
 end
