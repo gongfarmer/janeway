@@ -23,7 +23,6 @@ module Janeway
       }.to raise_error(Janeway::Parser::Error, 'Empty child segment')
     end
 
-    # FIXME: How? wildcard sends an array, name selector only operates on a hash.
     # CTS "basic, wildcard shorthand, then name shorthand",
     it 'interprets wildcard shorthand then name shorthand' do
       input = {

@@ -288,8 +288,6 @@ module Janeway
       end
 
       case next_token.type
-      # FIXME: implement a different name lexer which is limited to only the chars allowed under dot notation
-      # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.5.1.1
       when :identifier then parse_name_selector
       when :wildcard then parse_wildcard_selector
       else

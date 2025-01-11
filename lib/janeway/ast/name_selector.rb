@@ -14,7 +14,6 @@ module Janeway
 
       def initialize(value)
         super
-        # FIXME: implement name matching requirements here
         raise "Invalid name: #{value.inspect}:#{value.class}" unless value.is_a?(String)
       end
 

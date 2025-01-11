@@ -168,7 +168,6 @@ module Janeway
       return values unless selector.next
 
       # Apply next selector to every value
-      # FIXME: is this correct??  Makes the CTS pass  "basic, wildcard shorthand, then name shorthand"
       child = selector.next
       results = []
       values.each do |value|
@@ -388,7 +387,7 @@ module Janeway
       when AST::FilterSelector then interpret_filter_selector(next_expr, input)
       when AST::ChildSegment then interpret_child_segment(next_expr, input)
       when AST::DescendantSegment then interpret_descendant_segment(next_expr, input)
-      when NilClass then input # FIXME: put it in a node list???
+      when NilClass then input
       else
         raise err("don't know how to interpret @#{next_expr}")
       end
@@ -521,13 +520,13 @@ module Janeway
       nil
     end
 
-    # FIXME: split implementation out into separate methods for not and minus
-    # because they are so different.
+    # @param op [AST::UnaryOperator]
+    # @param input [Object]
     def interpret_unary_operator(op, input)
+      # The only other unary operator, "-", is consumed in the parsing stage and never in the AST
       node_list = send(:"interpret_#{op.operand.type}", op.operand, input)
       case op.operator
       when :not then interpret_not(node_list)
-      when :minus then 0 - node_list.first # FIXME: sure hope this is a number!
       else raise err("unknown unary operator #{op.inspect}")
       end
     end
