@@ -2,9 +2,10 @@
 
 module Janeway
   module AST
-    # Syntactically, a JSONPath query consists of a root identifier ($),
-    # which stands for a nodelist that contains the root node of the
-    # query argument, followed by a possibly empty sequence of segments.
+    # AST::Query holds the complete abstract syntax tree created by parsing the query.
+    #
+    # This can be frozen and passed to multiple threads or ractors for simultaneous use.
+    # No instance members are modified during the interpretation stage.
     class Query
       # @return [AST::RootNode]
       attr_reader :root
@@ -28,7 +29,7 @@ module Janeway
       # @param input [Object] ruby object to be searched
       # @return [Array] all matched objects
       def find_all(input)
-        Janeway::Interpreter.new(input).interpret(self)
+        Janeway::Interpreter.new(self).interpret(input)
       end
 
       def to_s

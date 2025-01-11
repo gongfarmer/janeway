@@ -3,9 +3,9 @@
 require_relative 'parser'
 
 module Janeway
-  # Tree-walk interpreter to apply the operations from the abstract syntax tree to the input value
+  # Tree-walk interpreter to apply the operations from the abstract syntax tree to the input
   class Interpreter
-    attr_reader :query, :output, :env, :call_stack
+    attr_reader :jsonpath, :output, :env, :call_stack
 
     class Error < Janeway::Error; end
 
@@ -25,33 +25,29 @@ module Janeway
     # @param input [Hash, Array]
     # @param query [String]
     def self.interpret(input, query)
-      raise ArgumentError, "expect query string, got #{query.inspect}" unless query.is_a?(String)
-
       tokens = Lexer.lex(query)
       ast = Parser.new(tokens, query).parse
-      new(input).interpret(ast, query)
+      new(ast).interpret(input)
     end
 
-    # @param input [Array,Hash] tree of data which the jsonpath query is addressing
-    def initialize(input)
-      @input = input
-      @query = nil
-    end
-
-    # @param ast [AST::Query] abstract syntax tree
-    # @param query [String] the original JSONPath string, for use in error messages
-    # @return [Object]
-    def interpret(ast, query)
-      raise ArgumentError, "expect AST, got #{ast.inspect}" unless ast.is_a?(AST::Query)
-      raise ArgumentError, "expect query string, got #{query.inspect}" unless query.is_a?(String)
+    # @param query [AST::Query] abstract syntax tree of the jsonpath query
+    def initialize(query)
+      raise ArgumentError, "expect AST::Query, got #{query.inspect}" unless query.is_a?(AST::Query)
 
       @query = query
+      @jsonpath = query.jsonpath
+      @input = nil
+    end
 
+    # @param input [Array, Hash] object to be searched
+    # @return [Object]
+    def interpret(input)
+      @input = input
       unless @input.is_a?(Hash) || @input.is_a?(Array)
         return [] # can't query on any other types
       end
 
-      interpret_node(ast.root, nil)
+      interpret_node(@query.root, nil)
     end
 
     private
@@ -624,7 +620,7 @@ module Janeway
     # @param msg [String] error message
     # @return [Parser::Error]
     def err(msg)
-      Error.new(msg, @query)
+      Error.new(msg, @jsonpath)
     end
   end
 end
