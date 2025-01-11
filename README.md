@@ -35,6 +35,26 @@ The RFC was finalized in 2024, and it has a rigorous [suite of compliance tests.
 
 With these tools it is possible to have JSONPath implementations in many languages with identical behavior.
 
+### Differences from joshbuddy/jsonpath
+
+The only other serious ruby implementation of jsonpath is joshbuddy/jsonpath.
+This implementation has been around for a long time.
+I personally have used it in a software project for several years.
+Here are differences I've found in porting this application from joshbuddy/jsonpath to janeway.
+
+* joshbuddy/jsonpath allows unquoted strings in filter comparisons.
+Examples:
+$ jsonpath '$.store.book[?(@.category==reference)]' example.json
+$ janeway '$.store.book[?(@.category=="reference")]' example.json
+
+* joshbuddy/jsonpath allows filter selector to follow dot
+Examples:
+$ jsonpath '$.store.book.[?(@.category=="reference")]' example.json
+$ janeway '$.store.book[?(@.category=="reference")]' example.json
+
+*
+$ jsonpath '$.nodes..services..id' spec/resources/grid-full.json
+
 ### Implementation
 
 Functionality is based on [IETF RFC 9535, "JSONPath: Query Expressions for JSON"](https://www.rfc-editor.org/rfc/rfc9535.html#filter-selector)
