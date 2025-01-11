@@ -6,7 +6,22 @@ module Janeway
     # which stands for a nodelist that contains the root node of the
     # query argument, followed by a possibly empty sequence of segments.
     class Query
-      attr_accessor :root
+      # @return [AST::RootNode]
+      attr_reader :root
+
+      # The original jsonpath query, for use in error messages
+      # @return [String]
+      attr_reader :jsonpath
+
+      # @param root_node [AST::Root]
+      # @param jsonpath [String]
+      def initialize(root_node, jsonpath)
+        raise ArgumentError, "expect root identifier, got #{root_node.inspect}" unless root_node.is_a?(RootNode)
+        raise ArgumentError, "expect query string, got #{jsonpath.inspect}" unless jsonpath.is_a?(String)
+
+        @root = root_node
+        @jsonpath = jsonpath
+      end
 
       # Use this Query to search the input, and return the results.
       #

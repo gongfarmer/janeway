@@ -5,20 +5,23 @@ require 'janeway'
 module Janeway
   describe Parser do
     it 'supports 2 comma-separated selectors in one pair of square brackets' do
-      tokens = Lexer.lex('$[1, 2]')
-      ast = described_class.new(tokens).parse
+      query = '$[1, 2]'
+      tokens = Lexer.lex(query)
+      ast = described_class.new(tokens, query).parse
       expect(ast.to_s).to eq('$[1, 2]')
     end
 
     it 'supports 3 comma-separated selectors in one pair of square brackets' do
-      tokens = Lexer.lex('$[1, 2, 3]')
-      ast = described_class.new(tokens).parse
+      query = '$[1, 2, 3]'
+      tokens = Lexer.lex(query)
+      ast = described_class.new(tokens, query).parse
       expect(ast.to_s).to eq('$[1, 2, 3]')
     end
 
     it 'allows a wildcard selector after a dot' do
-      tokens = Lexer.lex('$[?@.*]')
-      ast = described_class.new(tokens).parse
+      query = '$[?@.*]'
+      tokens = Lexer.lex(query)
+      ast = described_class.new(tokens, query).parse
       expect(ast.to_s).to eq('$[?@.*]')
     end
 
@@ -56,14 +59,16 @@ module Janeway
 
     it 'parses child segment that contains a single name selector as just a name selector' do
       # the point is that there is no AST::ChildSegment here that contains the name selector
-      tokens = Lexer.lex('$["abc"]')
-      ast = described_class.new(tokens).parse
+      query = '$["abc"]'
+      tokens = Lexer.lex(query)
+      ast = described_class.new(tokens, query).parse
       expect(ast.root.value).to eq(AST::NameSelector.new('abc'))
     end
 
     it 'applies minus operator to the following zero' do
       # parser is expected to combine the "-" and "0" tokens
-      ast = described_class.parse('$[?@.a==-0]')
+      query = '$[?@.a==-0]'
+      ast = described_class.parse(query)
       equals_operator = ast.root.value.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
@@ -191,14 +196,16 @@ module Janeway
     end
 
     it 'parses name selector with shorthand notation following a descendant segment' do
-      tokens = Lexer.lex('$..nodes..more')
-      ast = described_class.new(tokens).parse
+      query = '$..nodes..more'
+      tokens = Lexer.lex(query)
+      ast = described_class.new(tokens, query).parse
       expect(ast.to_s).to eq('$..nodes..more')
     end
 
     it 'parses a descendant segment following a name selector' do
-      tokens = Lexer.lex('$.nodes..["services"]..["id"]')
-      ast = described_class.new(tokens).parse
+      query = '$.nodes..["services"]..["id"]'
+      tokens = Lexer.lex(query)
+      ast = described_class.new(tokens, query).parse
       expect(ast.to_s).to eq('$.nodes..services..id')
     end
   end

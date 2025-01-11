@@ -8,7 +8,7 @@ module Janeway
   class Parser
     class Error < Janeway::Error; end
 
-    attr_accessor :tokens, :ast
+    attr_accessor :tokens
 
     include Functions
 
@@ -34,30 +34,34 @@ module Janeway
     # @param query [String] jsonpath query to be lexed and parsed
     #
     # @return [AST]
-    def self.parse(query)
-      raise ArgumentError, "expect string, got #{query.inspect}" unless query.is_a?(String)
+    def self.parse(jsonpath)
+      raise ArgumentError, "expect jsonpath string, got #{jsonpath.inspect}" unless jsonpath.is_a?(String)
 
-      tokens = Janeway::Lexer.lex(query)
-      new(tokens, query).parse
+      tokens = Janeway::Lexer.lex(jsonpath)
+      new(tokens, jsonpath).parse
     end
 
-    def initialize(tokens, query = nil)
+    # @param token [Array<Token>]
+    # @param jsonpath [String] original jsonpath query string
+    def initialize(tokens, jsonpath)
       @tokens = tokens
-      @ast = AST::Query.new
       @next_p = 0
-      @query = query
+      @jsonpath = jsonpath
     end
 
+    # Parse the token list and create an Abstract Syntax Tree
+    # @return [AST::Query]
     def parse
       consume
-      @ast.root = parse_expr_recursively
+      root_node = parse_expr_recursively
       consume
       unless current.type == :eof
         remaining = tokens[@next_p..].map(&:lexeme).join
         raise err("Unparsed tokens: #{remaining}")
       end
 
-      @ast
+      # Freeze so this can be used in ractors
+      AST::Query.new(root_node, @jsonpath).freeze
     end
 
     private
@@ -600,7 +604,7 @@ module Janeway
     # @param msg [String] error message
     # @return [Parser::Error]
     def err(msg)
-      Error.new(msg, @query)
+      Error.new(msg, @jsonpath)
     end
 
     alias parse_true parse_boolean
