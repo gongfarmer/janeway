@@ -123,8 +123,7 @@ begin
   options = parse_args(ARGV.dup)
   main(options)
 rescue Janeway::Error => e
-  puts
-  abort("Error: #{e}")
+  abort e.detailed_message
 rescue Interrupt, Errno::EPIPE
   abort("\n")
 end

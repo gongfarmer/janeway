@@ -99,7 +99,7 @@ module Janeway
         elsif digit?(c)
           lex_number
         elsif name_first_char?(c)
-          lex_member_name_shorthand(ignore_keywords: tokens.last.type == :dot)
+          lex_member_name_shorthand(ignore_keywords: tokens.last&.type == :dot)
         end
 
       if token
@@ -151,7 +151,9 @@ module Janeway
     # @return [Token]
     def token_from_two_char_lex(lexeme)
       next_two_chars = [lexeme, lookahead].join
-      raise err("Unknown operator \"#{next_two_chars}\"") unless TWO_CHAR_LEX.include?(next_two_chars)
+      unless TWO_CHAR_LEX.include?(next_two_chars)
+        raise err("Unknown operator \"#{lexeme}\"")
+      end
 
       consume
       Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
@@ -517,7 +519,7 @@ module Janeway
     # @param msg [String] error message
     # @return [Lexer::Error]
     def err(msg)
-      Error.new(msg, @query, current_location)
+      Error.new(msg, @source, current_location)
     end
   end
 end

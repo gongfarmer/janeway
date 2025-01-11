@@ -19,5 +19,11 @@ module Janeway
       @query = query
       @location = location
     end
+
+    def detailed_message
+      msg = "Error: #{message}\nQuery: #{query}\n"
+      msg += (' ' * location.col) + '^' if @location
+      msg
+    end
   end
 end
