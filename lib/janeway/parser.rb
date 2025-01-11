@@ -408,6 +408,7 @@ module Janeway
       case next_token.type
       when :child_start then parse_child_segment
       when :dot then parse_dot_notation
+      when :descendants then parse_descendant_segment
       end
     end
 

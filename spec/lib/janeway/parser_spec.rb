@@ -196,10 +196,10 @@ module Janeway
       expect(ast.to_s).to eq('$..nodes..more')
     end
 
-    xit 'parses a descendant segment following a name selector' do
+    it 'parses a descendant segment following a name selector' do
       tokens = Lexer.lex('$.nodes..["services"]..["id"]')
       ast = described_class.new(tokens).parse
-      expect(ast.to_s).to eq('$.nodes..["services"]..["id"]')
+      expect(ast.to_s).to eq('$.nodes..services..id')
     end
   end
 end
