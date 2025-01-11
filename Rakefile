@@ -17,6 +17,7 @@ require 'yard'
 
 # For code coverage measurements to work properly, `SimpleCov` should be loaded
 # and started before any application code is loaded.
+desc 'run unit test suite and show code coverage percentage'
 task :coverage do
   ENV['COVERAGE'] = 'yes'
   Rake::Task[:spec].invoke
@@ -27,6 +28,7 @@ CLEAN.include %w[coverage doc pkg *.gem .yardoc]
 RSpec::Core::RakeTask.new(:spec)
 RuboCop::RakeTask.new
 
+desc 'run rubocop'
 task lint: :rubocop
 
 YARD::Rake::YardocTask.new do |t|

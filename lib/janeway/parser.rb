@@ -192,10 +192,11 @@ module Janeway
     def parse_minus_operator
       raise err("Expect token '-', got #{current.lexeme.inspect}") unless current.type == :minus
 
-      # RFC: negative 0 is allowed within a filter selector comparison, but is NOT allowed within an index selector or array slice selector.
+      # RFC: negative 0 is allowed within a filter selector comparison, but is NOT allowed
+      #      within an index selector or array slice selector.
       # Detect that condition here
-      if next_token.type == :number && next_token.literal == 0
-        if [previous.type, lookahead(2).type].any? { _1 == :array_slice_separator}
+      if next_token.type == :number && next_token.literal.zero?
+        if [previous.type, lookahead(2).type].any? { _1 == :array_slice_separator }
           raise err('Negative zero is not allowed in an array slice selector')
         elsif %i[union child_start].include?(previous.type)
           raise err('Negative zero is not allowed in an index selector')
@@ -327,7 +328,6 @@ module Janeway
 
     # Parse the current node operator "@", and optionally a selector which is applied to it
     def parse_current_node
-
       # detect optional following selector
       selector =
         case next_token.type
@@ -378,9 +378,7 @@ module Janeway
         consume # ","
 
         # not allowed to have comma with nothing after it
-        if current.type == :child_end
-          raise err("Comma must be followed by another expression in filter selector")
-        end
+        raise err('Comma must be followed by another expression in filter selector') if current.type == :child_end
       end
 
       # Expect ']' after the selector definitions
@@ -391,7 +389,7 @@ module Janeway
       # combining results in a node list.
       node =
         case child_segment.size
-        when 0 then raise Error.new('Empty child segment')
+        when 0 then raise err('Empty child segment')
         when 1 then child_segment.first
         else child_segment
         end
@@ -528,9 +526,7 @@ module Janeway
 
       # Check for literal, they are not allowed to be a complete condition in a filter selector
       # This includes jsonpath functions that return a numeric value.
-      if selector.value.literal?
-        raise err("Literal value #{selector.value} must be used within a comparison")
-      end
+      raise err("Literal value #{selector.value} must be used within a comparison") if selector.value.literal?
 
       consume
 
@@ -569,8 +565,7 @@ module Janeway
     # Parse a JSONPath function call
     def parse_function
       parsing_function = "parse_function_#{current.literal}"
-      result = send(parsing_function)
-      result
+      send(parsing_function)
     end
 
     # Parse an expression

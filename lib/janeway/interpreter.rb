@@ -72,22 +72,6 @@ module Janeway
       end
     end
 
-    # Prepare a single node from an input node list to be sent to a selector.
-    # (Selectors require a node list as input)
-    # Helper method for interpret_child_segment.
-    #
-    # @param node [Object]
-    def as_node_list(node)
-      # FIXME: method still used?  Can this be delted?
-      result =
-        case node
-        when Array then node
-        when Hash then node
-        else [node]
-        end
-      result
-    end
-
     # Interpret a list of 1 or more selectors, seperated by the union operator.
     #
     # @param child_segment [AST::ChildSegment]
@@ -110,7 +94,6 @@ module Janeway
           results.concat(result)
         end
       end
-
 
       # Send result to the next node in the AST, if any
       child = child_segment.next
@@ -139,8 +122,7 @@ module Janeway
 
       # Interpret child using output of this name selector, and return result
       child = selector.next
-      results = send(:"interpret_#{child.type}", child, result)
-      results
+      send(:"interpret_#{child.type}", child, result)
     end
 
     # Filter the input by returning the array element with the given index.
@@ -161,8 +143,7 @@ module Janeway
       child = selector.next
       return [result] unless child
 
-      results = send(:"interpret_#{child.type}", child, result)
-      results
+      send(:"interpret_#{child.type}", child, result)
     rescue IndexError
       [] # returns empty array if no such index
     end
@@ -205,7 +186,7 @@ module Janeway
     # @return [Array]
     def interpret_array_slice_selector(selector, input)
       return [] unless input.is_a?(Array)
-      return [] if selector.step && selector.step.zero? # IETF: When step is 0, no elements are selected.
+      return [] if selector&.step&.zero? # IETF: When step is 0, no elements are selected.
 
       # Calculate the upper and lower indices of the target range
       lower = selector.lower_index(input.size)
@@ -331,7 +312,6 @@ module Janeway
     # @param node [AST::Expression]
     # @param input [Object]
     def interpret_node_as_value(node, input)
-
       # nodes must be singular queries or literals
       case node
       when AST::CurrentNode, AST::RootNode
@@ -389,7 +369,8 @@ module Janeway
     #
     # The result is an Array containing all results of evaluating the CurrentNode's selector (if any.)
     #
-    # If the selector extracted values from nodes such as strings, numbers or nil/null, these will be included in the array.
+    # If the selector extracted values from nodes such as strings, numbers or nil/null,
+    # these will be included in the array.
     # If the selector did not match any node, the array may be empty.
     # If there was no selector, then the current input node is returned in the array.
     #
@@ -398,21 +379,19 @@ module Janeway
     # @return [Array] Node List containing all results from evaluating this node's selectors.
     def interpret_current_node(current_node, input)
       next_expr = current_node.value
-      result =
-        # All of these return a node list
-        case next_expr
-        when AST::NameSelector then interpret_name_selector(next_expr, input)
-        when AST::WildcardSelector then interpret_wildcard_selector(next_expr, input)
-        when AST::IndexSelector then interpret_index_selector(next_expr, input)
-        when AST::ArraySliceSelector then interpret_array_slice_selector(next_expr, input)
-        when AST::FilterSelector then interpret_filter_selector(next_expr, input)
-        when AST::ChildSegment then interpret_child_segment(next_expr, input)
-        when AST::DescendantSegment then interpret_descendant_segment(next_expr, input)
-        when NilClass then input # FIXME: put it in a node list???
-        else
-          raise err("don't know how to interpret @#{next_expr}")
-        end
-      result
+      # All of these return a node list
+      case next_expr
+      when AST::NameSelector then interpret_name_selector(next_expr, input)
+      when AST::WildcardSelector then interpret_wildcard_selector(next_expr, input)
+      when AST::IndexSelector then interpret_index_selector(next_expr, input)
+      when AST::ArraySliceSelector then interpret_array_slice_selector(next_expr, input)
+      when AST::FilterSelector then interpret_filter_selector(next_expr, input)
+      when AST::ChildSegment then interpret_child_segment(next_expr, input)
+      when AST::DescendantSegment then interpret_descendant_segment(next_expr, input)
+      when NilClass then input # FIXME: put it in a node list???
+      else
+        raise err("don't know how to interpret @#{next_expr}")
+      end
     end
 
     def interpret_identifier(identifier, _input)
@@ -454,7 +433,6 @@ module Janeway
     end
 
     def interpret_equal(lhs, rhs)
-
       # When either side of a comparison results in an empty nodelist or the
       # special result Nothing (see Section 2.4.1):
       # A comparison using the operator == yields true if and only if the other
@@ -559,22 +537,19 @@ module Janeway
     # For a boolean, this inverts the meaning of the input.
     # @return [Boolean]
     def interpret_not(input)
-      result =
-        case input
-        when Array then input.empty?
-        when TrueClass, FalseClass then !input
-        else
-          raise err("don't know how to apply not operator to #{input.inspect}")
-        end
-      result
+      case input
+      when Array then input.empty?
+      when TrueClass, FalseClass then !input
+      else
+        raise err("don't know how to apply not operator to #{input.inspect}")
+      end
     end
 
     # @param function [AST::Function]
     # @param input [Hash, Array]
     def interpret_function(function, input)
       params = evaluate_function_parameters(function.parameters, function.name, input)
-      result = function.body.call(*params)
-      result
+      function.body.call(*params)
     end
 
     # Evaluate the expressions in the parameter list to make the parameter values
