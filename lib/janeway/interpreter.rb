@@ -113,7 +113,7 @@ module Janeway
 
 
       # Send result to the next node in the AST, if any
-      child = child_segment.child
+      child = child_segment.next
       unless child
         return child_segment.size == 1 ? [results] : results
       end
@@ -135,10 +135,10 @@ module Janeway
 
       # early exit, no point continuing the chain with no results
 
-      return [result] unless selector.child
+      return [result] unless selector.next
 
       # Interpret child using output of this name selector, and return result
-      child = selector.child
+      child = selector.next
       results = send(:"interpret_#{child.type}", child, result)
       results
     end
@@ -158,7 +158,7 @@ module Janeway
       result = input.fetch(selector.value) # raises IndexError if no such index
 
       # Interpret child using output of this name selector, and return result
-      child = selector.child
+      child = selector.next
       return [result] unless child
 
       results = send(:"interpret_#{child.type}", child, result)
@@ -184,11 +184,11 @@ module Janeway
         end
 
       return values if values.empty? # early exit, no need for further processing on empty list
-      return values unless selector.child
+      return values unless selector.next
 
       # Apply next selector to every value
       # FIXME: is this correct??  Makes the CTS pass  "basic, wildcard shorthand, then name shorthand"
-      child = selector.child
+      child = selector.next
       results = []
       values.each do |value|
         result = send(:"interpret_#{child.type}", child, value)
@@ -220,7 +220,7 @@ module Janeway
         end
 
       # Interpret child using output of this name selector, and return result
-      child = selector.child
+      child = selector.next
       return results unless child
 
       send(:"interpret_#{child.type}", child, results)
@@ -256,10 +256,10 @@ module Janeway
         end
       end
 
-      return results unless selector.child
+      return results unless selector.next
 
       # Interpret child using output of this name selector, and return result
-      child = selector.child
+      child = selector.next
       send(:"interpret_#{child.type}", child, results)
     end
 
@@ -284,7 +284,7 @@ module Janeway
     # @param input [Object]
     # @return [Array<AST::Expression>] node list
     def interpret_descendant_segment(descendant_segment, input)
-      visit(input) { |node| interpret_node(descendant_segment.child, node) }
+      visit(input) { |node| interpret_node(descendant_segment.next, node) }
     end
 
     # Visit all descendants of `root`.

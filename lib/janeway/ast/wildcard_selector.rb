@@ -17,29 +17,27 @@ module Janeway
     # It has only one possible value: '*'
     # @example: $.store.book[*]
     class WildcardSelector < Janeway::AST::Selector
-      attr_accessor :child
-
       def initialize
         super
-        @child = nil
+        @next = nil
       end
 
       def to_s(brackets: true)
-        if @child.is_a?(NameSelector) || @child.is_a?(WildcardSelector)
+        if @next.is_a?(NameSelector) || @next.is_a?(WildcardSelector)
           if brackets
-            "[*]#{@child.to_s(brackets: true)}"
+            "[*]#{@next.to_s(brackets: true)}"
           else
-            "*.#{@child}"
+            "*.#{@next}"
           end
         else
-          "*#{@child}"
+          "*#{@next}"
         end
       end
 
       # @param level [Integer]
       # @return [Array]
       def tree(level)
-        [indented(level, '*'), @child.tree(level + 1)]
+        [indented(level, '*'), @next.tree(level + 1)]
       end
     end
   end

@@ -24,7 +24,8 @@ module Janeway
   module AST
     # Represent a selector, which is an expression that filters nodes from a list based on a predicate.
     class Selector < Janeway::AST::Expression
-      attr_accessor :child
+      # Subsequent expression that modifies the result of this selector list.
+      attr_accessor :next
 
       def ==(other)
         value == other&.value

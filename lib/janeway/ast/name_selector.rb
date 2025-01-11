@@ -29,7 +29,7 @@ module Janeway
           else
             @value
           end
-        brackets ? "[#{name_str}]#{@child}" : "#{name_str}#{@child}"
+        brackets ? "[#{name_str}]#{@next}" : "#{name_str}#{@next}"
       end
 
       # put surrounding quotes on a string
@@ -45,7 +45,7 @@ module Janeway
       # @param level [Integer]
       # @return [Array]
       def tree(level)
-        [indented(level, "NameSelector:\"#{@value}\""), @child.tree(level + 1)]
+        [indented(level, "NameSelector:\"#{@value}\""), @next.tree(level + 1)]
       end
     end
   end

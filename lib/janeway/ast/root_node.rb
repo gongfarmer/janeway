@@ -33,7 +33,7 @@ module Janeway
         selector = @value
         loop do
           selector_types << selector.class
-          selector = selector.child
+          selector = selector.next
           break unless selector
         end
         allowed = [AST::IndexSelector, AST::NameSelector]

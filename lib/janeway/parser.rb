@@ -260,7 +260,7 @@ module Janeway
 
       AST::DescendantSegment.new.tap do |ds|
         # If there is another selector after this one, make it a child
-        ds.child = selector
+        ds.next = selector
       end
     end
 
@@ -397,7 +397,7 @@ module Janeway
         end
 
       # Parse any subsequent expression which consumes this child segment
-      node.child = parse_next_selector
+      node.next = parse_next_selector
 
       node
     end
@@ -450,7 +450,7 @@ module Janeway
     def parse_wildcard_selector
       selector = AST::WildcardSelector.new
       consume
-      selector.child = parse_next_selector
+      selector.next = parse_next_selector
       selector
     end
 
@@ -502,9 +502,9 @@ module Janeway
       selector = AST::NameSelector.new(current.lexeme)
       # If there is a following expression, parse that too
       case next_token.type
-      when :dot then selector.child = parse_dot_notation
-      when :child_start then selector.child = parse_child_segment
-      when :descendants then selector.child = parse_descendant_segment
+      when :dot then selector.next = parse_dot_notation
+      when :child_start then selector.next = parse_child_segment
+      when :descendants then selector.next = parse_descendant_segment
       end
       selector
     end

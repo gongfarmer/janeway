@@ -17,12 +17,10 @@ module Janeway
       def_delegators :@value, :size, :first, :last, :each, :map, :empty?
 
       # Subsequent expression that modifies the result of this selector list.
-      # This one is not in the selector list, it comes afterward.
-      attr_accessor :child
+      attr_accessor :next
 
       def initialize
         super([]) # @value holds the expressions in the selector
-        @child = nil # @child is the next expression, which modifies the output of this one
       end
 
       # Add a selector to the list
@@ -34,14 +32,14 @@ module Janeway
 
       def to_s(with_child: true)
         str = @value.map { |selector| selector.to_s(brackets: false) }.join(', ')
-        with_child ? "[#{str}]#{@child}" : "[#{str}]"
+        with_child ? "[#{str}]#{@next}" : "[#{str}]"
       end
 
       # @param level [Integer]
       # @return [Array]
       def tree(level)
         msg = format('[%s]', @value.map(&:to_s).join(', '))
-        [indented(level, msg), @child&.tree(level + 1)]
+        [indented(level, msg), @next&.tree(level + 1)]
       end
     end
   end
