@@ -189,5 +189,17 @@ module Janeway
         described_class.parse('$[?value(@.a,@.b)==4]')
       }.to raise_error(Error, 'Too many parameters for value() function call')
     end
+
+    it 'parses name selector with shorthand notation following a descendant segment' do
+      tokens = Lexer.lex('$..nodes..more')
+      ast = described_class.new(tokens).parse
+      expect(ast.to_s).to eq('$..nodes..more')
+    end
+
+    xit 'parses a descendant segment following a name selector' do
+      tokens = Lexer.lex('$.nodes..["services"]..["id"]')
+      ast = described_class.new(tokens).parse
+      expect(ast.to_s).to eq('$.nodes..["services"]..["id"]')
+    end
   end
 end

@@ -52,7 +52,10 @@ module Janeway
       consume
       @ast.root = parse_expr_recursively
       consume
-      raise err("Unparsed tokens: #{tokens.map(&:lexeme).inspect}") unless current.type == :eof
+      unless current.type == :eof
+        remaining = tokens[@next_p..].map(&:lexeme).join
+        raise err("Unparsed tokens: #{remaining}")
+      end
 
       @ast
     end
@@ -244,31 +247,20 @@ module Janeway
     def parse_descendant_segment
       consume # '..'
 
-      # DescendantSegment must be followed by a selector S which it applies to all descendants.
-      #
-      # Normally the parser makes the selector after S be a child of S.
-      # However that is not the desired behavior for DescendantSelector.
-      # Consider '$.a..b[1]'. The first element must be taken from the set of all 'b' keys.
-      # If the ChildSegment was a child of the `b` NameSelector, then it would be taking
-      # index 1 from every 'b' found rather than from the set of all 'b's.
-      #
-      # To get around this, the Parser must embed a Selector object that
-      # doesn't include the following selector as a child. Then the following
-      # selector must be made a child of the DescendantSegment.
       selector =
         case next_token.type
-        when :wildcard then parse_wildcard_selector(and_child: false)
-        when :child_start then parse_child_segment(and_child: false)
-        when :string, :identifier then parse_name_selector(and_child: false)
+        when :wildcard then parse_wildcard_selector
+        when :child_start then parse_child_segment
+        when :string, :identifier then parse_name_selector
         else
           msg = 'Descendant segment ".." must be followed by selector'
           msg += ", got ..#{next_token.type}" unless next_token.type == :eof
           raise err(msg)
         end
 
-      AST::DescendantSegment.new(selector).tap do |ds|
+      AST::DescendantSegment.new.tap do |ds|
         # If there is another selector after this one, make it a child
-        ds.child = parse_next_selector
+        ds.child = selector
       end
     end
 
@@ -368,9 +360,8 @@ module Janeway
     # This is not just a speed optimization. Serial selectors that feed into
     # each other have different behaviour than serial child segments.
     #
-    # @param and_child [Boolean] make following token a child of this selector list
     # @return [AST::ChildSegment]
-    def parse_child_segment(and_child: true)
+    def parse_child_segment
       consume
       raise err("Expect token [, got #{current.lexeme.inspect}") unless current.type == :child_start
 
@@ -405,10 +396,8 @@ module Janeway
         else child_segment
         end
 
-      if and_child
-        # Parse any subsequent expression which consumes this child segment
-        node.child = parse_next_selector
-      end
+      # Parse any subsequent expression which consumes this child segment
+      node.child = parse_next_selector
 
       node
     end
@@ -457,11 +446,10 @@ module Janeway
     end
 
     # Parse wildcard selector and any following selector
-    # @param and_child [Boolean] make following token a child of this selector
-    def parse_wildcard_selector(and_child: true)
+    def parse_wildcard_selector
       selector = AST::WildcardSelector.new
       consume
-      selector.child = parse_next_selector if and_child
+      selector.child = parse_next_selector
       selector
     end
 
@@ -507,18 +495,15 @@ module Janeway
     # The name selector may have been in dot notation or parentheses, that part is already parsed.
     # Next token is just the name.
     #
-    # @param and_child [Boolean] make following token a child of this selector
     # @return [AST::NameSelector]
-    def parse_name_selector(and_child: true)
+    def parse_name_selector
       consume
       selector = AST::NameSelector.new(current.lexeme)
-      if and_child
-        # If there is a following expression, parse that too
-        case next_token.type
-        when :dot then selector.child = parse_dot_notation
-        when :child_start then selector.child = parse_child_segment
-        when :descendants then selector.child = parse_descendant_segment
-        end
+      # If there is a following expression, parse that too
+      case next_token.type
+      when :dot then selector.child = parse_dot_notation
+      when :child_start then selector.child = parse_child_segment
+      when :descendants then selector.child = parse_descendant_segment
       end
       selector
     end
@@ -599,13 +584,11 @@ module Janeway
       parsing_function = determine_parsing_function
       raise err("Unrecognized token: #{current.lexeme.inspect}") unless parsing_function
 
-      tk = current
+      current
       expr = send(parsing_function)
       return unless expr # When expr is nil, it means we have reached a \n or a eof.
 
       # Note that here we are checking the NEXT token.
-      if next_not_terminator? && precedence < next_precedence
-      end
       while next_not_terminator? && precedence < next_precedence
         infix_parsing_function = determine_infix_function(next_token)
 

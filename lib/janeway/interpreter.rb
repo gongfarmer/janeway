@@ -284,12 +284,7 @@ module Janeway
     # @param input [Object]
     # @return [Array<AST::Expression>] node list
     def interpret_descendant_segment(descendant_segment, input)
-      results = visit(input) { |node| interpret_node(descendant_segment.selector, node) }
-
-      return results unless descendant_segment.child
-
-      child = descendant_segment.child
-      send(:"interpret_#{child.type}", child, results)
+      visit(input) { |node| interpret_node(descendant_segment.child, node) }
     end
 
     # Visit all descendants of `root`.

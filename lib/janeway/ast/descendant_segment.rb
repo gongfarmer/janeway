@@ -18,12 +18,6 @@ module Janeway
     class DescendantSegment < Janeway::AST::Selector
       attr_accessor :child
 
-      def initialize(selector)
-        super
-
-        @child = nil
-      end
-
       def to_s
         "..#{@value}#{@child}"
       end
