@@ -14,3 +14,6 @@ def on_truffleruby
 
   'skipped on truffleruby due to integer size limit'
 end
+
+# Compliance Test Suite tests
+CTS_DIR = File.expand_path("#{__dir__}/../jsonpath-compliance-test-suite/")
