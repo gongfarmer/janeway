@@ -53,7 +53,7 @@ module Janeway
       it 'raises error when there is space between function name and parentheses' do
         expect {
           described_class.parse('$[?length (@.authors) >= 5]')
-        }.to raise_error(Error, 'Function name "length" must not be followed by whitespace')
+        }.to raise_error(Error, /Function name "length" must not be followed by whitespace/)
       end
 
       # CTS "functions, count, non-query arg, number",
@@ -67,7 +67,7 @@ module Janeway
       it 'raises error when a function that returns a ValueType is not part of a comparison' do
         expect {
           described_class.parse('$[?count(@..*)]')
-        }.to raise_error(Error, 'Literal value count(@..*) must be used within a comparison')
+        }.to raise_error(Error, /Literal value count\(@\.\.\*\) must be used within a comparison/)
       end
 
       # CTS "functions, match, result cannot be compared"

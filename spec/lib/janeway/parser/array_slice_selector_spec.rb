@@ -34,35 +34,35 @@ module Janeway
       it 'raises error for negative zero in the start position' do
         expect {
           described_class.parse('$[-0::]')
-        }.to raise_error(Error, 'Negative zero is not allowed in an array slice selector')
+        }.to raise_error(Error, /Negative zero is not allowed in an array slice selector/)
       end
 
       # CTS "slice selector, end, -0",
       it 'raises error for negative zero in the end position' do
         expect {
           described_class.parse('$[:-0:]')
-        }.to raise_error(Error, 'Negative zero is not allowed in an array slice selector')
+        }.to raise_error(Error, /Negative zero is not allowed in an array slice selector/)
       end
 
       # CTS "slice selector, too many colons"
       it 'raises error when array slice selector has too many colons' do
         expect {
           described_class.parse('$[1:2:3:4]')
-        }.to raise_error(Error, 'After array slice selector, expect ], got 4')
+        }.to raise_error(Error, /After array slice selector, expect \], got 4/)
       end
 
       # CTS "slice selector, non-integer array index"
       it 'raises error when array slice selector has too many colons' do
         expect {
           described_class.parse('$[1:2:a]')
-        }.to raise_error(Error, 'Unexpected token in array slice selector: "a"')
+        }.to raise_error(Error, /Unexpected token in array slice selector: "a"/)
       end
 
       # CTS "slice selector, start, decimal"
       it 'raises error when array slice selector contains decimal point' do
         expect {
           described_class.parse('$[1.0::]')
-        }.to raise_error(Error, 'Array slice selector index must be integer or nothing, got 1.0')
+        }.to raise_error(Error, /Array slice selector index must be integer or nothing, got 1.0/)
       end
     end
   end

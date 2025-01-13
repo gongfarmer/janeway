@@ -47,10 +47,11 @@ Examples:
 $ jsonpath '$.store.book[?(@.category==reference)]' example.json
 $ janeway '$.store.book[?(@.category=="reference")]' example.json
 
-* joshbuddy/jsonpath allows filter selector to follow dot
-Examples:
-$ jsonpath '$.store.book.[?(@.category=="reference")]' example.json
-$ janeway '$.store.book[?(@.category=="reference")]' example.json
+* joshbuddy/jsonpath allows root selector to be omitted
+grid.first('gid').to_i
+
+$ jsonpath 'store' example.json
+$ janeway '$.store' example.json
 
 *
 $ jsonpath '$.nodes..services..id' spec/resources/grid-full.json

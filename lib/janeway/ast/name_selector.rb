@@ -17,18 +17,21 @@ module Janeway
         raise "Invalid name: #{value.inspect}:#{value.class}" unless value.is_a?(String)
       end
 
-      def to_s(brackets: false)
+      # @param bracket [Boolean] request for bracket syntax
+      # @param bracket [Boolean] include . prefix, if shorthand notation is used
+      def to_s(brackets: false, dot_prefix: true)
         # Add quotes and surrounding brackets if the name includes chars that require quoting.
         # These chars are not allowed in dotted notation, only bracket notation.
         special_chars = [' ', '.']
         brackets ||= special_chars.any? { |char| @value.include?(char) }
-        name_str =
-          if brackets
-            quote(@value)
-          else
-            @value
-          end
-        brackets ? "[#{name_str}]#{@next}" : "#{name_str}#{@next}"
+        if brackets
+          name_str = quote(@value)
+          "[#{name_str}]#{@next}"
+        elsif dot_prefix
+          ".#{@value}#{@next}"
+        else # omit dot prefix after a descendant segment
+          "#{@value}#{@next}"
+        end
       end
 
       # put surrounding quotes on a string
@@ -44,7 +47,7 @@ module Janeway
       # @param level [Integer]
       # @return [Array]
       def tree(level)
-        [indented(level, "NameSelector:\"#{@value}\""), @next.tree(level + 1)]
+        [indented(level, "NameSelector:\"#{@value}\""), @next&.tree(level + 1)]
       end
     end
   end

@@ -22,13 +22,11 @@ module Janeway
         @next = nil
       end
 
-      def to_s(brackets: true)
-        if @next.is_a?(NameSelector) || @next.is_a?(WildcardSelector)
-          if brackets
-            "[*]#{@next.to_s(brackets: true)}"
-          else
-            "*.#{@next}"
-          end
+      def to_s(brackets: false, dot_prefix: true)
+        if brackets
+          "[*]#{@next&.to_s(brackets: true)}"
+        elsif dot_prefix
+          ".*#{@next}"
         else
           "*#{@next}"
         end

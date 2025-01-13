@@ -15,7 +15,7 @@ module Janeway
     # @param query [String] entire query string
     # @param location [Location] location of error
     def initialize(message, query = nil, location = nil)
-      super(message)
+      super("Jsonpath query #{query} - #{message}")
       @query = query
       @location = location
     end

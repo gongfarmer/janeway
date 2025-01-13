@@ -371,7 +371,7 @@ module Janeway
 
       child_segment = AST::ChildSegment.new
       loop do
-        selector = parse_selector
+        selector = parse_current_selector
         child_segment << selector if selector # nil selector means empty brackets
 
         break unless current.type == :union # no more selectors in these parentheses
@@ -389,7 +389,7 @@ module Janeway
       # if the child_segment contains just one selector, then return the selector instead.
       # This way a series of selectors feed results to each other without
       # combining results in a node list.
-      node =
+      expr =
         case child_segment.size
         when 0 then raise err('Empty child segment')
         when 1 then child_segment.first
@@ -397,9 +397,9 @@ module Janeway
         end
 
       # Parse any subsequent expression which consumes this child segment
-      node.next = parse_next_selector
+      expr.next = parse_next_selector
 
-      node
+      expr
     end
 
     # Parse a selector and return it.
@@ -409,6 +409,8 @@ module Janeway
       when :child_start then parse_child_segment
       when :dot then parse_dot_notation
       when :descendants then parse_descendant_segment
+      when :wildcard then parse_wildcard_selector
+      when :eof, :child_end then nil
       end
     end
 
@@ -423,7 +425,7 @@ module Janeway
     end
 
     # Parse a selector which is inside brackets
-    def parse_selector
+    def parse_current_selector
       case current.type
       when :array_slice_separator then parse_array_slice_selector
       when :filter then parse_filter_selector
@@ -431,7 +433,7 @@ module Janeway
       when :minus
         # apply the - sign to the following number and retry
         parse_minus_operator
-        parse_selector
+        parse_current_selector
       when :number
         if lookahead.type == :array_slice_separator
           parse_array_slice_selector
@@ -450,6 +452,7 @@ module Janeway
     def parse_wildcard_selector
       selector = AST::WildcardSelector.new
       consume
+      return selector if current.type == :union
       selector.next = parse_next_selector
       selector
     end

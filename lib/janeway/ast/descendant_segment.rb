@@ -20,7 +20,7 @@ module Janeway
       attr_accessor :next
 
       def to_s
-        "..#{@value}#{@next}"
+        "..#{@next&.to_s(dot_prefix: false)}"
       end
 
       # @return [AST::Selector]

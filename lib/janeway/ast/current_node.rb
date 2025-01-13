@@ -30,11 +30,7 @@ module Janeway
     # Construct accepts an optional Selector which will be applied to the "current" node
     class CurrentNode < Janeway::AST::Expression
       def to_s
-        if @value.is_a?(NameSelector) || @value.is_a?(WildcardSelector)
-          "@.#{@value.to_s(brackets: false)}"
-        else
-          "@#{@value}"
-        end
+        "@#{@value}"
       end
 
       # True if this is the root of a singular-query.

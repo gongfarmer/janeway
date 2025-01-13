@@ -47,14 +47,20 @@ module Janeway
     #
     # @example: $.store[@.price < 10]
     class FilterSelector < Janeway::AST::Selector
-      def to_s(brackets: true)
-        brackets ? "[?#{value}]" : "?#{value}"
+      # @param brackets [Boolean] include brackets around selector
+      # ** ignores keyword arguments that don't apply to this selector
+      def to_s(brackets: true, **)
+        brackets ? "[?#{value}]#{@next}" : "?#{value}#{@next}"
       end
 
       # @param level [Integer]
       # @return [Array]
       def tree(level)
-        [indented(level, to_s)]
+        if @next
+          [indented(level, to_s), indented(level + 1, @next&.tree)]
+        else
+          [indented(level, to_s)]
+        end
       end
     end
   end
