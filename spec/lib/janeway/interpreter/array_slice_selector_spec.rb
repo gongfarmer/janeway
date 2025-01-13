@@ -41,8 +41,7 @@ module Janeway
         let(:input) { [%w[a b c], %w[d e f], %w[g h i]] }
 
         it 'finds all elements' do
-          expected = [%w[d e f], %w[g h i]]
-          expect(described_class.interpret(input, '$[1:3][:]')).to eq(expected)
+          expect(described_class.interpret(input, '$[1:3][1:2]')).to eq(%w[e h])
         end
       end
 
@@ -63,6 +62,16 @@ module Janeway
       it 're-calculates the bounds for different sized inputs' do
         input = [1, [], [2], [2, 3, 4], {}, { 'a' => 3 }]
         expect(described_class.interpret(input, '$[?@[0:2]]')).to eq([[2], [2, 3, 4]])
+      end
+
+      it 'interprets a name selector after an array slice selector' do
+        input =
+          [
+            { 'a' => { 'x' => 2, 'y' => 3 } },
+            { 'a' => { 'x' => 10, 'y' => 11 } },
+          ]
+        result = described_class.interpret(input, '$[::].a.y')
+        expect(result).to eq([3, 11])
       end
     end
   end

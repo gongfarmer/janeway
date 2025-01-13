@@ -164,6 +164,16 @@ module Janeway
         result = described_class.interpret(input, '$[?@.a == length(@.b)]')
         expect(result).to eq(input)
       end
+
+      it 'interprets a name selector after a filter selector' do
+        input =
+          [
+            { 'a' => { 'x' => 2, 'y' => 3 } },
+            { 'a' => { 'x' => 10, 'y' => 11 } },
+          ]
+        result = described_class.interpret(input, '$[?@.a.x == 2].a.y')
+        expect(result).to eq([3])
+      end
     end
   end
 end

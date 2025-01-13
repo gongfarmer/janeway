@@ -20,7 +20,7 @@ module Janeway
       input = { 'a' => 1 }
       expect {
         described_class.interpret(input, '$[]')
-      }.to raise_error(Janeway::Parser::Error, 'Empty child segment')
+      }.to raise_error(Janeway::Parser::Error, /Empty child segment/)
     end
 
     # CTS "basic, wildcard shorthand, then name shorthand",

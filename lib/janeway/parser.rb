@@ -53,11 +53,13 @@ module Janeway
     # @return [AST::Query]
     def parse
       consume
+      raise err('JsonPath queries must start with root identifier "$"') unless current.type == :root
+
       root_node = parse_expr_recursively
       consume
       unless current.type == :eof
         remaining = tokens[@next_p..].map(&:lexeme).join
-        raise err("Unparsed tokens: #{remaining}")
+        raise err("Unrecognized expressions after query: #{remaining}")
       end
 
       # Freeze so this can be used in ractors

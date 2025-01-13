@@ -322,7 +322,7 @@ module Janeway
       it 'raises error when number has leading zeros' do
         expect {
           described_class.lex('$[?@.a==00]')
-        }.to raise_error(Error, 'Number may not start with leading zero: "00"')
+        }.to raise_error(Error, /Number may not start with leading zero: "00"/)
       end
 
       it 'recognizes function "length"' do
@@ -437,74 +437,74 @@ module Janeway
       it 'raises error when given a char that is not allowed' do
         expect {
           described_class.lex("$[\"\0\"]")
-        }.to raise_error(Error, 'invalid character "\\u0000"')
+        }.to raise_error(Error, /invalid character "\\u0000"/)
       end
 
       it 'raises error when given an escaped char that is not allowed' do
         expect {
           described_class.lex("$[\"\\\0\"]")
-        }.to raise_error(Error, 'Invalid character "\\u0000"')
+        }.to raise_error(Error, /Invalid character "\\u0000"/)
       end
 
       it 'raises error when there is space between minus operator and number' do
         expect {
           described_class.lex('$[?@.a==- 1]')
-        }.to raise_error(Error, 'Operator "-" must not be followed by whitespace')
+        }.to raise_error(Error, /Operator "-" must not be followed by whitespace/)
       end
 
       # CTS "name selector, double quotes, invalid escaped single quote"
       it 'raises error when name contains invalid escaped single quote' do
         expect {
           described_class.lex("$[\"\\'\"]")
-        }.to raise_error(Error, "Character ' must not be escaped within double quotes")
+        }.to raise_error(Error, /Character ' must not be escaped within double quotes/)
       end
 
       # CTS "name selector, single quotes, invalid escaped double quote",
       it 'raises error when name contains invalid escaped double quote' do
         expect {
           described_class.lex("$['\\\"']")
-        }.to raise_error(Error, 'Character " must not be escaped within single quotes')
+        }.to raise_error(Error, /Character " must not be escaped within single quotes/)
       end
 
       # CTS "name selector, double quotes, question mark escape"
       it 'raises error when name contains an unnecessarily escaped character' do
         expect {
           described_class.lex("$[\"\\?\"]")
-        }.to raise_error(Error, 'Character ? must not be escaped')
+        }.to raise_error(Error, /Character \? must not be escaped/)
       end
 
       # CTS "basic, no leading whitespace",
       it 'raises error when query starts with whitesapce' do
         expect {
           described_class.lex(' $')
-        }.to raise_error(Error, 'JSONPath query may not start or end with whitespace')
+        }.to raise_error(Error, /JSONPath query may not start or end with whitespace/)
       end
 
       # CTS "basic, no trailing whitespace",
       it 'raises error when query ends with whitesapce' do
         expect {
           described_class.lex('$ ')
-        }.to raise_error(Error, 'JSONPath query may not start or end with whitespace')
+        }.to raise_error(Error, /JSONPath query may not start or end with whitespace/)
       end
 
       it 'raises error when descendant segment is followed by space' do
         expect {
           described_class.lex('$.. a')
-        }.to raise_error(Error, 'Operator ".." must not be followed by whitespace')
+        }.to raise_error(Error, /Operator "\.\." must not be followed by whitespace/)
       end
 
       # "name selector, double quotes, unicode escape no hex"
       it 'raises error when string contains unicode escape prefix \u without hex code' do
         expect {
           described_class.lex('$["\u"]')
-        }.to raise_error(Error, 'Invalid unicode escape sequence: \u"')
+        }.to raise_error(Error, /Invalid unicode escape sequence: \\u"/)
       end
 
       # CTS name selector, double quotes, single low surrogate"
-      it 'raises error when low surrogate is not preceded by high surrogate ' do
+      it 'raises error when low surrogate is not preceded by high surrogate' do
         expect {
           described_class.lex("$[\"\\uDC00\"]")
-        }.to raise_error(Error, 'Invalid unicode escape sequence: \uDC00')
+        }.to raise_error(Error, /Invalid unicode escape sequence: \\uDC00/)
       end
     end
   end

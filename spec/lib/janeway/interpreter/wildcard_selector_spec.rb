@@ -41,5 +41,15 @@ module Janeway
       expected = [1, 2, 2, 1] # order is not deterministic
       expect(described_class.interpret(input, '$.o[*, *]')).to match_array(expected)
     end
+
+    it 'interprets a name selector after a wildcard selector' do
+      input =
+        [
+          { 'a' => { 'x' => 2, 'y' => 3 } },
+          { 'a' => { 'x' => 10, 'y' => 11 } },
+        ]
+      result = described_class.interpret(input, '$.*..a.y')
+      expect(result).to eq([3, 11])
+    end
   end
 end

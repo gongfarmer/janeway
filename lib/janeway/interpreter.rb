@@ -163,12 +163,11 @@ module Janeway
       return values if values.empty? # early exit, no need for further processing on empty list
       return values unless selector.next
 
-      # Apply next selector to every value
+      # Apply child selector to each node in the output node list
       child = selector.next
       results = []
       values.each do |value|
-        result = send(:"interpret_#{child.type}", child, value)
-        results << result.first unless result.empty?
+        results.concat send(:"interpret_#{child.type}", child, value)
       end
       results
     end
@@ -199,7 +198,13 @@ module Janeway
       child = selector.next
       return results unless child
 
-      send(:"interpret_#{child.type}", child, results)
+      # Apply child selector to each node in the output node list
+      node_list = results
+      results = []
+      node_list.each do |node|
+        results.concat send(:"interpret_#{child.type}", child, node)
+      end
+      results
     end
 
     # Return the set of values from the input for which the filter is true.
@@ -232,11 +237,16 @@ module Janeway
         end
       end
 
-      return results unless selector.next
-
-      # Interpret child using output of this name selector, and return result
       child = selector.next
-      send(:"interpret_#{child.type}", child, results)
+      return results unless child
+
+      # Apply child selector to each node in the output node list
+      node_list = results
+      results = []
+      node_list.each do |node|
+        results.concat send(:"interpret_#{child.type}", child, node)
+      end
+      results
     end
 
     # Combine results from selectors into a single list.

@@ -214,5 +214,11 @@ module Janeway
       ast = described_class.parse(jsonpath)
       expect(ast.to_s).to eq(jsonpath)
     end
+
+    it 'raises error when query does not start with root identifier' do
+      expect {
+        described_class.parse('a')
+      }.to raise_error(Error, /JsonPath queries must start with root identifier/)
+    end
   end
 end
