@@ -454,7 +454,8 @@ module Janeway
     def parse_wildcard_selector
       selector = AST::WildcardSelector.new
       consume
-      return selector if current.type == :union
+      return selector if %i[child_end union].include?(current.type)
+
       selector.next = parse_next_selector
       selector
     end

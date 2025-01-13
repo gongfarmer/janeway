@@ -220,5 +220,10 @@ module Janeway
         described_class.parse('a')
       }.to raise_error(Error, /JsonPath queries must start with root identifier/)
     end
+
+    it 'parses this query from the RFC' do
+      query = '$.a[*].b'
+      expect(described_class.parse(query).to_s).to eq('$.a.*.b')
+    end
   end
 end

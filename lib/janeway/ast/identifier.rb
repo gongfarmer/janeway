@@ -5,7 +5,7 @@ module Janeway
     class Identifier < Janeway::AST::Expression
       alias name value
 
-      # TODO: This list is incomplete. Complete after some aspects of the parser become clearer.
+      # Tokens which may follow an identifier string
       EXPECTED_NEXT_TOKENS = %I[
         \n
         +
