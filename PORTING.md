@@ -3,8 +3,10 @@
 The only other serious ruby implementation of jsonpath is [joshbuddy/jsonpath](https://github.com/joshbuddy/jsonpath), also known as the ruby gem "jsonpath".
 
 The jsonpath gem has been around since 2008 and was implemented at a time when there was not even a draft version of the standard.
+It is not compliant with the jsonpath RFC 9535, which was finalized much later in 2024.
 
-It has features that janeway does not, such as:
+The jsonpath gem has features that janeway does not, such as:
+
     * deletion of the values through jsonpath queries
     * handling of hashes with symbol keys
     * handling of nested objects responding to `#dig`, such as Structs
@@ -87,8 +89,9 @@ Consider this input json, which has objects with an "x" key that can have a true
 ```
 
 joshbuddy/jsonpath considers the query `$.*[?(@.x)` to match only object "a", because a's value for key "x" is true.
-Janeway considers this same query to match both objects, because both objects have a key "x"
-To make an equivalent query, compare the value with `true`:
+Janeway considers this same query to match both objects, because both objects have a key "x". The key value is not considered, beacuse "@.x" is an existence check.
+
+To make an equivalent query for janeway, explicitly compare the value with `true`:
 
 ```
     $ jsonpath '$.*[?(@.x)]' document.json
@@ -96,8 +99,9 @@ To make an equivalent query, compare the value with `true`:
 ```
 
 Notice one other difference in the query above:
+
 The `jsonpath` tool's query starts with `$.*`, but the `janeway` query omits that.
-Accordin to the RFC, the wilcard operator "*" would convert the input json from a JSON Object to a list of the values from the object, discarding the keys.  Thus, the "x" key would be thrown away and the "`@.x`" part of the query wouldn't be able to match it.
+According to the RFC, the wilcard operator "*" would convert the JSON Object to a list of the values from the object, discarding the keys.  Thus, the "x" key would be thrown away and the "`@.x`" part of the query wouldn't be able to match on it.
 
 
 * jsonpath requires parentheses around the filter selector, janeway does not
@@ -106,7 +110,7 @@ Examples:
     $ jsonpath '$.store.book[?(@.category==reference)]' example.json
     $ janeway  '$.store.book[? @.category=="reference"]' example.json
 ```
-The space an be omitted too.
+The spaces can be omitted too, or more added.
 
 
 No doubt there are other differences that I haven't found.  Feel free to open bug requests or PRs to add more.
