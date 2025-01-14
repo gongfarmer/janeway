@@ -57,7 +57,7 @@ module Janeway
       # @return [Array]
       def tree(level)
         if @next
-          [indented(level, to_s), indented(level + 1, @next&.tree)]
+          [indented(level, to_s), @next.tree(level + 1)]
         else
           [indented(level, to_s)]
         end

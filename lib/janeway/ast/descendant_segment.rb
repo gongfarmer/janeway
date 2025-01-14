@@ -32,7 +32,7 @@ module Janeway
       # @param level [Integer]
       # @return [Array]
       def tree(level)
-        [indented(level, "..#{@value}"), child&.tree(level + 1)]
+        [indented(level, "..#{@value}"), @next&.tree(level + 1)]
       end
     end
   end
