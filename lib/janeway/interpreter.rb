@@ -5,11 +5,10 @@ require_relative 'parser'
 module Janeway
   # Tree-walk interpreter to apply the operations from the abstract syntax tree to the input
   class Interpreter
-    attr_reader :jsonpath, :output, :env, :call_stack
-
-    class Error < Janeway::Error; end
+    attr_reader :jsonpath, :output, :call_stack
 
     # Specify the parameter types that built-in JsonPath functions require
+    # @return [Hash<Symbol, Array<Symbol>] function name => list of parameter types
     FUNCTION_PARAMETER_TYPES = {
       length: [:value_type],
       count: [:nodes_type],
@@ -47,7 +46,7 @@ module Janeway
         return [] # can't query on any other types
       end
 
-      interpret_node(@query.root, nil)
+      interpret_root_node(@query.root, nil)
     end
 
     private
@@ -78,24 +77,15 @@ module Janeway
       # segment is the concatenation of the nodelists from each of its
       # selectors in the order that the selectors appear in the list. Note: Any
       # node matched by more than one selector is kept as many times in the nodelist.
-      # combine results from all selectors
-      results = nil
-      if child_segment.size == 1
-        selector = child_segment.first
-        results = send(:"interpret_#{selector.type}", selector, input)
-      else
-        results = []
-        child_segment.each do |selector|
-          result = send(:"interpret_#{selector.type}", selector, input)
-          results.concat(result)
-        end
+      results = []
+      child_segment.each do |selector|
+        result = send(:"interpret_#{selector.type}", selector, input)
+        results.concat(result)
       end
 
-      # Send result to the next node in the AST, if any
+      # Return results, or forward them to the next selector
       child = child_segment.next
-      unless child
-        return child_segment.size == 1 ? [results] : results
-      end
+      return results unless child
 
       send(:"interpret_#{child.type}", child, results)
     end
@@ -111,12 +101,9 @@ module Janeway
       return [] unless input.is_a?(Hash) && input.key?(selector.name)
 
       result = input[selector.name]
-
-      # early exit, no point continuing the chain with no results
-
       return [result] unless selector.next
 
-      # Interpret child using output of this name selector, and return result
+      # Forward result to next selector
       child = selector.next
       send(:"interpret_#{child.type}", child, result)
     end
@@ -135,7 +122,7 @@ module Janeway
 
       result = input.fetch(selector.value) # raises IndexError if no such index
 
-      # Interpret child using output of this name selector, and return result
+      # Forward result to next selector
       child = selector.next
       return [result] unless child
 
@@ -173,14 +160,13 @@ module Janeway
     end
 
     # Filter the input by applying the array slice selector.
-    # Returns at most 1 element.
     #
     # @param selector [ArraySliceSelector]
     # @param input [Array]
     # @return [Array]
     def interpret_array_slice_selector(selector, input)
       return [] unless input.is_a?(Array)
-      return [] if selector&.step&.zero? # IETF: When step is 0, no elements are selected.
+      return [] if selector&.step&.zero? # RFC: When step is 0, no elements are selected.
 
       # Calculate the upper and lower indices of the target range
       lower = selector.lower_index(input.size)
@@ -208,9 +194,9 @@ module Janeway
     end
 
     # Return the set of values from the input for which the filter is true.
+    # Performs existence tests or comparison tests.
     # For array, acts on array values.
     # For hash, acts on hash values.
-    # Otherwise returns empty node list.
     #
     # @param selector [AST::FilterSelector]
     # @param input [Object]
@@ -223,25 +209,23 @@ module Janeway
         else return [] # early exit
         end
 
-      results = []
+      node_list = []
       values.each do |value|
         # Run filter and interpret result
         result = interpret_node(selector.value, value)
-
         case result
-        when TrueClass then results << value # comparison test - pass
+        when TrueClass then node_list << value # comparison test - pass
         when FalseClass then nil # comparison test - fail
-        when Array then results << value unless result.empty? # existence test - node list
+        when Array then node_list << value unless result.empty? # existence test - node list
         else
-          results << value # existence test. Null values here == success.
+          node_list << value # existence test. Null values here == success.
         end
       end
 
       child = selector.next
-      return results unless child
+      return node_list unless child
 
       # Apply child selector to each node in the output node list
-      node_list = results
       results = []
       node_list.each do |node|
         results.concat send(:"interpret_#{child.type}", child, node)
@@ -257,8 +241,7 @@ module Janeway
     # @return [Array]
     def interpret_union(lhs, rhs)
       if lhs.is_a?(Array) && rhs.is_a?(Array)
-        # can't use ruby's array union operator "|" here because it eliminates duplicates
-        lhs.concat rhs
+        lhs.concat rhs # can't use ruby's array union operator "|" here because it eliminates duplicates
       else
         [lhs, rhs]
       end
@@ -288,16 +271,6 @@ module Janeway
       end
 
       results.flatten(1).compact
-    end
-
-    def interpret_nodes(nodes)
-      last_value = nil
-
-      nodes.each do |node|
-        last_value = interpret_node(node, last_value)
-      end
-
-      last_value
     end
 
     # Interpret an AST node.
@@ -399,19 +372,6 @@ module Janeway
       end
     end
 
-    def interpret_identifier(identifier, _input)
-      if env.key?(identifier.name)
-        # Global variable.
-        env[identifier.name]
-      elsif call_stack.length.positive? && call_stack.last.env.key?(identifier.name)
-        # Local variable.
-        call_stack.last.env[identifier.name]
-      else
-        # Undefined variable.
-        raise err("Undefined identifier: #{identifier.name}")
-      end
-    end
-
     # The binary operators are all comparison operators that test equality.
     #
     #  * boolean values specified in the query
@@ -483,8 +443,8 @@ module Janeway
 
       lhs < rhs
     rescue StandardError
-      # This catches type mismatches like { a: 1 } <= 1
-      # IETF says that both < and > return false for such comparisons
+      # This catches type mismatches like {} <= 1
+      # RFC says that both < and > return false for such comparisons
       false
     end
 
@@ -576,18 +536,14 @@ module Janeway
         type = param_types[i]
         case parameter
         when AST::CurrentNode, AST::RootNode
-          # Selectors always return a node list.
-          # Deconstruct the resulting node list if function parameter type is ValueType.
           result = interpret_node(parameter, input)
           if type == :value_type && parameter.singular_query?
             deconstruct(result)
           else
             result
           end
-        when AST::Function
-          interpret_function(parameter, input)
-        when AST::StringType, AST::Number
-          interpret_string_type(parameter, input)
+        when AST::Function then interpret_function(parameter, input)
+        when AST::StringType then interpret_string_type(parameter, input)
         else
           # invalid parameter type. Function must accept it and return Nothing result
           parameter
@@ -630,7 +586,7 @@ module Janeway
     # @param msg [String] error message
     # @return [Parser::Error]
     def err(msg)
-      Error.new(msg, @jsonpath)
+      Janeway::Error.new(msg, @jsonpath)
     end
   end
 end
