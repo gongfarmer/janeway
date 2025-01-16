@@ -17,9 +17,8 @@ module Janeway
       end
 
       # @param brackets [Boolean] include brackets around selector
-      # ** ignores keyword arguments that don't apply to this selector
-      def to_s(brackets: true, **)
-        brackets ? "[#{@value}]" : @value.to_s
+      def to_s(brackets: true, **_ignored)
+        brackets ? "[#{@value}]#{@next}" : "#{@value}#{@next}"
       end
     end
   end
