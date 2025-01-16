@@ -1,39 +1,36 @@
 # Janeway JSONPath parser
 
-### Purpose
-
 This is a [JsonPath](https://goessner.net/articles/JsonPath/) parser.
+It strictly follows [RFC 9535](https://github.com/ietf-wg-jsonpath) and passes the [JSONPath Compliance Test Suite](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite).
 
-It reads a JSON input file and a query.
-It uses the query to find and return a set of matching values from the input.
+It reads a JSON input file and a query, and uses the query to find and return a set of matching values from the input.
 This does for JSON the same job that XPath does for XML.
 
 This project includes:
+
     * command-line tool to run jsonpath queries on a JSON input
     * ruby library to run jsonpath queries on a JSON input
 
-### Goals
+**Contents**
 
-* parse Goessner JSONPath, similar to https://github.com/joshbuddy/jsonpath
-* implement all of [IETF RFC 9535](https://github.com/ietf-wg-jsonpath)
-* raise helpful query parse errors designed to help users understand and improve queries, rather than describing issues in the code
-* don't use regular expressions for parsing, for performance
-* don't use `eval`, which is known to be an attack vector
-* be simple and fast with minimal dependencies
-* modern, linted ruby 3 code with frozen string literals
+- [Install](#install)
+- [Usage](#usage)
+- [Related projects](#related-projects)
+- [Goals](#goals)
+- [Non-goals](#non-goals)
 
-### Non-goals
+### Install
 
-* Changing behavior to follow [other implementations](https://cburgmer.github.io/json-path-comparison/)
+Install the gem from the command-line:
+```
+    gem install janeway-jsonpath`
+```
 
-The JSONPath RFC was in draft status for a long time and has seen many changes.
-There are many implementations based on older drafts, or which add features that were never in the RFC at all.
+or add it to your Gemfile:
 
-The goal is perfect adherence to the finalized [RFC 9535](https://github.com/ietf-wg-jsonpath) rather than adding features that are in other implementations.
-
-The RFC was finalized in 2024, and it has a rigorous [suite of compliance tests.](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite)
-
-With these tools it is possible to have JSONPath implementations in many languages with identical behavior.
+```
+    gem 'janeway-jsonpath', '~> 0.2.0'
+```
 
 ### Usage
 
@@ -67,6 +64,8 @@ You can also pipe JSON into it:
     $ cat example.json | janeway '$..book[?(@.price<10)]'
 ```
 
+See the help message for more capabilities: `janeway --help`
+
 #### Janeway ruby libarary
 
 Here's an example of using Janeway to execute a JSONPath query in ruby code:
@@ -98,13 +97,41 @@ The Janeway::AST::Query object is not modified after parsing, so it is easy to f
     ractors.each { |ractor| ractor.send(query).take }
 ```
 
-### Porting from joshbuddy/jsonpath
+### Related Projects
+
+- [joshbuddy/jsonpath](https://github.com/joshbuddy/jsonpath)
+
+This is the classic 'jsonpath' ruby gem. It has been around since 2008.
+It is not compliant with RFC 9535, because it was written long before the standard was finalized, but it's a capable and useful parser and has long been the best jsonpath library available for ruby.
 
 See [Porting](PORTING.md) for tips on converting a ruby project from [joshbuddy/jsonpath](https://github.com/joshbuddy/jsonpath) to janeway.
 
-### Implementation
+- [JPT - reference implementation based on parsing the ABNF grammar of RFC 9535](https://github.com/cabo/jpt)
 
-Functionality is based on [IETF RFC 9535, "JSONPath: Query Expressions for JSON"](https://www.rfc-editor.org/rfc/rfc9535.html#filter-selector)
-The examples in the RFC have been implemented as unit tests.
+Also there are many non-ruby implementations of RFC 9535, here are just a few:
+- [jesse (dart)](https://github.com/f3ath/jessie)
+- [python-jsonpath-rfc9535 (python)](https://github.com/jg-rp/python-jsonpath-rfc9535)
+- [theory/jsonpath (go)](https://github.com/theory/jsonpath)
 
-For details not covered in the RFC, it does the most reasonable thing based on [what other JSONPath parsers do](https://cburgmer.github.io/json-path-comparison/). However, this is always secondary to following the RFC. Many of the popular behaviors there contradict the RFC, so it has to be one or the other.
+### Goals
+
+* maintain perfect compliance with [IETF RFC 9535](https://github.com/ietf-wg-jsonpath)
+* raise helpful query parse errors designed to help users understand and improve queries, rather than describing issues in the code
+* don't use regular expressions for parsing, for performance
+* don't use `eval`, which is known to be an attack vector
+* be simple and fast with minimal dependencies
+* provide ruby-like accessors (eg. #each, #delete_if) for processing results
+* modern, linted ruby 3 code with frozen string literals
+
+### Non-goals
+
+* Changing behavior to follow [other implementations](https://cburgmer.github.io/json-path-comparison/)
+
+The JSONPath RFC was in draft status for a long time and has seen many changes.
+There are many implementations based on older drafts, and others which add features that were never in the RFC at all.
+
+The goal is adherence to the [RFC 9535](https://github.com/ietf-wg-jsonpath) rather than adding features that are in other implementations. This implementation's results are supposed to be identical to other RFC-compliant implementations in [dart](https://github.com/f3ath/jessie), [python](https://github.com/jg-rp/python-jsonpath-rfc9535) and other languages.
+
+The RFC was finalized in 2024, and it has a rigorous [suite of compliance tests.](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite)
+
+With these tools it is possible to have JSONPath implementations in many languages with identical behavior.

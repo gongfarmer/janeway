@@ -44,7 +44,8 @@ module Janeway
       expect(described_class.interpret(input, query)).to eq(expected)
     end
 
-    it 'interprets this query from the spec' do
+    # RFC
+    it 'parses wildcard selector with brackets in between name selectors with shorthand notation' do
       input = { 'a' => [{ 'b' => 0 }, { 'b' => 1 }, { 'c' => 2 }] }
       query = '$.a[*].b'
       expect(described_class.interpret(input, query)).to eq([0, 1])
