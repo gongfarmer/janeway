@@ -383,7 +383,7 @@ module Janeway
     # @param input [Hash, Array]
     # @return [Array] Node List containing all results from evaluating this node's selectors.
     def interpret_current_node(current_node, input)
-      next_expr = current_node.value
+      next_expr = current_node.next
       # All of these return a node list
       case next_expr
       when AST::NameSelector then interpret_name_selector(next_expr, input)

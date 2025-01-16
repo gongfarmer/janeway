@@ -14,7 +14,7 @@ module Janeway
     #   $(? $.key1 == $.key2 )
     #
     class RootNode < Janeway::AST::Expression
-      # Subsequent expression that modifies the result of this selector list.
+      # Subsequent expression that modifies the output of this expression
       attr_accessor :next
 
       def to_s

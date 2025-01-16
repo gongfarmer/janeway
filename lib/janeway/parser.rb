@@ -313,11 +313,11 @@ module Janeway
       expr
     end
 
-    # TODO: Temporary impl; reflect more deeply about the appropriate way of parsing a terminator.
     def parse_terminator
       nil
     end
 
+    # Parse the root identifier "$", and any subsequent selector
     # @return [AST::RootNode]
     def parse_root
       AST::RootNode.new.tap do |root_node|
@@ -325,17 +325,12 @@ module Janeway
       end
     end
 
-    # Parse the current node operator "@", and optionally a selector which is applied to it
+    # Parse the current node operator "@", and any subsequent selector
+    # @return [AST::CurrentNode]
     def parse_current_node
-      # detect optional following selector
-      selector =
-        case next_token.type
-        when :dot then parse_dot_notation
-        when :child_start then parse_child_segment
-        when :descendants then parse_descendant_segment
-        end
-
-      AST::CurrentNode.new(selector)
+      AST::CurrentNode.new.tap do |current_node|
+        current_node.next = parse_next_selector
+      end
     end
 
     # Parse one or more selectors surrounded by parentheses.
