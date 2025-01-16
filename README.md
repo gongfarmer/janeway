@@ -1,7 +1,7 @@
 # Janeway JSONPath parser
 
 This is a [JsonPath](https://goessner.net/articles/JsonPath/) parser.
-It strictly follows [RFC 9535](https://github.com/ietf-wg-jsonpath) and passes the [JSONPath Compliance Test Suite](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite).
+It strictly follows [RFC 9535](https://www.rfc-editor.org/rfc/rfc9535.html) and passes the [JSONPath Compliance Test Suite](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite).
 
 It reads a JSON input file and a query, and uses the query to find and return a set of matching values from the input.
 This does for JSON the same job that XPath does for XML.
@@ -115,7 +115,7 @@ Also there are many non-ruby implementations of RFC 9535, here are just a few:
 
 ### Goals
 
-* maintain perfect compliance with [IETF RFC 9535](https://github.com/ietf-wg-jsonpath)
+* maintain perfect compliance with [IETF RFC 9535](https://www.rfc-editor.org/rfc/rfc9535.html)
 * raise helpful query parse errors designed to help users understand and improve queries, rather than describing issues in the code
 * don't use regular expressions for parsing, for performance
 * don't use `eval`, which is known to be an attack vector
@@ -130,8 +130,6 @@ Also there are many non-ruby implementations of RFC 9535, here are just a few:
 The JSONPath RFC was in draft status for a long time and has seen many changes.
 There are many implementations based on older drafts, and others which add features that were never in the RFC at all.
 
-The goal is adherence to the [RFC 9535](https://github.com/ietf-wg-jsonpath) rather than adding features that are in other implementations. This implementation's results are supposed to be identical to other RFC-compliant implementations in [dart](https://github.com/f3ath/jessie), [python](https://github.com/jg-rp/python-jsonpath-rfc9535) and other languages.
+The goal is adherence to the [RFC 9535](https://www.rfc-editor.org/rfc/rfc9535.html) rather than adding features that are in other implementations. This implementation's results are supposed to be identical to other RFC-compliant implementations in [dart](https://github.com/f3ath/jessie), [python](https://github.com/jg-rp/python-jsonpath-rfc9535) and other languages.
 
-The RFC was finalized in 2024, and it has a rigorous [suite of compliance tests.](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite)
-
-With these tools it is possible to have JSONPath implementations in many languages with identical behavior.
+The RFC was finalized in 2024. With the finalized RFC and the rigorous [suite of compliance tests](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite), it is now possible to have JSONPath implementations in many languages with identical behavior.
