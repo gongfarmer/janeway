@@ -22,6 +22,7 @@ module Janeway
         @next = nil
       end
 
+      # @return [String]
       def to_s(brackets: false, dot_prefix: true)
         if brackets
           "[*]#{@next&.to_s(brackets: true)}"

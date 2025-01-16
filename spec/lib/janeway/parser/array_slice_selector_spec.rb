@@ -7,7 +7,7 @@ module Janeway
     describe '#parse_array_slice_selector' do
       it 'parses all 3 components' do
         ast = described_class.parse('$[6:12:2]')
-        expect(ast).to eq('$[6:12:2]')
+        expect(ast.to_s).to eq('$[6:12:2]')
       end
 
       it 'defaults to step 1' do
@@ -48,7 +48,7 @@ module Janeway
       it 'raises error when array slice selector has too many colons' do
         expect {
           described_class.parse('$[1:2:3:4]')
-        }.to raise_error(Error, /After array slice selector, expect \], got 4/)
+        }.to raise_error(Error, /Array slice selector must be followed by/)
       end
 
       # CTS "slice selector, non-integer array index"
@@ -63,6 +63,11 @@ module Janeway
         expect {
           described_class.parse('$[1.0::]')
         }.to raise_error(Error, /Array slice selector index must be integer or nothing, got 1.0/)
+      end
+
+      it 'can be part of a union' do
+        ast = described_class.parse('$[6:12:2, ::-1]')
+        expect(ast).to eq('$[6:12:2, ::-1]')
       end
     end
   end

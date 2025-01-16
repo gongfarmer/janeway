@@ -406,16 +406,6 @@ module Janeway
       end
     end
 
-    # Return true if the given token represents the start of any type of selector,
-    # or a collection of selectors.
-    #
-    # @param token [Token]
-    # @return [Boolean]
-    def selector?(token)
-      type = token.type.to_s
-      type.include?('selector') || %w[dot child_start].include?(type)
-    end
-
     # Parse a selector which is inside brackets
     def parse_current_selector
       case current.type
@@ -441,13 +431,12 @@ module Janeway
     end
 
     # Parse wildcard selector and any following selector
+    # @return [AST::WildcardSelector]
     def parse_wildcard_selector
-      selector = AST::WildcardSelector.new
-      consume
-      return selector if %i[child_end union].include?(current.type)
-
-      selector.next = parse_next_selector
-      selector
+      AST::WildcardSelector.new.tap do |selector|
+        consume # *
+        selector.next = parse_next_selector unless %i[child_end union].include?(current.type)
+      end
     end
 
     # An array slice start:end:step selects a series of elements from
@@ -464,7 +453,10 @@ module Janeway
     # @return [AST::ArraySliceSelector]
     def parse_array_slice_selector
       start, end_, step = Array.new(3) { parse_array_slice_component }.map { _1&.literal }
-      raise err("After array slice selector, expect ], got #{current.lexeme}") unless current.type == :child_end # ]
+
+      unless %i[child_end union].include?(current.type)
+        raise err("Array slice selector must be followed by \",\" or \"]\", got #{current.lexeme}") 
+      end
 
       AST::ArraySliceSelector.new(start, end_, step)
     end

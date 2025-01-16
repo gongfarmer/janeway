@@ -73,6 +73,12 @@ module Janeway
         result = described_class.interpret(input, '$[::].a.y')
         expect(result).to eq([3, 11])
       end
+
+      it 'can be part of a union' do
+        input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        expected = [1, 3, input.reverse].flatten
+        expect(described_class.interpret(input, '$[1:5:2, ::-1]')).to eq(expected)
+      end
     end
   end
 end

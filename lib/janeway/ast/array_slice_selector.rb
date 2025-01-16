@@ -136,14 +136,16 @@ module Janeway
         [lower, upper]
       end
 
-      # ignores the brackets: argument, this always needs surrounding brackets
+      # @param brackets [Boolean] add surrounding brackets if true
       # @return [String]
-      def to_s(*)
-        if @step
-          "[#{@start}:#{@end}:#{@step}]"
-        else
-          "[#{@start}:#{@end}]"
-        end
+      def to_s(brackets: true, **_ignored)
+        index_str =
+          if @step
+            "#{@start}:#{@end}:#{@step}"
+          else
+            "#{@start}:#{@end}"
+          end
+        brackets ? "[#{index_str}]" : index_str
       end
 
       # @param level [Integer]
