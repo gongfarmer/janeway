@@ -55,7 +55,7 @@ module Janeway
       consume
       raise err('JsonPath queries must start with root identifier "$"') unless current.type == :root
 
-      root_node = parse_expr_recursively
+      root_node = parse_root
       consume
       unless current.type == :eof
         remaining = tokens[@next_p..].map(&:lexeme).join
@@ -318,16 +318,11 @@ module Janeway
       nil
     end
 
+    # @return [AST::RootNode]
     def parse_root
-      # detect optional following selector
-      selector =
-        case next_token.type
-        when :dot then parse_dot_notation
-        when :child_start then parse_child_segment
-        when :descendants then parse_descendant_segment
-        end
-
-      AST::RootNode.new(selector)
+      AST::RootNode.new.tap do |root_node|
+        root_node.next = parse_next_selector
+      end
     end
 
     # Parse the current node operator "@", and optionally a selector which is applied to it

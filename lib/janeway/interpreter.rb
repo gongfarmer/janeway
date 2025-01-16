@@ -58,13 +58,13 @@ module Janeway
     # RootNode starts from the top level regardless of current state.
     # @return [Array]
     def interpret_root_node(node, _input)
-      case node&.value
-      when AST::ChildSegment then interpret_child_segment(node.value, @input)
-      when AST::DescendantSegment then interpret_descendant_segment(node.value, @input)
-      when AST::Selector then interpret_selector(node.value, @input)
+      case node&.next
+      when AST::ChildSegment then interpret_child_segment(node.next, @input)
+      when AST::DescendantSegment then interpret_descendant_segment(node.next, @input)
+      when AST::Selector then interpret_selector(node.next, @input)
       when nil then [@input]
       else
-        raise err("don't know how to interpret #{node.value.class}")
+        raise err("don't know how to interpret #{node.next.class}")
       end
     end
 

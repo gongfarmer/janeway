@@ -27,7 +27,7 @@ module Janeway
 
     it 'combines the minus sign and number into one node in an index selector' do
       ast = described_class.parse('$[-1]')
-      index_selector = ast.root.value
+      index_selector = ast.root.next
       expect(index_selector.value).to eq(-1)
     end
 
@@ -62,14 +62,14 @@ module Janeway
       query = '$["abc"]'
       tokens = Lexer.lex(query)
       ast = described_class.new(tokens, query).parse
-      expect(ast.root.value).to eq(AST::NameSelector.new('abc'))
+      expect(ast.root.next).to eq(AST::NameSelector.new('abc'))
     end
 
     it 'applies minus operator to the following zero' do
       # parser is expected to combine the "-" and "0" tokens
       query = '$[?@.a==-0]'
       ast = described_class.parse(query)
-      equals_operator = ast.root.value.value
+      equals_operator = ast.root.next.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
         value: 0
@@ -79,7 +79,7 @@ module Janeway
     it 'applies minus operator to the following integer' do
       # parser is expected to combine the "-" and number tokens
       ast = described_class.parse('$[?@.a==-1]')
-      equals_operator = ast.root.value.value
+      equals_operator = ast.root.next.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
         value: -1
@@ -89,7 +89,7 @@ module Janeway
     it 'applies minus operator to the following float' do
       # parser is expected to combine the "-" and number tokens
       ast = described_class.parse('$[?@.a==-15.8]')
-      equals_operator = ast.root.value.value
+      equals_operator = ast.root.next.value
       expect(equals_operator.right).to have_attributes(
         class: AST::Number,
         value: -15.8

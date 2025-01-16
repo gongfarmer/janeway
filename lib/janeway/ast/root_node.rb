@@ -14,8 +14,11 @@ module Janeway
     #   $(? $.key1 == $.key2 )
     #
     class RootNode < Janeway::AST::Expression
+      # Subsequent expression that modifies the result of this selector list.
+      attr_accessor :next
+
       def to_s
-        "$#{@value}"
+        "$#{@next}"
       end
 
       # True if this is the root of a singular-query.
@@ -23,13 +26,13 @@ module Janeway
       #
       # @return [Boolean]
       def singular_query?
-        return true unless @value # there are no following selectors
+        return true unless @next # there are no following selectors
 
         selector_types = []
-        selector = @value
+        selector = @next
         loop do
           selector_types << selector.class
-          selector = selector.next
+          selector = selector&.next
           break unless selector
         end
         allowed = [AST::IndexSelector, AST::NameSelector]
@@ -39,7 +42,7 @@ module Janeway
       # @param level [Integer]
       # @return [Array]
       def tree(level = 0)
-        [indented(level, '$'), @value.tree(level + 1)]
+        [indented(level, '$'), @next.tree(level + 1)]
       end
     end
   end

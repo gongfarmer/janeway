@@ -20,7 +20,7 @@ module Janeway
 
       ### Examples from https://www.rfc-editor.org/rfc/rfc9535.html#name-examples-6
 
-      it 'handles equality operator with nodelists' do
+      it 'handles equality operator with name selectors' do
         ast = described_class.parse('$[? $.absent1 == $.absent2]')
         expect(ast).to eq('$[?($.absent1 == $.absent2)]')
       end
