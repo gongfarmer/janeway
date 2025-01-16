@@ -54,7 +54,7 @@ module Janeway
     it 'raises error on trailing comma' do
       expect {
         described_class.parse('$[0,]')
-      }.to raise_error(Parser::Error, /Comma must be followed by another expression in filter selector/)
+      }.to raise_error(Error, /Comma must be followed by another expression in filter selector/)
     end
 
     it 'parses child segment that contains a single name selector as just a name selector' do

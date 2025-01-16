@@ -14,6 +14,10 @@ module Janeway
         expect(described_class.interpret(input, '$[2]')).to eq(['c'])
       end
 
+      it 'can be part of a union' do
+        expect(described_class.interpret(input, '$[2, 0]')).to eq(%w[c a])
+      end
+
       # CTS "index selector, -0",
       it 'raises error for negative zero' do
         expect {

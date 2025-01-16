@@ -17,8 +17,8 @@ module Janeway
         raise "Invalid name: #{value.inspect}:#{value.class}" unless value.is_a?(String)
       end
 
-      # @param bracket [Boolean] request for bracket syntax
-      # @param bracket [Boolean] include . prefix, if shorthand notation is used
+      # @param brackets [Boolean] request for bracket syntax
+      # @param dot_prefix [Boolean] include . prefix, if shorthand notation is used
       def to_s(brackets: false, dot_prefix: true)
         # Add quotes and surrounding brackets if the name includes chars that require quoting.
         # These chars are not allowed in dotted notation, only bracket notation.

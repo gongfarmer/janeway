@@ -1,23 +1,20 @@
 # frozen_string_literal: true
 
+require_relative 'error'
 require_relative 'functions'
 require_relative 'lexer'
 
 module Janeway
   # Transform a list of tokens into an Abstract Syntax Tree
   class Parser
-    class Error < Janeway::Error; end
-
-    attr_accessor :tokens
+    attr_reader :tokens
 
     include Functions
 
     UNARY_OPERATORS = %w[! -].freeze
     BINARY_OPERATORS = %w[== != > < >= <= ,].freeze
     LOGICAL_OPERATORS = %w[&& ||].freeze
-
     LOWEST_PRECEDENCE = 0
-    PREFIX_PRECEDENCE = 7
     OPERATOR_PRECEDENCE = {
       ',' => 0,
       '||' => 1,
@@ -31,9 +28,8 @@ module Janeway
       '(' => 8,
     }.freeze
 
-    # @param query [String] jsonpath query to be lexed and parsed
-    #
-    # @return [AST]
+    # @param jsonpath [String] jsonpath query to be lexed and parsed
+    # @return [AST::Query]
     def self.parse(jsonpath)
       raise ArgumentError, "expect jsonpath string, got #{jsonpath.inspect}" unless jsonpath.is_a?(String)
 
@@ -41,7 +37,7 @@ module Janeway
       new(tokens, jsonpath).parse
     end
 
-    # @param token [Array<Token>]
+    # @param tokens [Array<Token>]
     # @param jsonpath [String] original jsonpath query string
     def initialize(tokens, jsonpath)
       @tokens = tokens
@@ -62,15 +58,10 @@ module Janeway
         raise err("Unrecognized expressions after query: #{remaining}")
       end
 
-      # Freeze so this can be used in ractors
-      AST::Query.new(root_node, @jsonpath).freeze
+      AST::Query.new(root_node, @jsonpath)
     end
 
     private
-
-    def build_token(type, lexeme = nil)
-      Token.new(type, lexeme, nil, nil)
-    end
 
     def pending_tokens?
       @next_p < tokens.length
@@ -94,12 +85,12 @@ module Janeway
       current.literal.tap { consume }
     end
 
-    def consume_if_next_is(expected)
-      if next_token.type == expected.type
+    def consume_if_next_is(token_type)
+      if next_token.type == token_type
         consume
         true
       else
-        unexpected_token_error(expected)
+        unexpected_token_error(token_type)
         false
       end
     end
@@ -131,11 +122,11 @@ module Janeway
       OPERATOR_PRECEDENCE[next_token.lexeme] || LOWEST_PRECEDENCE
     end
 
-    def unexpected_token_error(expected = nil)
-      if expected
+    def unexpected_token_error(expected_type = nil)
+      if expected_type
         raise err(
           "Unexpected token #{current.lexeme.inspect} " \
-          "(expected #{expected.inspect}, got #{next_token.lexeme.inspect} )"
+          "(expected #{expected_type}, got #{next_token.lexeme.inspect} )"
         )
       end
       raise err("Unexpected token #{current.lexeme.inspect} (next is #{next_token.inspect})")
@@ -194,7 +185,7 @@ module Janeway
     end
 
     # Consume minus operator and apply it to the (expected) number token following it.
-    # Don't consume the number token.
+    # Don't consume the number token. The minus operator does not end up in the AST.
     def parse_minus_operator
       raise err("Expect token '-', got #{current.lexeme.inspect}") unless current.type == :minus
 
@@ -282,7 +273,7 @@ module Janeway
     def parse_dot_notation
       consume # "."
       unless current.type == :dot
-        # Parse error, determine most useful error message
+        # Parse error. Determine the most useful error message for this situation:
         msg =
           if current.type == :number
             "Decimal point must be preceded by number, got \".#{current.lexeme}\""
@@ -308,7 +299,7 @@ module Janeway
       consume
 
       expr = parse_expr_recursively
-      return unless consume_if_next_is(build_token(:group_end, ')'))
+      return unless consume_if_next_is(:group_end)
 
       expr
     end
@@ -401,7 +392,6 @@ module Janeway
       when :child_start then parse_child_segment
       when :dot then parse_dot_notation
       when :descendants then parse_descendant_segment
-      when :wildcard then parse_wildcard_selector
       when :eof, :child_end then nil
       end
     end
@@ -455,7 +445,7 @@ module Janeway
       start, end_, step = Array.new(3) { parse_array_slice_component }.map { _1&.literal }
 
       unless %i[child_end union].include?(current.type)
-        raise err("Array slice selector must be followed by \",\" or \"]\", got #{current.lexeme}") 
+        raise err("Array slice selector must be followed by \",\" or \"]\", got #{current.lexeme}")
       end
 
       AST::ArraySliceSelector.new(start, end_, step)
@@ -482,19 +472,13 @@ module Janeway
 
     # Parse a name selector.
     # The name selector may have been in dot notation or parentheses, that part is already parsed.
-    # Next token is just the name.
+    # Next token is the name.
     #
     # @return [AST::NameSelector]
     def parse_name_selector
-      consume
-      selector = AST::NameSelector.new(current.lexeme)
-      # If there is a following expression, parse that too
-      case next_token.type
-      when :dot then selector.next = parse_dot_notation
-      when :child_start then selector.next = parse_child_segment
-      when :descendants then selector.next = parse_descendant_segment
+      AST::NameSelector.new(consume.lexeme).tap do |selector|
+        selector.next = parse_next_selector
       end
-      selector
     end
 
     # Feed tokens to the FilterSelector until hitting a terminator
@@ -510,11 +494,11 @@ module Janeway
             parse_expr_recursively
           end
 
-        # may replace existing node with a binary operator that incorporates the original node
+        # may replace existing node with a binary operator that contains the existing node
         selector.value = node
       end
 
-      # Check for literal, they are not allowed to be a complete condition in a filter selector
+      # Check for literals, they are not allowed to be a complete condition in a filter selector.
       # This includes jsonpath functions that return a numeric value.
       raise err("Literal value #{selector.value} must be used within a comparison") if selector.value.literal?
 
@@ -538,7 +522,7 @@ module Janeway
     def parse_not_operator
       AST::UnaryOperator.new(current.type).tap do |op|
         consume
-        op.operand = parse_expr_recursively(PREFIX_PRECEDENCE)
+        op.operand = parse_expr_recursively
       end
     end
 
@@ -566,18 +550,18 @@ module Janeway
       send(parsing_function)
     end
 
+    # Parse an expression which may contain binary operators and varying expression precedence.
+    # This is only needed within a filter expression.
     def parse_expr_recursively(precedence = LOWEST_PRECEDENCE)
       parsing_function = determine_parsing_function
       raise err("Unrecognized token: #{current.lexeme.inspect}") unless parsing_function
 
-      current
       expr = send(parsing_function)
-      return unless expr # When expr is nil, it means we have reached a \n or a eof.
+      return unless expr
 
-      # Note that here we are checking the NEXT token.
+      # Keep parsing until next token is higher precedence, or a terminator
       while next_not_terminator? && precedence < next_precedence
         infix_parsing_function = determine_infix_function(next_token)
-
         return expr if infix_parsing_function.nil?
 
         consume
@@ -592,7 +576,7 @@ module Janeway
     # @param msg [String] error message
     # @return [Parser::Error]
     def err(msg)
-      Error.new(msg, @jsonpath)
+      Janeway::Error.new(msg, @jsonpath)
     end
 
     alias parse_true parse_boolean
