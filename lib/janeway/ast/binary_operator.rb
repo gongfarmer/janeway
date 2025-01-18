@@ -3,13 +3,13 @@
 module Janeway
   module AST
     class BinaryOperator < Janeway::AST::Expression
-      attr_reader :operator, :left, :right
+      attr_reader :name, :left, :right
 
       def initialize(operator, left = nil, right = nil)
         super(nil)
         raise ArgumentError, "expect symbol, got #{operator.inspect}" unless operator.is_a?(Symbol)
 
-        @operator = operator
+        @name = operator # eg. :equal
         self.left = left if left
         self.right = right if right
       end
@@ -52,23 +52,6 @@ module Janeway
         "(#{@left} #{operator_to_s} #{@right})"
       end
 
-      private
-
-      def operator_to_s
-        case operator
-        when :and then '&&'
-        when :equal then '=='
-        when :greater_than then '>'
-        when :greater_than_or_equal then '>='
-        when :less_than then '<'
-        when :less_than_or_equal then '<='
-        when :not_equal then '!='
-        when :or then '||'
-        else
-          raise "unknown binary operator #{operator}"
-        end
-      end
-
       # @param level [Integer]
       # @return [Array]
       def tree(level)
@@ -91,12 +74,29 @@ module Janeway
         operator_type == :logical
       end
 
+      private
+
+      def operator_to_s
+        case name
+        when :and then '&&'
+        when :equal then '=='
+        when :greater_than then '>'
+        when :greater_than_or_equal then '>='
+        when :less_than then '<'
+        when :less_than_or_equal then '<='
+        when :not_equal then '!='
+        when :or then '||'
+        else
+          raise "unknown binary operator #{name}"
+        end
+      end
+
       def operator_type
-        case operator
+        case name
         when :and, :or then :logical
         when :equal, :not_equal, :greater_than, :greater_than_or_equal, :less_than, :less_than_or_equal then :comparison
         else
-          raise "unknown binary operator #{operator}"
+          raise "unknown binary operator #{name}"
         end
       end
     end

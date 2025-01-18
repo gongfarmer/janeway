@@ -8,7 +8,11 @@ module Janeway
     INDENT = '  '
 
     class Expression
+      # Value provided by subclass constructor.
       attr_accessor :value
+
+      # Next expression in the AST, if any
+      attr_reader :next
 
       def initialize(val = nil)
         # don't set the instance variable if unused, because it makes the

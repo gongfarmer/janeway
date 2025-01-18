@@ -4,11 +4,11 @@ module Janeway
   module AST
     # Represent unary operators "!", "-"
     class UnaryOperator < Janeway::AST::Expression
-      attr_accessor :operator, :operand
+      attr_accessor :name, :operand
 
       def initialize(operator, operand = nil)
         super()
-        @operator = operator
+        @name = operator # eg. :not
         @operand = operand
       end
 

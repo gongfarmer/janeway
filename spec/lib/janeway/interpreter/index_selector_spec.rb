@@ -31,7 +31,7 @@ module Janeway
         expect(described_class.interpret(input, '$[-3]')).to eq(['a'])
       end
 
-      it 'returns nil when index is out of bounds' do
+      it 'returns Nothing when index is out of bounds' do
         expect(described_class.interpret(input, '$[3]')).to be_empty
         expect(described_class.interpret(input, '$[-4]')).to be_empty
       end

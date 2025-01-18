@@ -118,7 +118,7 @@ module Janeway
       # RFC "Comparison of queries with no values"
       it 'supports comparison that references non-existent value' do
         result = described_class.interpret(input, '$.a[?@.b == $.x]')
-        expect(result).to eq([3, 5, 1, 2, 4, 6]) # order is undefined
+        expect(result).to match_array([3, 5, 1, 2, 4, 6]) # order is undefined
       end
 
       # rubocop: disable RSpec/ExampleLength
@@ -156,7 +156,7 @@ module Janeway
       end
 
       # CTS "filter, exists and exists, data false"
-      it 'does existence checks on either side of a logical operator' do
+      it 'does existence checks on both sides of a logical operator' do
         input = [{ 'a' => false, 'b' => false }]
         result = described_class.interpret(input, '$[?@.a&&@.b]')
         expect(result).to eq([{ 'a' => false, 'b' => false }])
