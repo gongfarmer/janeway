@@ -18,13 +18,6 @@ module Janeway
         # end
         @left = TreeConstructor.ast_node_to_interpreter(operator.left)
         @right = TreeConstructor.ast_node_to_interpreter(operator.right)
-
-        return unless operator.comparison_operator?
-
-        # For comparison operators, only expressions that produce single value are acceptable
-        # FIXME: push this down to the parsing stage?
-        verify_single_value_expression(operator.left)
-        verify_single_value_expression(operator.right)
       end
 
       # The binary operators are all comparison operators that test equality.
@@ -78,22 +71,12 @@ module Janeway
         # This must not match any literal value (including null/nil) but must match another missing value.
         return NOTHING if result.empty?
 
-        # This should not be possible to hit because of the singular query check
-        raise err('node list contains multiple elements but this is a comparison') unless result.size == 1
+        # The parsing stage has already verified that both the left and right
+        # expressions evaluate to a single value. Both are either a literal or a singular query.
+        # So, this check will never raise an error.
+        raise 'node list contains multiple elements but this is a comparison' unless result.size == 1
 
         result.first # Return the only node in the node list
-      end
-
-      # @return [void]
-      def verify_single_value_expression(expr)
-        case expr
-        when AST::CurrentNode, AST::RootNode
-          raise err("Expression #{expr} does not produce a singular value for comparison") unless expr.singular_query?
-        when AST::Number, AST::StringType, AST::Null, AST::Function, AST::Boolean
-          nil # these are OK
-        else
-          raise err("Invalid expression for comparison: #{expr}")
-        end
       end
 
       def interpret_equal(lhs, rhs)

@@ -14,7 +14,7 @@ module Janeway
         self.right = right if right
       end
 
-      # Set the left-hand-side value
+      # Set the left-hand-side expression
       # @param expr [AST::Expression]
       def left=(expr)
         if comparison_operator? && !(expr.literal? || expr.singular_query?)
@@ -32,7 +32,7 @@ module Janeway
         @left = expr
       end
 
-      # Set the left-hand-side value
+      # Set the left-hand-side expression
       # @param expr [AST::Expression]
       def right=(expr)
         if comparison_operator? && !(expr.literal? || expr.singular_query?)
