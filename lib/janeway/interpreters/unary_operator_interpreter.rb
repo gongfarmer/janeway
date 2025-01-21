@@ -24,7 +24,7 @@ module Janeway
         when Array then result.empty?
         when TrueClass, FalseClass then !result
         else
-          raise err("don't know how to apply not operator to #{result.inspect}")
+          raise "don't know how to apply not operator to #{result.inspect}"
         end
       end
     end

@@ -28,7 +28,7 @@ module Janeway
       @query = query
       @jsonpath = query.jsonpath
       @input = nil
-      @pipeline = []
+      @pipeline = query_to_interpreter_pipeline(@query)
     end
 
     # @param input [Array, Hash] object to be searched
@@ -39,22 +39,32 @@ module Janeway
         return [] # can't query on any other types, but need to check because a string is also valid json
       end
 
-      root_interpreter = query_to_interpreter_chain(@query)
-      root_interpreter.interpret(nil, input)
+      @pipeline.first.interpret(nil, input)
+    rescue StandardError => e
+      # Error during interpretation. Convert it to a Janeway::Error and include the query in the message
+      error = err(e.message)
+      error.backtrace = e.backtrace
+      raise error
+    end
+
+    # Append an interpreter onto the end of the pipeline
+    # @param [Interpreters::Base]
+    def push(node)
+      @pipeline.last.next = node
     end
 
     private
 
     # @return [Interpreters::RootNodeInterpreter]
-    def query_to_interpreter_chain(query)
-      chain =
+    def query_to_interpreter_pipeline(query)
+      pipeline =
         query.node_list.map do |node|
           Interpreters::TreeConstructor.ast_node_to_interpreter(node)
         end
-      chain.each_with_index do |node, i|
-        node.next = chain[i + 1]
+      pipeline.each_with_index do |node, i|
+        node.next = pipeline[i + 1]
       end
-      chain.first
+      pipeline
     end
 
     # Return an Interpreter::Error with the specified message, include the query.

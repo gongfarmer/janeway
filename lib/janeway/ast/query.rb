@@ -32,6 +32,19 @@ module Janeway
         Janeway::Interpreter.new(self).interpret(input)
       end
 
+      # Iterate through each value matched by the JSONPath query.
+      #
+      # @param input [Hash, Array] ruby object to be searched
+      # @yieldparam [Object] matched value
+      # @return [void]
+      def each(input, &)
+        return enum_for(:each, input) unless block_given?
+
+        interpreter = Janeway::Interpreter.new(self)
+        interpreter.push Janeway::Interpreters::Yielder.new(&)
+        interpreter.interpret(input)
+      end
+
       def to_s
         @root.to_s
       end
@@ -54,7 +67,7 @@ module Janeway
 
       # Remove the last selector in the query from the node list, and return the removed selector.
       # @return [AST::Selector, nil] last selector in the query, if any
-      def pop!
+      def pop
         nodes = node_list
         return nil if node_list.size == 1 # only 1 node, don't pop
 

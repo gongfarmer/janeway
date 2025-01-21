@@ -41,7 +41,7 @@ module Janeway
           lhs = to_single_value @left.interpret(input, root)
           rhs = to_single_value @right.interpret(input, root)
         else
-          raise err("Don't know how to handle binary operator #{operator.name.inspect}")
+          raise "Don't know how to handle binary operator #{operator.name.inspect}"
         end
         send(:"interpret_#{operator.name}", lhs, rhs)
       end
@@ -62,7 +62,7 @@ module Janeway
       # @param node [AST::Expression]
       # @param input [Object]
       def to_single_value(result)
-        # Return basic types (ie. from AST::Number, AST::StringType)
+        # Return basic types (ie. from AST::Number, AST::StringType, AST::Null)
         return result unless result.is_a?(Array)
 
         # Node lists are returned by Selectors, ChildSegment, DescendantSegment.
@@ -79,6 +79,8 @@ module Janeway
         result.first # Return the only node in the node list
       end
 
+      # @param lhs [String, Numeric, Symbol, nil] string/number/null or NOTHING
+      # @param rhs [String, Numeric, Symbol, nil] string/number/null or NOTHING
       def interpret_equal(lhs, rhs)
         lhs == rhs
       end

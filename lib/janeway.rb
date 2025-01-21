@@ -2,7 +2,7 @@
 
 require 'English'
 
-# Janeway jsonpath parsing library
+# Janeway JSONPath parsing library
 module Janeway
   # Abstract Syntax Tree
   module AST
@@ -11,17 +11,17 @@ module Janeway
     INTEGER_MAX = 9_007_199_254_740_991
   end
 
-  # Apply a JsonPath query to the input, and return the result.
+  # Apply a JSONPath query to the input, and return all matched values.
   #
-  # @param query [String] jsonpath query
-  # @param input [Object] ruby object to be searched
+  # @param query [String] JSONPath query
+  # @param input [Hash, Array] ruby object to be searched
   # @return [Array] all matched objects
   def self.find_all(query, input)
     ast = compile(query)
     Janeway::Interpreter.new(ast).interpret(input)
   end
 
-  # Compile a JsonPath query into an Abstract Syntax Tree.
+  # Compile a JSONPath query into an Abstract Syntax Tree.
   #
   # This can be used and re-used later on multiple inputs.
   #
@@ -29,6 +29,26 @@ module Janeway
   # @return [Janeway::AST::Query]
   def self.compile(query)
     Janeway::Parser.parse(query)
+  end
+
+  # Iterate through each value matched by the JSONPath query.
+  #
+  # @param query [String] jsonpath query
+  # @param input [Hash, Array] ruby object to be searched
+  # @yieldparam [Object] matched value
+  # @return [void]
+  def self.each(query, input, &)
+    raise ArgumentError, "Invalid jsonpath query: #{query.inspect}" unless query.is_a?(String)
+    unless [Hash, Array, String].include?(input.class)
+      raise ArgumentError, "Invalid input, expecting array or hash: #{input.inspect}"
+    end
+    return enum_for(:each, query, input) unless block_given?
+
+    ast = Janeway::Parser.parse(query)
+    interpreter = Janeway::Interpreter.new(ast)
+    yielder = Janeway::Interpreters::Yielder.new(&)
+    interpreter.push(yielder)
+    interpreter.interpret(input)
   end
 end
 
