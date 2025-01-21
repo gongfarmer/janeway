@@ -7,6 +7,12 @@ module Janeway
   module AST
     INDENT = '  '
 
+    # Base class for jsonpath expressions.
+    #
+    # Every AST node is a subclass of this.
+    # This includes selectors, root and child identifiers, descendant segments,
+    # and the nodes that occur within a filter selector such as the current
+    # node identifier, operators and literals.
     class Expression
       # Value provided by subclass constructor.
       attr_accessor :value
@@ -17,7 +23,7 @@ module Janeway
       def initialize(val = nil)
         # don't set the instance variable if unused, because it makes the
         # "#inspect" output cleaner in rspec test failures
-        @value = val unless val.nil?  # false must be stored though!
+        @value = val unless val.nil? # false must be stored though!
       end
 
       # @return [String]

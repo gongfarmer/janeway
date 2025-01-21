@@ -4,6 +4,8 @@ require_relative 'filter_expression_base'
 
 module Janeway
   module Interpreters
+    # Interpets current node identifier.
+    # This applies the following selector to the input.
     class CurrentNodeInterpreter < FilterExpressionBase
       alias current_node node
 

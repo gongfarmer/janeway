@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Janeway
+  # Mixin to provide JSONPath function handlers for Parser
   module Functions
     # The length() function extension provides a way to compute the length of a value
     # and make that available for further processing in the filter expression:
@@ -18,9 +19,7 @@ module Janeway
       unless arg.singular_query? || arg.literal?
         raise Error, "Invalid parameter - length() expects literal value or singular query, got #{arg.value.inspect}"
       end
-      unless current.type == :group_end
-        raise Error, 'Too many parameters for length() function call'
-      end
+      raise Error, 'Too many parameters for length() function call' unless current.type == :group_end
 
       # Meaning of return value depends on the JSON type:
       #   * string - number of Unicode scalar values in the string.

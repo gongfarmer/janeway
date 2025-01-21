@@ -26,7 +26,12 @@ end
 CLEAN.include %w[coverage doc pkg *.gem .yardoc]
 
 RSpec::Core::RakeTask.new(:spec)
-RuboCop::RakeTask.new
+
+LINT_TARGETS = 'lib spec'
+desc 'lint project code with rubocop'
+task :rubocop do
+  sh("rubocop #{LINT_TARGETS}")
+end
 
 desc 'run rubocop'
 task lint: :rubocop

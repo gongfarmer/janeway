@@ -3,6 +3,7 @@
 require 'forwardable'
 
 module Janeway
+  # Tokens are produced by the lexer, they represent jsonpath query elements in a low-level, non-hierarchical way.
   class Token
     extend Forwardable
 

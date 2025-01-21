@@ -11,11 +11,6 @@ module Janeway
       # Set up the internal interpreter chain for the BinaryOperator.
       def initialize(operator)
         super
-        # FIXME: how to set this up???
-        # Probably... move the setup_interpreter_tree and ast_node_to_interpeter methods to a separate module and include that in Base, so it can be accessed here and in FilterSelcetorIntepreter.
-        # Later consider eliminating the similar thing in Interpreter and using this module there too
-        #
-        # end
         @left = TreeConstructor.ast_node_to_interpreter(operator.left)
         @right = TreeConstructor.ast_node_to_interpreter(operator.right)
       end

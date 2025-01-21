@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Janeway
+  # Parses jsonpath function calls, and defines the code for jsonpath builtin functions
   module Functions
     #  2.4.8. value() Function Extension
 
@@ -33,9 +34,7 @@ module Janeway
 
       # Read parameter
       parameters = [parse_function_parameter]
-      unless current.type == :group_end
-        raise Error, 'Too many parameters for value() function call'
-      end
+      raise Error, 'Too many parameters for value() function call' unless current.type == :group_end
 
       AST::Function.new('value', parameters) do |nodes|
         if nodes.is_a?(Array) && nodes.size == 1

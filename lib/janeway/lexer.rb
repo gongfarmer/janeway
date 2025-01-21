@@ -101,12 +101,9 @@ module Janeway
         elsif name_first_char?(c)
           lex_member_name_shorthand(ignore_keywords: tokens.last&.type == :dot)
         end
+      raise err("Unknown character: #{c.inspect}") unless token
 
-      if token
-        tokens << token
-      else
-        raise err("Unknown character: #{c.inspect}")
-      end
+      tokens << token
     end
 
     def digit?(lexeme)
@@ -141,6 +138,7 @@ module Janeway
         if next_two_chars == '..' && WHITESPACE.include?(lookahead)
           raise err("Operator #{next_two_chars.inspect} must not be followed by whitespace")
         end
+
         Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
       else
         token_from_one_char_lex(lexeme)
@@ -151,9 +149,7 @@ module Janeway
     # @return [Token]
     def token_from_two_char_lex(lexeme)
       next_two_chars = [lexeme, lookahead].join
-      unless TWO_CHAR_LEX.include?(next_two_chars)
-        raise err("Unknown operator \"#{lexeme}\"")
-      end
+      raise err("Unknown operator \"#{lexeme}\"") unless TWO_CHAR_LEX.include?(next_two_chars)
 
       consume
       Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
@@ -172,7 +168,9 @@ module Janeway
     # @param delimiter [String] eg. ' or "
     # @return [Token] string token
     def lex_delimited_string(delimiter)
-      non_delimiter = %w[' "].reject { _1 == delimiter }.first
+      allowed_delimiters = %w[' "]
+      # the "other" delimiter char, which is not currently being treated as a delimiter
+      non_delimiter = allowed_delimiters.reject { _1 == delimiter }.first
 
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
@@ -191,7 +189,7 @@ module Janeway
             end
           elsif unescaped?(next_char)
             consume
-          elsif %w[' "].include?(next_char) && next_char != delimiter
+          elsif allowed_delimiters.include?(next_char) && next_char != delimiter
             consume
           else
             raise err("invalid character #{next_char.inspect}")
@@ -225,12 +223,10 @@ module Janeway
       when '/', '\\', '"', "'" then char
       when 'u' then consume_unicode_escape_sequence
       else
-        if unescaped?(char)
-          raise err("Character #{char} must not be escaped")
-        else
-          # whatever this is, it is not allowed even when escaped
-          raise err("Invalid character #{char.inspect}")
-        end
+        raise err("Character #{char} must not be escaped") if unescaped?(char)
+
+        # whatever this is, it is not allowed even when escaped
+        raise err("Invalid character #{char.inspect}")
       end
     end
 

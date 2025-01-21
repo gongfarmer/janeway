@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Janeway
+  # Parses jsonpath function calls, and defines the code for jsonpath builtin functions
   module Functions
     # 2.4.7. search() Function Extension
     # Parameters:
@@ -35,22 +36,16 @@ module Janeway
       # Read first parameter
       parameters = []
       parameters << parse_function_parameter
+      raise Error, 'Insufficient parameters for search() function call' unless current.type == :union
 
-      # Consume comma
-      if current.type == :union
-        consume # ,
-      else
-        raise Error, 'Insufficient parameters for search() function call'
-      end
+      consume # ,
 
       # Read second parameter (the regexp)
       # This could be a string, in which case it is available now.
       # Otherwise it is an expression that takes the regexp from the input document,
       # and the iregexp will not be available until interpretation.
       parameters << parse_function_parameter
-      unless current.type == :group_end
-        raise Error, 'Too many parameters for match() function call'
-      end
+      raise Error, 'Too many parameters for match() function call' unless current.type == :group_end
 
       AST::Function.new('search', parameters) do |str, str_iregexp|
         if str.is_a?(String) && str_iregexp.is_a?(String)

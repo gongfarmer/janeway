@@ -182,14 +182,14 @@ module Janeway
     end
 
     # CTS "functions, search, too many params"
-    it 'raises error when search() function call has no parameters' do
+    it 'raises error when search() function call has too many parameters' do
       expect {
         described_class.parse('$[?search(@.a,@.b,@.c)]')
       }.to raise_error(Error, /Too many parameters for match\(\) function call/)
     end
 
     # CTS "functions, value, too many params"
-    it 'raises error when search() function call has no parameters' do
+    it 'raises error when value() function call has too many parameters' do
       expect {
         described_class.parse('$[?value(@.a,@.b)==4]')
       }.to raise_error(Error, /Too many parameters for value\(\) function call/)

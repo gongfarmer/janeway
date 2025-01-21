@@ -36,18 +36,7 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
       def interpret(_input, _root)
-        raise NotImplementedError.new('subclass must implement #interpret')
-      end
-
-      # Return an Interpreter::Error with the specified message, include the query.
-      #
-      # @param msg [String] error message
-      # @return [Parser::Error]
-      def err(msg)
-        # FIXME: rather than carrying the jsonpath expression into every #interpret call,
-        # just raise the error where it occurs, and set up a rescue block in Interpreter#interpret
-        # that adds context. Delete this.
-        Janeway::Error.new(msg, @jsonpath)
+        raise NotImplementedError, 'subclass must implement #interpret'
       end
     end
   end

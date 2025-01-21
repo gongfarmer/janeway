@@ -10,6 +10,7 @@ Style/FormatStringToken:
 
 Style/TrailingCommaInHashLiteral:
   EnforcedStyleForMultiline: consistent_comma
+
 Style/TrailingCommaInArrayLiteral:
   EnforcedStyleForMultiline: consistent_comma
 
@@ -27,8 +28,29 @@ Performance:
 Style/BlockDelimiters:
   EnforcedStyle: braces_for_chaining
 
+# Sometimes duplicate branches in a switch statement make the code easier to read
+Lint/DuplicateBranch:
+  Enabled: false
+
+Metrics/MethodLength:
+  Max: 15
+
+Metrics/ClassLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Max: 9
+
+# Rspec cops
+
 RSpec/ExampleLength:
-  Max: 6
+  Max: 7
+
+# Many jsonpath queries have results without a strict order defined.
+# Accomodate this by using Rspec.match_array to test result arrays without requiring any specific order.
+# This cop suggests using an alternative matcher that is order-specific.
+RSpec/MatchArray:
+  Enabled: false
 
 # Allow rspec test module blocks to be long
 Metrics/ModuleLength:

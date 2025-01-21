@@ -11,9 +11,7 @@ module Janeway
         def interpret(*)
           value
         end
-        def node
-          value
-        end
+        alias_method :node, :interpret
       end
 
       def self.ast_node_to_interpreter(expr)

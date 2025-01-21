@@ -52,7 +52,7 @@ module Janeway
       end
 
       # CTS "slice selector, non-integer array index"
-      it 'raises error when array slice selector has too many colons' do
+      it 'raises error when array slice selector has a non-integer array index' do
         expect {
           described_class.parse('$[1:2:a]')
         }.to raise_error(Error, /Unexpected token in array slice selector: "a"/)

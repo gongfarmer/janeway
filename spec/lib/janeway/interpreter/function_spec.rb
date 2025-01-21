@@ -68,8 +68,8 @@ module Janeway
         # CTS "functions, length, arg is a function expression"
         it 'can use the return from a ValueType function as a parameter' do
           query = '$.values[?length(@.a)==length(value($..c))]'
-          input = {'c' => 'cd', 'values' => [{'a' => 'ab'}, {'a' => 'd'}]}
-          expect(described_class.interpret(input, query)).to eq([{"a" => "ab"}])
+          input = { 'c' => 'cd', 'values' => [{ 'a' => 'ab' }, { 'a' => 'd' }] }
+          expect(described_class.interpret(input, query)).to eq([{ 'a' => 'ab' }])
         end
       end
 

@@ -2,6 +2,7 @@
 
 module Janeway
   module AST
+    # Represents JSON null literal within a filter expression
     class Null < Janeway::AST::Expression
       def to_s
         'null'

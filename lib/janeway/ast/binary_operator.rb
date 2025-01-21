@@ -2,6 +2,8 @@
 
 module Janeway
   module AST
+    # AST node for binary operators:
+    #   == != <= >= < > || &&
     class BinaryOperator < Janeway::AST::Expression
       attr_reader :name, :left, :right
 

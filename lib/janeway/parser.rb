@@ -126,16 +126,10 @@ module Janeway
       if expected_type
         raise err(
           "Unexpected token #{current.lexeme.inspect} " \
-          "(expected #{expected_type}, got #{next_token.lexeme.inspect} )"
+          "(expected #{expected_type}, got #{next_token.lexeme} )"
         )
       end
-      raise err("Unexpected token #{current.lexeme.inspect} (next is #{next_token.inspect})")
-    end
-
-    def check_syntax_compliance(ast_node)
-      return if ast_node.expects?(next_token)
-
-      unexpected_token_error
+      raise err("Unexpected token #{current.lexeme.inspect} (next is #{next_token})")
     end
 
     def determine_parsing_function
@@ -170,10 +164,11 @@ module Janeway
       :parse_binary_operator
     end
 
+    # A non-delimited word that is not a keyword within a jsonpath query is not allowed.
+    # eg. $[?@==foo]
+    # @raise
     def parse_identifier
-      ident = AST::Identifier.new(current.lexeme)
-      check_syntax_compliance(ident)
-      ident
+      unexpected_token_error
     end
 
     def parse_string

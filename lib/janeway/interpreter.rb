@@ -43,7 +43,7 @@ module Janeway
     rescue StandardError => e
       # Error during interpretation. Convert it to a Janeway::Error and include the query in the message
       error = err(e.message)
-      error.backtrace = e.backtrace
+      error.set_backtrace e.backtrace
       raise error
     end
 

@@ -4,6 +4,7 @@ require_relative 'base'
 
 module Janeway
   module Interpreters
+    # Interprets array slice selector on the given input
     class ArraySliceSelectorInterpreter < Base
       alias selector node
 

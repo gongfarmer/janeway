@@ -469,7 +469,7 @@ module Janeway
       # CTS "name selector, double quotes, question mark escape"
       it 'raises error when name contains an unnecessarily escaped character' do
         expect {
-          described_class.lex("$[\"\\?\"]")
+          described_class.lex('$["\\?"]')
         }.to raise_error(Error, /Character \? must not be escaped/)
       end
 
@@ -503,7 +503,7 @@ module Janeway
       # CTS name selector, double quotes, single low surrogate"
       it 'raises error when low surrogate is not preceded by high surrogate' do
         expect {
-          described_class.lex("$[\"\\uDC00\"]")
+          described_class.lex('$["\\uDC00"]')
         }.to raise_error(Error, /Invalid unicode escape sequence: \\uDC00/)
       end
     end

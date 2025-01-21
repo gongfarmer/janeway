@@ -2,6 +2,7 @@
 
 module Janeway
   module AST
+    # Helper methods for AST Expressions.
     module Helpers
       # @param str [String] ascii string, CamelCase
       # @return [String] lowercase, with underscores

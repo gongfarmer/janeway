@@ -6,3 +6,6 @@ coverage/*
 doc/*
 pkg/*
 vendor
+
+# Some large test files for benchmarking are in here
+benchmark/*
