@@ -37,11 +37,11 @@ module Janeway
       # @param input [Hash, Array] ruby object to be searched
       # @yieldparam [Object] matched value
       # @return [void]
-      def each(input, &)
+      def each(input, &block)
         return enum_for(:each, input) unless block_given?
 
         interpreter = Janeway::Interpreter.new(self)
-        interpreter.push Janeway::Interpreters::Yielder.new(&)
+        interpreter.push Janeway::Interpreters::Yielder.new(&block)
         interpreter.interpret(input)
       end
 

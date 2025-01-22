@@ -34,7 +34,7 @@ module Janeway
         if node_list.is_a?(Array)
           node_list.size
         else
-          1 # The count of a non-empty singulare noselist such as count(@) is always 1
+          1 # the count of a non-empty singular nodelist such as count(@) is always 1.
         end
       end
     end

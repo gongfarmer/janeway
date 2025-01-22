@@ -37,7 +37,7 @@ module Janeway
   # @param input [Hash, Array] ruby object to be searched
   # @yieldparam [Object] matched value
   # @return [void]
-  def self.each(query, input, &)
+  def self.each(query, input, &block)
     raise ArgumentError, "Invalid jsonpath query: #{query.inspect}" unless query.is_a?(String)
     unless [Hash, Array, String].include?(input.class)
       raise ArgumentError, "Invalid input, expecting array or hash: #{input.inspect}"
@@ -46,7 +46,7 @@ module Janeway
 
     ast = Janeway::Parser.parse(query)
     interpreter = Janeway::Interpreter.new(ast)
-    yielder = Janeway::Interpreters::Yielder.new(&)
+    yielder = Janeway::Interpreters::Yielder.new(&block)
     interpreter.push(yielder)
     interpreter.interpret(input)
   end
