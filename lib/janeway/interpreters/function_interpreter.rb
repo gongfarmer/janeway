@@ -5,7 +5,7 @@ require_relative 'base'
 module Janeway
   module Interpreters
     # Interprets a jsonpath function call within a filter selector.
-    class FunctionInterpreter < FilterExpressionBase
+    class FunctionInterpreter < Base
       alias function node
 
       # Specify the parameter types that built-in JsonPath functions require

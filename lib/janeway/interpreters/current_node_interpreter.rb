@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative 'filter_expression_base'
+require_relative 'base'
 
 module Janeway
   module Interpreters
     # Interpets current node identifier.
     # This applies the following selector to the input.
-    class CurrentNodeInterpreter < FilterExpressionBase
+    class CurrentNodeInterpreter < Base
       alias current_node node
 
       # Apply selector to each value in the current node and return result.

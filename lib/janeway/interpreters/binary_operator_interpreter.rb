@@ -5,7 +5,7 @@ require_relative 'base'
 module Janeway
   module Interpreters
     # Interprets a binary operator within filter selector.
-    class BinaryOperatorInterpreter < FilterExpressionBase
+    class BinaryOperatorInterpreter < Base
       alias operator node
 
       # Set up the internal interpreter chain for the BinaryOperator.

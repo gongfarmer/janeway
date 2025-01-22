@@ -6,7 +6,7 @@ module Janeway
   module Interpreters
     # Interprets the "not" operator within a filter selector logical expression.
     # The only other unary operator is "minus", which is consumed during parsing and is not part of the AST.
-    class UnaryOperatorInterpreter < FilterExpressionBase
+    class UnaryOperatorInterpreter < Base
       alias operator node
 
       def initialize(operator)
