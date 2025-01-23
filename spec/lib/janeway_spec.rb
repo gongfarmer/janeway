@@ -35,6 +35,13 @@ describe Janeway do
       expect(described_class.each('$', {})).to be_a(Enumerator)
     end
 
+    it 'returns an enumerator that returns matched values' do
+      input = { 'a' => %w[a b c], 'b' => %w[d e f] }
+      expected = [%w[a b c], %w[d e f]]
+      enum = described_class.each('$.*', input)
+      expect(enum.to_a).to eq(expected)
+    end
+
     it 'raises error when no query given' do
       expect {
         described_class.each(nil, {}) { puts }
