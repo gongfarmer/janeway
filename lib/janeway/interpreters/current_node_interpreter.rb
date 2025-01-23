@@ -21,9 +21,9 @@ module Janeway
       # @param _input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
       # @return [Array] Node List containing all results from evaluating this node's selectors.
-      def interpret(input, root)
+      def interpret(input, parent, root)
         if @next
-          @next.interpret(input, root)
+          @next.interpret(input, parent, root)
         else
           input
         end

@@ -22,11 +22,12 @@ module Janeway
       # Yield each input value
       #
       # @param input [Array, Hash] the results of processing so far
+      # @param parent [Array, Hash] parent of the input object
       # @param _root [Array, Hash] the entire input
       # @yieldparam [Object] matched value
       # @return [Object] input
-      def interpret(input, _root)
-        @block.call(input)
+      def interpret(input, parent, _root)
+        @block.call(input, parent)
         input.is_a?(Array) ? input : [input]
       end
     end

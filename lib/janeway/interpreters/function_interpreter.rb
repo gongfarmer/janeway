@@ -25,8 +25,9 @@ module Janeway
       end
 
       # @param input [Array, Hash] the results of processing so far
+      # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, root)
+      def interpret(input, _parent, root)
         params = interpret_function_parameters(@params, input, root)
         function.body.call(*params)
       end
@@ -50,13 +51,13 @@ module Janeway
           type = param_types[i]
           case parameter.node
           when AST::CurrentNode, AST::RootNode
-            result = parameter.interpret(input, root)
+            result = parameter.interpret(input, nil, root)
             if type == :value_type && parameter.node.singular_query?
               deconstruct(result)
             else
               result
             end
-          when AST::Function, AST::StringType then parameter.interpret(input, root)
+          when AST::Function, AST::StringType then parameter.interpret(input, nil, root)
           when String then parameter.value # from a TreeConstructor::Literal
           else
             # invalid parameter type. Function must accept it and return Nothing result

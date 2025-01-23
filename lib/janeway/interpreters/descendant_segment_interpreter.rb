@@ -11,24 +11,27 @@ module Janeway
       # Find all descendants of the current input that match the selector in the DescendantSegment
       #
       # @param input [Array, Hash] the results of processing so far
+      # @param parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
       # @return [Array<AST::Expression>] node list
-      def interpret(input, root)
-        visit(input) do |node|
-          @next.interpret(node, root)
+      def interpret(input, parent, root)
+        visit(input, parent) do |node, parent_of_node|
+          @next.interpret(node, parent_of_node, root)
         end
       end
 
       # Visit all descendants of `input`.
       # Return results of applying `action` on each.
-      def visit(input, &action)
-        results = [yield(input)]
+      # @param input [Array, Hash] the results of processing so far
+      # @param parent [Array, Hash] parent of the input object
+      def visit(input, parent, &action)
+        results = [yield(input, parent)]
 
         case input
         when Array
-          results.concat(input.map { |elt| visit(elt, &action) })
+          results.concat(input.map { |elt| visit(elt, input, &action) })
         when Hash
-          results.concat(input.values.map { |value| visit(value, &action) })
+          results.concat(input.values.map { |value| visit(value, input, &action) })
         else
           input
         end

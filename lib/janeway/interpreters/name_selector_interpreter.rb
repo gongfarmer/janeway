@@ -15,15 +15,16 @@ module Janeway
 
       # Interpret selector on the given input.
       # @param input [Array, Hash] the results of processing so far
+      # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, root)
+      def interpret(input, _parent, root)
         return [] unless input.is_a?(Hash) && input.key?(selector.name)
 
         result = input[selector.name]
         return [result] unless @next
 
         # Forward result to next selector
-        @next.interpret(result, root)
+        @next.interpret(result, input, root)
       end
     end
   end

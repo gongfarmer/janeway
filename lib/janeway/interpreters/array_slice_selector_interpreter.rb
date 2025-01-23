@@ -12,9 +12,10 @@ module Janeway
       #
       # @param selector [ArraySliceSelector]
       # @param input [Array, Hash] the results of processing so far
+      # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
       # @return [Array]
-      def interpret(input, root)
+      def interpret(input, _parent, root)
         return [] unless input.is_a?(Array)
         return [] if selector&.step&.zero? # RFC: When step is 0, no elements are selected.
 
@@ -35,7 +36,7 @@ module Janeway
         node_list = results
         results = []
         node_list.each do |node|
-          results.concat @next.interpret(node, root)
+          results.concat @next.interpret(node, input, root)
         end
         results
       end

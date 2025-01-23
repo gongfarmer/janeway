@@ -27,8 +27,9 @@ module Janeway
 
       # Interpret selector on the input.
       # @param input [Array, Hash] the results of processing so far
+      # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, root)
+      def interpret(input, _parent, root)
         values =
           case input
           when Array then input
@@ -40,7 +41,7 @@ module Janeway
         node_list = []
         values.each do |value|
           # Run filter and interpret result
-          result = @expr.interpret(value, root)
+          result = @expr.interpret(value, nil, root)
           case result
           when TrueClass then node_list << value # comparison test - pass
           when FalseClass then nil # comparison test - fail
@@ -54,7 +55,7 @@ module Janeway
         # Apply child selector to each node in the output node list
         results = []
         node_list.each do |node|
-          results.concat @next.interpret(node, root)
+          results.concat @next.interpret(node, input, root)
         end
         results
       end

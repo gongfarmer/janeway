@@ -13,10 +13,10 @@ module Janeway
       #
       # @param _input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
-      def interpret(_input, root)
+      def interpret(_input, _parent, root)
         return [root] unless @next
 
-        @next.interpret(root, root)
+        @next.interpret(root, nil, root)
       end
     end
   end

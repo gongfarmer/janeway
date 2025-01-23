@@ -27,17 +27,17 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
       # @return [Array]
-      def interpret(input, root)
+      def interpret(input, parent, root)
         # Apply each expression to the input, collect results
         results = []
         @nodes.each do |node|
-          results.concat node.interpret(input, root)
+          results.concat node.interpret(input, parent, root)
         end
 
         # Return results, or forward them to the next selector
         return results unless @next
 
-        @next.interpret(results, root)
+        @next.interpret(results, parent, root)
       end
     end
   end

@@ -14,8 +14,9 @@ module Janeway
       # For anything else, return empty list.
       #
       # @param input [Array, Hash] the results of processing so far
+      # @param parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, root)
+      def interpret(input, _parent, root)
         values =
           case input
           when Array then input
@@ -29,7 +30,7 @@ module Janeway
         # Apply child selector to each node in the output node list
         results = []
         values.each do |value|
-          results.concat @next.interpret(value, root)
+          results.concat @next.interpret(value, input, root)
         end
         results
       end
