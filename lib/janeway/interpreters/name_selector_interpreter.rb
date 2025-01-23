@@ -17,14 +17,15 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, _parent, root)
+      # @param path [Array<String>] elements of normalized path to the current input
+      def interpret(input, _parent, root, path)
         return [] unless input.is_a?(Hash) && input.key?(selector.name)
 
         result = input[selector.name]
         return [result] unless @next
 
         # Forward result to next selector
-        @next.interpret(result, input, root)
+        @next.interpret(result, input, root, path + [selector.name])
       end
     end
   end

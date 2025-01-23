@@ -13,10 +13,11 @@ module Janeway
       #
       # @param _input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
-      def interpret(_input, _parent, root)
+      # @param path [Array<String>] elements of normalized path to the current input
+      def interpret(_input, _parent, root, _path = nil)
         return [root] unless @next
 
-        @next.interpret(root, nil, root)
+        @next.interpret(root, nil, root, ['$'])
       end
     end
   end

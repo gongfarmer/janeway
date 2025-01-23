@@ -4,13 +4,13 @@ require 'janeway'
 
 module Janeway
   describe Interpreter do
-    describe '#interpret_array_slice_selector' do
+    context 'when interpreting a descendant segment' do
       let(:input) { ('a'..'g').to_a }
 
       # CTS "basic, descendant segment, wildcard selector, nested arrays",
       # rubocop: disable RSpec/ExampleLength
       it 'can be followed by wildcard selector' do
-        input = [[[1]], [2]]
+        input = [[[1]], [2], 3]
         expected =
           [
             [
@@ -26,8 +26,9 @@ module Janeway
             ],
             1,
             2,
+            3,
           ]
-        expect(described_class.interpret(input, '$..[*]')).to match_array(expected)
+        expect(described_class.interpret(input, '$..*')).to match_array(expected)
       end
       # rubocop: enable RSpec/ExampleLength
     end

@@ -29,33 +29,67 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, _parent, root)
-        values =
-          case input
-          when Array then input
-          when Hash then input.values
-          else return [] # early exit
-          end
+      # @param path [Array<String>] elements of normalized path to the current input
+      def interpret(input, _parent, root, path)
+        case input
+        when Array then interpret_array(input, root, path)
+        when Hash then interpret_hash(input, root, path)
+        else return [] # early exit
+        end
+      end
 
+      # Interpret selector on the input.
+      # @param input [Hash] the results of processing so far
+      # @param root [Array, Hash] the entire input
+      # @param path [Array<String>] elements of normalized path to the current input
+      def interpret_hash(input, root, path)
         # Apply filter expressions to the input data
         node_list = []
-        values.each do |value|
+        input.each do |key, value|
           # Run filter and interpret result
-          result = @expr.interpret(value, nil, root)
+          result = @expr.interpret(value, nil, root, [])
           case result
-          when TrueClass then node_list << value # comparison test - pass
+          when TrueClass then node_list << [key, value] # comparison test - pass
           when FalseClass then nil # comparison test - fail
-          when Array then node_list << value unless result.empty? # existence test - node list
+          when Array then node_list << [key, value] unless result.empty? # existence test - node list
           else
-            node_list << value # existence test. Null values here == success.
+            node_list << [key, value] # existence test. Null values here == success.
           end
         end
-        return node_list unless @next
+        return node_list.map(&:last) unless @next
 
         # Apply child selector to each node in the output node list
         results = []
-        node_list.each do |node|
-          results.concat @next.interpret(node, input, root)
+        node_list.each do |key, value|
+          results.concat @next.interpret(value, input, root, path + [key])
+        end
+        results
+      end
+
+      # Interpret selector on the input.
+      # @param input [Array] the results of processing so far
+      # @param root [Array, Hash] the entire input
+      # @param path [Array<String>] elements of normalized path to the current input
+      def interpret_array(input, root, path)
+        # Apply filter expressions to the input data
+        node_list = []
+        input.each_with_index do |value, i|
+          # Run filter and interpret result
+          result = @expr.interpret(value, nil, root, [])
+          case result
+          when TrueClass then node_list << [i, value] # comparison test - pass
+          when FalseClass then nil # comparison test - fail
+          when Array then node_list << [i, value] unless result.empty? # existence test - node list
+          else
+            node_list << [i, value] # existence test. Null values here == success.
+          end
+        end
+        return node_list.map(&:last) unless @next
+
+        # Apply child selector to each node in the output node list
+        results = []
+        node_list.each do |i, value|
+          results.concat @next.interpret(value, input, root, path + [i])
         end
         results
       end

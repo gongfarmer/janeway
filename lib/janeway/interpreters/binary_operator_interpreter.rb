@@ -26,16 +26,18 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      def interpret(input, parent, root)
+      # @param path [Array] ignored
+      def interpret(input, parent, root, _path = nil)
+        # FIXME: this branch could be pushed into the constructor, to convert O(n) work to O(1)
         case operator.name
         when :and, :or
           # handle node list for existence check
-          lhs = @left.interpret(input, parent, root)
-          rhs = @right.interpret(input, parent, root)
+          lhs = @left.interpret(input, parent, root, [])
+          rhs = @right.interpret(input, parent, root, [])
         when :equal, :not_equal, :less_than, :greater_than, :less_than_or_equal, :greater_than_or_equal
           # handle node values for comparison check
-          lhs = to_single_value @left.interpret(input, parent, root)
-          rhs = to_single_value @right.interpret(input, parent, root)
+          lhs = to_single_value @left.interpret(input, parent, root, [])
+          rhs = to_single_value @right.interpret(input, parent, root, [])
         else
           raise "Don't know how to handle binary operator #{operator.name.inspect}"
         end

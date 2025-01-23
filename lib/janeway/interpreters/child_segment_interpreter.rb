@@ -26,18 +26,20 @@ module Janeway
       #
       # @param input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
+      # @param path [Array<String>] elements of normalized path to the current input
       # @return [Array]
-      def interpret(input, parent, root)
+      def interpret(input, parent, root, path)
         # Apply each expression to the input, collect results
         results = []
         @nodes.each do |node|
-          results.concat node.interpret(input, parent, root)
+          results.concat node.interpret(input, parent, root, path)
         end
 
         # Return results, or forward them to the next selector
         return results unless @next
 
-        @next.interpret(results, parent, root)
+        # FIXME: I have no idea how to implement pathing here. This does not seem correct
+        @next.interpret(results, parent, root, path)
       end
     end
   end

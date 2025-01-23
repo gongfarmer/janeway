@@ -24,13 +24,14 @@ module Janeway
       #
       # @param input [Array, Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
-      def interpret(input, _parent,  root)
+      # @param path [Array<String>] elements of normalized path to the current input
+      def interpret(input, _parent, root, path)
         return [] unless input.is_a?(Array)
 
         result = input.fetch(selector.value) # raises IndexError if no such index
         return [result] unless @next
 
-        @next.interpret(result, input, root)
+        @next.interpret(result, input, root, path + [selector.value])
       rescue IndexError
         []
       end

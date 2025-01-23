@@ -18,8 +18,8 @@ module Janeway
       end
 
       # @return [Boolean]
-      def interpret(input, parent, root)
-        result = @operand.interpret(input, parent, root)
+      def interpret(input, parent, root, _path)
+        result = @operand.interpret(input, parent, root, [])
         case result
         when Array then result.empty?
         when TrueClass, FalseClass then !result

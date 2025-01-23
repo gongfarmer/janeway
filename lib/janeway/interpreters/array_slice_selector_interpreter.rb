@@ -14,8 +14,9 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
+      # @param path [Array<String>] elements of normalized path to the current input
       # @return [Array]
-      def interpret(input, _parent, root)
+      def interpret(input, _parent, root, path)
         return [] unless input.is_a?(Array)
         return [] if selector&.step&.zero? # RFC: When step is 0, no elements are selected.
 
@@ -23,20 +24,19 @@ module Janeway
         lower = selector.lower_index(input.size)
         upper = selector.upper_index(input.size)
 
-        # Collect values from target indices. Omit the value from the final index.
-        results =
+        # Collect real index values. Omit the final index, since no value is collected for that.
+        indexes =
           if selector.step.positive?
-            lower.step(to: upper - 1, by: selector.step).map { input[_1] }
+            lower.step(to: upper - 1, by: selector.step).to_a
           else
-            upper.step(to: lower + 1, by: selector.step).map { input[_1] }
+            upper.step(to: lower + 1, by: selector.step).to_a
           end
-        return results unless @next
+        return indexes.map { |i| input[i] } unless @next
 
         # Apply child selector to each node in the output node list
-        node_list = results
         results = []
-        node_list.each do |node|
-          results.concat @next.interpret(node, input, root)
+        indexes.each do |i|
+          results.concat @next.interpret(input[i], input, root, path + [i])
         end
         results
       end
