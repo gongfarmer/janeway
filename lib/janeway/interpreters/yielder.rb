@@ -18,12 +18,13 @@ module Janeway
         @yield_to_block =
           if block.arity.negative?
             # Yield values only to an enumerator.
-            proc { |input, _parent, _path| @block.call(input) }
-          elsif block.arity >= 3
+            proc { |value, _parent, _path| @block.call(value) }
+          elsif block.arity > 3
             # Only do the work of constructing the normalized path when it is actually used
-            proc { |input, parent, path| @block.call(input, parent, normalized_path(path)) }
+            proc { |value, parent, path| @block.call(value, parent, path.last, normalized_path(path)) }
           else
-            proc { |input, parent, _path| @block.call(input, parent) }
+            # block arity is 1, 2 or 3. Send all 3.
+            proc { |value, parent, path| @block.call(value, parent, path.last) }
           end
       end
 

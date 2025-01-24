@@ -28,7 +28,7 @@ module Janeway
       @query = query
       @jsonpath = query.jsonpath
       @input = nil
-      @pipeline = query_to_interpreter_pipeline(@query)
+      @pipeline = query_to_interpreter_tree(@query)
     end
 
     # @param input [Array, Hash] object to be searched
@@ -47,24 +47,54 @@ module Janeway
       raise error
     end
 
-    # Append an interpreter onto the end of the pipeline
+    # Append an interpreter onto the end of the pipeline.
     # @param [Interpreters::Base]
     def push(node)
-      @pipeline.last.next = node
+      if @pipeline.last.is_a?(Interpreters::ChildSegmentInterpreter)
+        @pipeline.last.push(node)
+      else
+        @pipeline.last.next = node
+      end
     end
 
     private
 
+    # Build a tree of interpreter classes based on the query's abstract syntax tree.
+    #
+    # Child segments require special handling.
+    # See the detailed explanation at the end of this file.
+    #
     # @return [Interpreters::RootNodeInterpreter]
-    def query_to_interpreter_pipeline(query)
+    def query_to_interpreter_tree(query)
+      # Build an interpreter for each selector
       pipeline =
         query.node_list.map do |node|
           Interpreters::TreeConstructor.ast_node_to_interpreter(node)
         end
+
+      # Link interpreters together
       pipeline.each_with_index do |node, i|
         node.next = pipeline[i + 1]
       end
-      pipeline
+
+      # Child segments which contain multiple selectors are branches in the interpreter tree.
+      #
+      # For every child segment, remove all following interpreters and push
+      # them "inside" the child segment interpreter.
+      #
+      # Work backwards in case there are multiple child segments.
+      # For full explanation see the explanation at the end of this file.
+      selectors = []
+      pipeline.reverse_each do |node|
+        if node.is_a?(Interpreters::ChildSegmentInterpreter)
+          node.push(selectors.shift) until selectors.empty?
+          selectors = [node]
+        else
+          selectors << node
+        end
+      end
+
+      selectors.reverse
     end
 
     # Return an Interpreter::Error with the specified message, include the query.
@@ -76,3 +106,61 @@ module Janeway
     end
   end
 end
+__END__
+= Child Segment Handling
+
+== Interpreter Tree Layout
+
+The interpreter tree is mostly a straight line except for the case of child segments
+(brackets) that contain multiple selectors, eg. "$.store['bicycle', 'book']".
+
+Such child segments are branches in the tree.
+
+In Janeway, child segments that contain only one selector are not represented
+in the AST, only the selector itself is an AST node.
+For the remainder of this explanation, the term 'child segment' refers to child
+segments that contain multiple selectors.
+
+== Child segment evaluation -- original approach and problem
+
+The obvious approach to interpreting a child segment is to send the input to
+each of the selectors, combine the resulting values, and forward that to then
+'next' selector which follows the child segment.
+This is how I originally implemented the Janeway interpeter.
+
+That approach works fine when only values are being collected.
+However Janeway now supports iteration with #each, so each interpretation 
+step carries along some new context information:  the parent (object which
+contains the current input value) and the path (list of array indices or hash
+keys which define the path to the current input).
+
+Interpreting a child segment by interpeting its selectors separately and combining the results
+discards all of that context.  Fully interpreting selectors only returns
+values, not the parent or path data.
+
+== Child segment evaluation -- new approach
+
+Instead, embrace the idea of the child segment being a branch in the tree.
+
+Take the chain of selectors which comes after the child segment, and copy that chain
+onto the selectors inside the child segment.
+
+Consider this jsonpath:
+    $.store['book', 'bicycle'].price
+
+In the first approach, the interpretation tree has a diamond:
+
+             bicycle
+    $ store <          > price
+              book
+
+In the new approach, the interpretation tree splits into two separate branches
+
+              bicycle - price
+    $ store <
+              book - price
+
+This way, the parent and path information is passed down normally to the following selectors.
+
+When a Yielder is pushed onto the interpreter tree, copies of it must be pushed onto
+the end of every branch.

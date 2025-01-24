@@ -23,7 +23,7 @@ module Janeway
       def initialize(val = nil)
         # don't set the instance variable if unused, because it makes the
         # "#inspect" output cleaner in rspec test failures
-        @value = val unless val.nil? # false must be stored though!
+        @value = val unless val.nil? # literal false must be stored though!
       end
 
       # @return [String]

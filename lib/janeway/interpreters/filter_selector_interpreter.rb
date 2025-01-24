@@ -34,7 +34,7 @@ module Janeway
         case input
         when Array then interpret_array(input, root, path)
         when Hash then interpret_hash(input, root, path)
-        else return [] # early exit
+        else [] # early exit
         end
       end
 

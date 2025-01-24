@@ -35,20 +35,18 @@ module Janeway
   #
   # @param query [String] jsonpath query
   # @param input [Hash, Array] ruby object to be searched
-  # @yieldparam [Object] matched value
+  # @yieldparam [Object] value matched by query
+  # @yieldparam [Array, Hash] parent object that contains the value
+  # @yieldparam [String, Integer] hash key or array index of the value within the parent object
+  # @yieldparam [String] normalized jsonpath that uniqely points to this value
   # @return [void]
   def self.each(query, input, &block)
     raise ArgumentError, "Invalid jsonpath query: #{query.inspect}" unless query.is_a?(String)
     unless [Hash, Array, String].include?(input.class)
       raise ArgumentError, "Invalid input, expecting array or hash: #{input.inspect}"
     end
-    return enum_for(:each, query, input) unless block_given?
 
-    ast = Janeway::Parser.parse(query)
-    interpreter = Janeway::Interpreter.new(ast)
-    yielder = Janeway::Interpreters::Yielder.new(&block)
-    interpreter.push(yielder)
-    interpreter.interpret(input)
+    Janeway::Parser.parse(query).each(input, &block)
   end
 end
 

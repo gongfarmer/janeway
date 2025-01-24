@@ -35,7 +35,7 @@ describe Janeway do
       expect(described_class.each('$', {})).to be_a(Enumerator)
     end
 
-    it 'returns an enumerator that returns matched values' do
+    it 'returns an enumerator that enumerates on matched values' do
       input = { 'a' => %w[a b c], 'b' => %w[d e f] }
       expected = [%w[a b c], %w[d e f]]
       enum = described_class.each('$.*', input)
@@ -70,7 +70,7 @@ describe Janeway do
           '$.a.b' => "$['a']['b']",
           '$.a.b.c' => "$['a']['b']['c']",
         }.each do |jsonpath, normalized_path|
-          described_class.each(jsonpath, input) do |_, _, path|
+          described_class.each(jsonpath, input) do |_, _, _, path|
             expect(path).to eq(normalized_path)
           end
         end
@@ -87,13 +87,13 @@ describe Janeway do
         end
 
         it 'yields normalized path for hash keys that need single quotes' do
-          described_class.each('$.o["j j"]', input) do |_, _, path|
+          described_class.each('$.o["j j"]', input) do |_, _, _, path|
             expect(path).to eq("$['o']['j j']")
           end
         end
 
         it 'yields normalized path for hash keys that need double quotes' do
-          described_class.each('$["\'"]', input) do |_, _, path|
+          described_class.each('$["\'"]', input) do |_, _, _, path|
             expect(path).to eq("$['\\'']")
           end
         end
@@ -104,16 +104,17 @@ describe Janeway do
       context 'over an array' do
         let(:input) { %w[a b c] }
 
-        it 'yields the value and also the array that contains the value' do
-          described_class.each('$.*', input) do |value, parent|
+        it 'yields value, array that contains value, and array index' do
+          described_class.each('$.*', input) do |value, parent, index|
             expect(input).to include(value)
             expect(parent).to eq(input)
+            expect(parent[index]).to eq(value)
           end
         end
 
         it 'yields the normalized path' do
           results = []
-          described_class.each('$.*', input) do |_, _, path|
+          described_class.each('$.*', input) do |_, _, _, path|
             results << path
           end
           expect(results).to eq(%w[$[0] $[1] $[2]])
@@ -123,10 +124,11 @@ describe Janeway do
       context 'over a hash' do
         let(:input) { { 'a' => { 'b' => { 'c' => 1 } } } }
 
-        it 'yields the value and also the hash that contains the value' do
-          described_class.each('$.*', input) do |value, parent|
+        it 'yields value, hash that contains value, and hash key' do
+          described_class.each('$.*', input) do |value, parent, key|
             expect(value).to eq({ 'b' => { 'c' => 1 } })
             expect(parent).to eq(input)
+            expect(parent[key]).to eq(value)
           end
         end
 
@@ -136,7 +138,7 @@ describe Janeway do
             '$.*.*' => "$['a']['b']",
             '$.*.*.*' => "$['a']['b']['c']",
           }.each do |jsonpath, normalized_path|
-            described_class.each(jsonpath, input) do |_, _, path|
+            described_class.each(jsonpath, input) do |_, _, _, path|
               expect(path).to eq(normalized_path)
             end
           end
@@ -160,7 +162,7 @@ describe Janeway do
           '$[1]',
           '$[2]',
         ].each do |jsonpath|
-          described_class.each(jsonpath, input) do |_, _, path|
+          described_class.each(jsonpath, input) do |_, _, _, path|
             expect(path).to eq(jsonpath)
           end
         end
@@ -181,7 +183,7 @@ describe Janeway do
 
       it 'yields the normalized path' do
         paths = []
-        described_class.each('$[1:7:2]', input) do |_, _, path|
+        described_class.each('$[1:7:2]', input) do |_, _, _, path|
           paths << path
         end
         expect(paths).to eq(%w[$[1] $[3] $[5]])
@@ -199,15 +201,16 @@ describe Janeway do
       end
 
       it 'yields the value and also the array that contains the value' do
-        described_class.each('$[? @.cost < 15]', input) do |value, parent|
+        described_class.each('$[? @.cost < 15]', input) do |value, parent, key|
           expect(%w[bucket trowel]).to include(value['name'])
           expect(parent).to eq(input)
+          expect(parent[key]).to eq(value)
         end
       end
 
       it 'yields the normalized path' do
         paths = []
-        described_class.each('$[? @.cost < 15]', input) do |_, _, path|
+        described_class.each('$[? @.cost < 15]', input) do |_, _, _, path|
           paths << path
         end
         expect(paths).to eq(%w[$[0] $[3]])
@@ -215,7 +218,7 @@ describe Janeway do
 
       it 'yields the normalized path when there is a following name selector' do
         paths = []
-        described_class.each('$[? @.cost < 15].name', input) do |_, _, path|
+        described_class.each('$[? @.cost < 15].name', input) do |_, _, _, path|
           paths << path
         end
         expect(paths).to eq(%w[$[0]['name'] $[3]['name']])
@@ -231,17 +234,57 @@ describe Janeway do
           ['bucket', { 'name' => 'bucket', 'cost' => 9.99 }],
           [9.99, { 'name' => 'bucket', 'cost' => 9.99 }],
         ]
-        described_class.each('$..*', input) do |value, parent|
+        described_class.each('$..*', input) do |value, parent, index|
           expect(expected).to include([value, parent])
+          expect(value).to eq(parent[index])
         end
       end
 
       it 'yields the normalized path' do
         paths = []
-        described_class.each('$..*', input) do |_, _, path|
+        described_class.each('$..*', input) do |_, _, _, path|
           paths << path
         end
         expected = ['$[0]', "$[0]['name']", "$[0]['cost']"]
+        expect(paths).to eq(expected)
+      end
+    end
+
+    context 'when iterating through a child segment containing multiple selectors' do
+      let(:input) do
+        [
+          { 'name' => 'bucket', 'cost' => 9.99 },
+          { 'name' => 'shovel', 'cost' => 18 },
+          { 'name' => 'hose', 'cost' => 20.50 },
+          { 'name' => 'trowel', 'cost' => 7.44 },
+        ]
+      end
+
+      it 'iterates to the end of all selectors in the child segment' do
+        seen = []
+        described_class.each("$.*['name', 'cost']", input) do |value, parent, key|
+          seen << value
+          expect(value).to eq(parent[key])
+        end
+        expect(seen).to eq(['bucket', 9.99, 'shovel', 18, 'hose', 20.5, 'trowel', 7.44])
+      end
+
+      it 'builds normalized path for every result' do
+        paths = []
+        described_class.each("$.*['name', 'cost']", input) do |_value, _parent, _key, path|
+          paths << path
+        end
+        expected =
+          [
+            "$[0]['name']",
+            "$[0]['cost']",
+            "$[1]['name']",
+            "$[1]['cost']",
+            "$[2]['name']",
+            "$[2]['cost']",
+            "$[3]['name']",
+            "$[3]['cost']",
+          ]
         expect(paths).to eq(expected)
       end
     end
