@@ -21,20 +21,19 @@ module Janeway
           end
       end
 
-      # Child segment has no "next" element because it is a branch in the intepretation tree.
-      # Only the selectors it contains have a "next".
-      # This differs from how child segments are represented in the AST built by the Parser.
-      #
-      # @return [nil]
-      def next
-        nil
-      end
-
       # Append an interpreter onto each of the selector branches
       # @param node [Interpreters::Base]
       def push(node)
+        return unless node
+
+        node.next = nil
         @selectors.each do |selector|
-          find_last(selector).next = node
+          last_node = find_last(selector)
+          if last_node.is_a?(Interpreters::ChildSegmentInterpreter)
+            last_node.push(node.dup)
+          else
+            last_node.next = node.dup
+          end
         end
       end
 
@@ -54,6 +53,16 @@ module Janeway
         end
 
         results
+      end
+
+      # Return hash representation of this interpreter
+      # @return [Hash]
+      def as_json
+        {
+          type: type,
+          selectors: @selectors.map(&:as_json),
+          next: @next&.as_json,
+        }
       end
 
       private

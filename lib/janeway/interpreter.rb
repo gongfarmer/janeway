@@ -31,6 +31,17 @@ module Janeway
       @pipeline = query_to_interpreter_tree(@query)
     end
 
+    # Return multiline JSON string describing the interpreter tree.
+    #
+    # This is not used for parsing / interpretation.
+    # It is intended to represent the interpreter tree to help with debugging.
+    # This format makes the tree structure much clearer than the #inspect output does.
+    #
+    # @return [String]
+    def to_json(options = {})
+      JSON.pretty_generate(@pipeline.first.as_json, *options)
+    end
+
     # @param input [Array, Hash] object to be searched
     # @return [Object]
     def interpret(input)
@@ -48,7 +59,7 @@ module Janeway
     end
 
     # Append an interpreter onto the end of the pipeline.
-    # @param [Interpreters::Base]
+    # @param node [Interpreters::Base]
     def push(node)
       if @pipeline.last.is_a?(Interpreters::ChildSegmentInterpreter)
         @pipeline.last.push(node)
@@ -87,7 +98,8 @@ module Janeway
       selectors = []
       pipeline.reverse_each do |node|
         if node.is_a?(Interpreters::ChildSegmentInterpreter)
-          node.push(selectors.shift) until selectors.empty?
+          node.next = nil
+          node.push(selectors.pop) until selectors.empty?
           selectors = [node]
         else
           selectors << node

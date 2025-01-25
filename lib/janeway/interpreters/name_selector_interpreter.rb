@@ -27,6 +27,12 @@ module Janeway
         # Forward result to next selector
         @next.interpret(result, input, root, path + [selector.name])
       end
+
+      # Return hash representation of this interpreter
+      # @return [Hash]
+      def as_json
+        { type: type, value: selector.name, next: @next&.as_json }
+      end
     end
   end
 end

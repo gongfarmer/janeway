@@ -33,10 +33,29 @@ module Janeway
 
       # Interpret the input, return result or forward to next node.
       #
-      # @param input [Array, Hash] the results of processing so far
-      # @param root [Array, Hash] the entire input
+      # @param _input [Array, Hash] the results of processing so far
+      # @param _root [Array, Hash] the entire input
       def interpret(_input, _root)
         raise NotImplementedError, 'subclass must implement #interpret'
+      end
+
+      # Return hash representation of this selector interpreter
+      # @return [Hash]
+      def as_json
+        if node
+          { type: type, value: node&.value, next: @next&.as_json }
+        else
+          { type: type, next: @next&.as_json }
+        end
+      end
+
+      # @return [AST::Selector] AST node containing this interpreter's data
+      def selector
+        nil # subclass should implement
+      end
+
+      def type
+        self.class.to_s.split('::').last # eg. Janeway::AST::FunctionCall => "FunctionCall"
       end
     end
   end

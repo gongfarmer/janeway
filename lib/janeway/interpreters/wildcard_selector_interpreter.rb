@@ -14,7 +14,7 @@ module Janeway
       # For anything else, return empty list.
       #
       # @param input [Array, Hash] the results of processing so far
-      # @param parent [Array, Hash] parent of the input object
+      # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
       # @param path [Array<String>] elements of normalized path to the current input
       def interpret(input, _parent, root, path)

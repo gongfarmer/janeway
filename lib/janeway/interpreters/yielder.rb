@@ -33,7 +33,7 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param parent [Array, Hash] parent of the input object
       # @param _root [Array, Hash] the entire input
-      # @param path_componenets [Array<String>] components of normalized path to the current input
+      # @param path [Array<String, Integer>] components of normalized path to the current input
       # @yieldparam [Object] matched value
       # @return [Object] input as node list
       def interpret(input, parent, _root, path)
@@ -57,6 +57,11 @@ module Janeway
         # Handle the root identifier separately, because .normalize does not handle those.
         '$' + components[1..].map { NormalizedPath.normalize(_1) }.join
       end
+
+      # Dummy method from Interpreters::Base, allow child segment interpreter to disable the
+      # non-exist 'next' link.
+      # @return [void]
+      def next=(*); end
     end
   end
 end

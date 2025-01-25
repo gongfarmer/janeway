@@ -33,6 +33,15 @@ module Janeway
           expect(seen).to eq(%w[a b c d e f])
         end
 
+        it 'yields value, parent, array index and path' do
+          input = { 'a' => %w[a b c], 'b' => %w[d e f] }
+          query = Parser.parse('$.*.*')
+          query.each(input) do |value, parent, index, path|
+            expect(parent[index]).to eq(value)
+            expect(path).to match(/^\$\['.'\]\[#{index}\]$/)
+          end
+        end
+
         it 'returns an enumerator if no block given' do
           query = Parser.parse('$.*.*')
           expect(query.each({})).to be_an(Enumerator)

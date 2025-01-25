@@ -287,6 +287,33 @@ describe Janeway do
           ]
         expect(paths).to eq(expected)
       end
+
+      it 'collects values from all branches when query contains multiple child segments' do
+        input =
+          {
+            'cars' =>
+              {
+                'honda' => [
+                  { 'name' => 'civic', 'type' => 'sedan' },
+                  { 'name' => 'cr-v', 'type' => 'suv' },
+                  { 'name' => 'pilot', 'type' => 'suv' },
+                  { 'name' => 'accord', 'type' => 'sedan' },
+                ],
+                'toyota' => [
+                  { 'name' => 'corolla', 'type' => 'sedan' },
+                  { 'name' => 'rav-4', 'type' => 'suv' },
+                  { 'name' => 'land cruiser', 'type' => 'truck' },
+                  { 'name' => '4runner', 'type' => 'truck' },
+                ],
+              },
+          }
+        values = described_class.find_all("$.cars['honda', 'toyota'].*['name', 'type']", input)
+        expected = [
+          'civic', 'sedan', 'cr-v', 'suv', 'pilot', 'suv', 'accord', 'sedan',
+          'corolla', 'sedan', 'rav-4', 'suv', 'land cruiser', 'truck', '4runner', 'truck',
+        ]
+        expect(values).to eq(expected)
+      end
     end
   end
 end

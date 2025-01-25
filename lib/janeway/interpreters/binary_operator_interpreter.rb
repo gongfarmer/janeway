@@ -26,7 +26,7 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      # @param path [Array] ignored
+      # @param _path [Array] ignored
       def interpret(input, parent, root, _path = nil)
         # FIXME: this branch could be pushed into the constructor, to convert O(n) work to O(1)
         case operator.name
@@ -57,8 +57,8 @@ module Janeway
       # Any node list is guaranteed not to contain multiple values because the expression that
       # produce it was already verified to be a singular query.
       #
-      # @param node [AST::Expression]
-      # @param input [Object]
+      # @param result [Object] node list, or single value of basic type
+      # @return [String, Integer, nil]
       def to_single_value(result)
         # Return basic types (ie. from AST::Number, AST::StringType, AST::Null)
         return result unless result.is_a?(Array)

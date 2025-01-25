@@ -35,7 +35,10 @@ module Janeway
       # Iterate through each value matched by the JSONPath query.
       #
       # @param input [Hash, Array] ruby object to be searched
-      # @yieldparam [Object] matched value
+      # @yieldparam [Object] value matched by query
+      # @yieldparam [Array, Hash] parent object that contains the value
+      # @yieldparam [String, Integer] hash key or array index of the value within the parent object
+      # @yieldparam [String] normalized jsonpath that uniqely points to this value
       # @return [void]
       def each(input, &block)
         return enum_for(:each, input) unless block_given?

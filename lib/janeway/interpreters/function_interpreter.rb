@@ -18,7 +18,7 @@ module Janeway
         value: [:nodes_type],
       }.freeze
 
-      # @param [AST::Function]
+      # @param function [AST::Function]
       def initialize(function)
         super
         @params = function.parameters.map { |param| TreeConstructor.ast_node_to_interpreter(param) }
@@ -27,7 +27,7 @@ module Janeway
       # @param input [Array, Hash] the results of processing so far
       # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      # @param path [Array<String>] elements of normalized path to the current input
+      # @param _path [Array<String>] elements of normalized path to the current input
       def interpret(input, _parent, root, _path)
         params = interpret_function_parameters(@params, input, root)
         function.body.call(*params)
@@ -42,8 +42,8 @@ module Janeway
       # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-well-typedness-of-function-
       #
       # @param parameters [Array] parameters before evaluation
-      # @param func [String] function name (eg. "length", "count")
       # @param input [Object]
+      # @param root [Array, Hash] the entire input
       # @return [Array] parameters after evaluation
       def interpret_function_parameters(parameters, input, root)
         param_types = FUNCTION_PARAMETER_TYPES[function.name.to_sym]

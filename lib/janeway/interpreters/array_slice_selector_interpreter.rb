@@ -10,7 +10,6 @@ module Janeway
 
       # Filter the input by applying the array slice selector.
       #
-      # @param selector [ArraySliceSelector]
       # @param input [Array, Hash] the results of processing so far
       # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input

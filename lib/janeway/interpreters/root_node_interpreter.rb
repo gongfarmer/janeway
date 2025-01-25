@@ -12,8 +12,9 @@ module Janeway
       # Start an expression chain using the entire, unfiltered input.
       #
       # @param _input [Array, Hash] the results of processing so far
+      # @param _parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
-      # @param path [Array<String>] elements of normalized path to the current input
+      # @param _path [Array<String>] elements of normalized path to the current input
       def interpret(_input, _parent, root, _path = nil)
         return [root] unless @next
 

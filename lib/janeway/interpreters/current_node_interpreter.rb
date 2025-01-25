@@ -18,7 +18,8 @@ module Janeway
       # If the selector did not match any node, the array may be empty.
       # If there was no selector, then the current input node is returned in the array.
       #
-      # @param _input [Array, Hash] the results of processing so far
+      # @param input [Array, Hash] the results of processing so far
+      # @param parent [Array, Hash] parent of the input object
       # @param root [Array, Hash] the entire input
       # @param _path [Array] ignored
       # @return [Array] Node List containing all results from evaluating this node's selectors.
