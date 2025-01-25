@@ -34,6 +34,22 @@ module Janeway
           raise "Unknown AST expression: #{expr.inspect}"
         end
       end
+
+      def self.ast_node_to_deleter(expr)
+        case expr
+        when AST::IndexSelector then IndexSelectorDeleter.new(expr)
+        when AST::ArraySliceSelector then ArraySliceSelectorDeleter.new(expr)
+        when AST::NameSelector then NameSelectorDeleter.new(expr)
+        when AST::FilterSelector then FilterSelectorDeleter.new(expr)
+        when AST::WildcardSelector then WildcardSelectorDeleter.new(expr)
+        when AST::ChildSegment then ChildSegmentDeleter.new(expr)
+        when AST::RootNode then RootNodeDeleter.new(expr)
+
+        when nil then nil # caller has no @next node
+        else
+          raise "Unknown AST expression: #{expr.inspect}"
+        end
+      end
     end
   end
 end

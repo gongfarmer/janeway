@@ -2,6 +2,9 @@
 
 require 'janeway'
 
+# TODO: move most of these tests into smaller test files in spec/lib/janeway/intepreters
+# Also add tests for JSON conversion of interpreter tree
+
 describe Janeway do
   describe '.each' do
     it 'yields one input value from a singular query' do

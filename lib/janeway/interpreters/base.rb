@@ -39,6 +39,11 @@ module Janeway
         raise NotImplementedError, 'subclass must implement #interpret'
       end
 
+      # @return [String]
+      def to_s
+        @node.to_s
+      end
+
       # Return hash representation of this selector interpreter
       # @return [Hash]
       def as_json

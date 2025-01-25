@@ -48,6 +48,14 @@ module Janeway
 
     Janeway::Parser.parse(query).each(input, &block)
   end
+
+  # Delete the values matched by the query
+  #
+  # @param query [String] jsonpath query
+  # @param input [Hash, Array] ruby object to be searched
+  def self.delete(query, input)
+    Janeway::Parser.parse(query).delete(input)
+  end
 end
 
 # Require ruby source files in the given dir. Do not recurse to subdirs.

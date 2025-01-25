@@ -12,6 +12,13 @@ module Janeway
     # and a key that does not exist ([])
     class NameSelectorInterpreter < Base
       alias selector node
+      attr_reader :name
+
+      # @param selector [AST::NameSelector]
+      def initialize(selector)
+        super
+        @name = selector.name
+      end
 
       # Interpret selector on the given input.
       # @param input [Array, Hash] the results of processing so far
@@ -19,19 +26,19 @@ module Janeway
       # @param root [Array, Hash] the entire input
       # @param path [Array<String>] elements of normalized path to the current input
       def interpret(input, _parent, root, path)
-        return [] unless input.is_a?(Hash) && input.key?(selector.name)
+        return [] unless input.is_a?(Hash) && input.key?(name)
 
-        result = input[selector.name]
+        result = input[name]
         return [result] unless @next
 
         # Forward result to next selector
-        @next.interpret(result, input, root, path + [selector.name])
+        @next.interpret(result, input, root, path + [name])
       end
 
       # Return hash representation of this interpreter
       # @return [Hash]
       def as_json
-        { type: type, value: selector.name, next: @next&.as_json }
+        { type: type, value: name, next: @next&.as_json }
       end
     end
   end

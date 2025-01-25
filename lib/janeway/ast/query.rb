@@ -43,9 +43,15 @@ module Janeway
       def each(input, &block)
         return enum_for(:each, input) unless block_given?
 
-        interpreter = Janeway::Interpreter.new(self)
-        interpreter.push Janeway::Interpreters::Yielder.new(&block)
+        interpreter = Janeway::Interpreter.new(self, as: :iterator, &block)
         interpreter.interpret(input)
+      end
+
+      # Delete each value matched by the JSONPath query.
+      #
+      # @param input [Hash, Array] ruby object to be searched
+      def delete(input)
+        Janeway::Interpreter.new(self, as: :deleter).interpret(input)
       end
 
       def to_s

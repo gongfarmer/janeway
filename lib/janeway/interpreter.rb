@@ -11,6 +11,7 @@ module Janeway
   # It should be created for a single query and then discarded.
   class Interpreter
     attr_reader :jsonpath, :output
+    include Interpreters
 
     # Interpret a query on the given input, return result
     # @param input [Hash, Array]
@@ -22,13 +23,17 @@ module Janeway
     end
 
     # @param query [AST::Query] abstract syntax tree of the jsonpath query
-    def initialize(query)
+    def initialize(query, as: :finder, &block)
       raise ArgumentError, "expect AST::Query, got #{query.inspect}" unless query.is_a?(AST::Query)
+      unless %i[finder iterator deleter].include?(as)
+        raise ArgumentError, "invalid interpreter type: #{as.inspect}" 
+      end
 
       @query = query
+      @type = as
       @jsonpath = query.jsonpath
       @input = nil
-      @pipeline = query_to_interpreter_tree(@query)
+      @root = query_to_interpreter_tree(@query, &block)
     end
 
     # Return multiline JSON string describing the interpreter tree.
@@ -39,7 +44,7 @@ module Janeway
     #
     # @return [String]
     def to_json(options = {})
-      JSON.pretty_generate(@pipeline.first.as_json, *options)
+      JSON.pretty_generate(@root.as_json, *options)
     end
 
     # @param input [Array, Hash] object to be searched
@@ -50,22 +55,12 @@ module Janeway
         return [] # can't query on any other types, but need to check because a string is also valid json
       end
 
-      @pipeline.first.interpret(nil, nil, input)
+      @root.interpret(nil, nil, input, [])
     rescue StandardError => e
       # Error during interpretation. Convert it to a Janeway::Error and include the query in the message
       error = err(e.message)
       error.set_backtrace e.backtrace
       raise error
-    end
-
-    # Append an interpreter onto the end of the pipeline.
-    # @param node [Interpreters::Base]
-    def push(node)
-      if @pipeline.last.is_a?(Interpreters::ChildSegmentInterpreter)
-        @pipeline.last.push(node)
-      else
-        @pipeline.last.next = node
-      end
     end
 
     private
@@ -76,16 +71,22 @@ module Janeway
     # See the detailed explanation at the end of this file.
     #
     # @return [Interpreters::RootNodeInterpreter]
-    def query_to_interpreter_tree(query)
+    def query_to_interpreter_tree(query, &block)
       # Build an interpreter for each selector
-      pipeline =
+      interpreters =
         query.node_list.map do |node|
           Interpreters::TreeConstructor.ast_node_to_interpreter(node)
         end
 
+      # Append iterotor / deleter as needed, to support #each, #delete operations
+      case @type
+      when :iterator then interpreters.push(Yielder.new(&block))
+      when :deleter then interpreters.push make_deleter(interpreters.pop)
+      end
+
       # Link interpreters together
-      pipeline.each_with_index do |node, i|
-        node.next = pipeline[i + 1]
+      interpreters.each_with_index do |node, i|
+        node.next = interpreters[i + 1]
       end
 
       # Child segments which contain multiple selectors are branches in the interpreter tree.
@@ -96,7 +97,7 @@ module Janeway
       # Work backwards in case there are multiple child segments.
       # For full explanation see the explanation at the end of this file.
       selectors = []
-      pipeline.reverse_each do |node|
+      interpreters.reverse_each do |node|
         if node.is_a?(Interpreters::ChildSegmentInterpreter)
           node.next = nil
           node.push(selectors.pop) until selectors.empty?
@@ -106,7 +107,13 @@ module Janeway
         end
       end
 
-      selectors.reverse
+      selectors.last
+    end
+
+    # Make a Deleter that will delete the results matched by a Selector.
+    # @param interpreter [Interpreters::Base] interpeter subclass
+    def make_deleter(interpreter)
+      TreeConstructor.ast_node_to_deleter(interpreter.node)
     end
 
     # Return an Interpreter::Error with the specified message, include the query.
