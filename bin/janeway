@@ -21,6 +21,7 @@ HELP = <<~HELP_TEXT.freeze
 
     FILENAME is the path to a JSON file to use as input.
     Alternately, input JSON can be provided on STDIN.
+    If input is not provided then the query is just checked for correctness.
 
     For an introduction to JsonPath, see https://goessner.net/articles/JsonPath/
     For the complete reference, see https://www.rfc-editor.org/info/rfc9535
@@ -74,8 +75,8 @@ end
 def read_query(path, argv)
   return File.read(path).strip if path
 
-  query = argv.find { |arg| arg.start_with?('$') }
-  abort('No JsonPath query received, provide one on the command line.') unless query
+  query = argv.first
+  abort('No JSONPath query received, provide one on the command line.') unless query
 
   argv.delete(query)
   query
@@ -91,7 +92,7 @@ def read_input(path)
     elsif !$stdin.tty?
       $stdin.read
     else
-      abort('No input JSON provided. Provide a filename or pipe it to STDIN.')
+      return # no input json provided
     end
   parse_json(json)
 end
@@ -108,8 +109,19 @@ rescue JSON::JSONError => e
   abort "Input is not valid JSON: #{msg}"
 end
 
+# Just pares the query ane then exit.
+# Useful for testing whether a query is valid.
+# @param query [String] jsonpath
+def parse_query_and_exit(query)
+  Janeway.compile(query)
+  puts 'Query is valid. Provide input json to run the query.'
+  exit(0)
+end
+
 # @param options [Options]
 def main(options)
+  parse_query_and_exit(options.query) unless options.input
+
   results = Janeway.find_all(options.query, options.input)
 
   if options.compact_output

@@ -22,7 +22,7 @@ module Janeway
 
     def detailed_message
       msg = "Error: #{message}\nQuery: #{query}\n"
-      msg += "#{' ' * location.col}^" if @location
+      msg += "       #{' ' * location.col}^" if @location
       msg
     end
   end
