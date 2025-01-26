@@ -33,7 +33,7 @@ HELP = <<~HELP_TEXT.freeze
 HELP_TEXT
 
 # Command-line options
-Options = Struct.new(:query, :query_file, :input, :compact_output, :verbose)
+Options = Struct.new(:query, :query_file, :input, :compact_output, :delete, :verbose)
 
 # Parse the command-line arguments.
 # This includes both bare words and hyphenated options.
@@ -61,6 +61,7 @@ def parse_options(argv)
 
     opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
     opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
+    opts.on('-d', '--delete', 'Print the input, with matching values deleted') { options.delete = true }
     opts.on('--version', 'Show version number') { abort(Janeway::VERSION) }
     opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
   end
@@ -75,7 +76,8 @@ end
 def read_query(path, argv)
   return File.read(path).strip if path
 
-  query = argv.first
+  # Assume query is the first arg that is not a filename
+  query = argv.reject { File.exist?(_1) }.first
   abort('No JSONPath query received, provide one on the command line.') unless query
 
   argv.delete(query)
@@ -122,7 +124,17 @@ end
 def main(options)
   parse_query_and_exit(options.query) unless options.input
 
-  results = Janeway.find_all(options.query, options.input)
+  if options.delete
+    results = Janeway.delete(options.query, options.input)
+    if options.compact_output
+      puts JSON.generate(options.input)
+    else
+      puts JSON.pretty_generate(options.input)
+    end
+    exit(0)
+  else
+    results = Janeway.find_all(options.query, options.input)
+  end
 
   if options.compact_output
     puts JSON.generate(results)
