@@ -22,11 +22,11 @@ module Janeway
       new(ast).interpret(input)
     end
 
-    # @param query [AST::Query] abstract syntax tree of the jsonpath query
+    # @param query [Query] abstract syntax tree of the jsonpath query
     def initialize(query, as: :finder, &block)
-      raise ArgumentError, "expect AST::Query, got #{query.inspect}" unless query.is_a?(AST::Query)
+      raise ArgumentError, "expect Query, got #{query.inspect}" unless query.is_a?(Query)
       unless %i[finder iterator deleter].include?(as)
-        raise ArgumentError, "invalid interpreter type: #{as.inspect}" 
+        raise ArgumentError, "invalid interpreter type: #{as.inspect}"
       end
 
       @query = query

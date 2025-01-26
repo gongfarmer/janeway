@@ -29,7 +29,7 @@ module Janeway
     }.freeze
 
     # @param jsonpath [String] jsonpath query to be lexed and parsed
-    # @return [AST::Query]
+    # @return [Query]
     def self.parse(jsonpath)
       raise ArgumentError, "expect jsonpath string, got #{jsonpath.inspect}" unless jsonpath.is_a?(String)
 
@@ -46,7 +46,7 @@ module Janeway
     end
 
     # Parse the token list and create an Abstract Syntax Tree
-    # @return [AST::Query]
+    # @return [Query]
     def parse
       consume
       raise err('JsonPath queries must start with root identifier "$"') unless current.type == :root
@@ -58,7 +58,7 @@ module Janeway
         raise err("Unrecognized expressions after query: #{remaining}")
       end
 
-      AST::Query.new(root_node, @jsonpath)
+      Query.new(root_node, @jsonpath)
     end
 
     private
