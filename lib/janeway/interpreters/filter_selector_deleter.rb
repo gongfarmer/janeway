@@ -9,7 +9,7 @@ module Janeway
       # Interpret selector on the input.
       # @param input [Hash] the results of processing so far
       # @param root [Array, Hash] the entire input
-      # @param path [Array<String>] elements of normalized path to the current input
+      # @param _path [Array<String>] elements of normalized path to the current input
       def interpret_hash(input, root, _path)
         # Apply filter expressions to the input data
         results = []
@@ -34,7 +34,7 @@ module Janeway
       # Interpret selector on the input.
       # @param input [Array] the results of processing so far
       # @param root [Array, Hash] the entire input
-      # @param path [Array<String>] elements of normalized path to the current input
+      # @param _path [Array<String>] elements of normalized path to the current input
       def interpret_array(input, root, _path)
         # Apply filter expressions to the input data
         results = []

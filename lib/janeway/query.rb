@@ -23,34 +23,12 @@ module Janeway
       @jsonpath = jsonpath
     end
 
-    # Use this Query to search the input, and return the results.
+    # Combine this query with input to make an Enumerator.
+    # This can be used to iterate over results with #each, #map, etc.
     #
-    # @param input [Object] ruby object to be searched
-    # @return [Array] all matched objects
-    def find_all(input)
-      Janeway::Interpreter.new(self).interpret(input)
-    end
-
-    # Iterate through each value matched by the JSONPath query.
-    #
-    # @param input [Hash, Array] ruby object to be searched
-    # @yieldparam [Object] value matched by query
-    # @yieldparam [Array, Hash] parent object that contains the value
-    # @yieldparam [String, Integer] hash key or array index of the value within the parent object
-    # @yieldparam [String] normalized jsonpath that uniqely points to this value
-    # @return [void]
-    def each(input, &block)
-      return enum_for(:each, input) unless block_given?
-
-      interpreter = Janeway::Interpreter.new(self, as: :iterator, &block)
-      interpreter.interpret(input)
-    end
-
-    # Delete each value matched by the JSONPath query.
-    #
-    # @param input [Hash, Array] ruby object to be searched
-    def delete(input)
-      Janeway::Interpreter.new(self, as: :deleter).interpret(input)
+    # @return [Janeway::Enumerator]
+    def on(input)
+      Janeway::Enumerator.new(self, input)
     end
 
     def to_s

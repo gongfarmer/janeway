@@ -10,8 +10,8 @@ module Janeway
       #
       # @param input [Array, Hash] the results of processing so far
       # @param _parent [Array, Hash] parent of the input object
-      # @param root [Array, Hash] the entire input
-      # @param path [Array<String>] elements of normalized path to the current input
+      # @param _root [Array, Hash] the entire input
+      # @param _path [Array<String>] elements of normalized path to the current input
       # @return [Array]
       def interpret(input, _parent, _root, _path)
         return [] unless input.is_a?(Array)

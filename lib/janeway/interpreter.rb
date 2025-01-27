@@ -32,7 +32,6 @@ module Janeway
       @query = query
       @type = as
       @jsonpath = query.jsonpath
-      @input = nil
       @root = query_to_interpreter_tree(@query, &block)
     end
 
@@ -50,8 +49,7 @@ module Janeway
     # @param input [Array, Hash] object to be searched
     # @return [Object]
     def interpret(input)
-      @input = input
-      unless @input.is_a?(Hash) || @input.is_a?(Array)
+      unless input.is_a?(Hash) || input.is_a?(Array)
         return [] # can't query on any other types, but need to check because a string is also valid json
       end
 

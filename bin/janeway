@@ -124,8 +124,9 @@ end
 def main(options)
   parse_query_and_exit(options.query) unless options.input
 
+  enum = Janeway.on(options.query, options.input)
   if options.delete
-    results = Janeway.delete(options.query, options.input)
+    results = enum.delete
     if options.compact_output
       puts JSON.generate(options.input)
     else
@@ -133,7 +134,7 @@ def main(options)
     end
     exit(0)
   else
-    results = Janeway.find_all(options.query, options.input)
+    results = enum.find_all
   end
 
   if options.compact_output

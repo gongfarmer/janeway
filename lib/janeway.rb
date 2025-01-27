@@ -21,6 +21,18 @@ module Janeway
     Janeway::Interpreter.new(ast).interpret(input)
   end
 
+  # Pair a jsonpath query with data to make an enumerator.
+  # This can be used to iterate over results with #each, #map an other standard
+  # ruby methods.
+  #
+  # @param jsonpath [String] jsonpath query
+  # @param data [Array, Hash] input data
+  # @return [Janeway::Enumerator]
+  def self.on(jsonpath, data)
+    query = compile(jsonpath)
+    Janeway::Enumerator.new(query, data)
+  end
+
   # Compile a JSONPath query into an Abstract Syntax Tree.
   #
   # This can be used and re-used later on multiple inputs.
@@ -29,32 +41,6 @@ module Janeway
   # @return [Janeway::AST::Query]
   def self.compile(query)
     Janeway::Parser.parse(query)
-  end
-
-  # Iterate through each value matched by the JSONPath query.
-  #
-  # @param query [String] jsonpath query
-  # @param input [Hash, Array] ruby object to be searched
-  # @yieldparam [Object] value matched by query
-  # @yieldparam [Array, Hash] parent object that contains the value
-  # @yieldparam [String, Integer] hash key or array index of the value within the parent object
-  # @yieldparam [String] normalized jsonpath that uniqely points to this value
-  # @return [void]
-  def self.each(query, input, &block)
-    raise ArgumentError, "Invalid jsonpath query: #{query.inspect}" unless query.is_a?(String)
-    unless [Hash, Array, String].include?(input.class)
-      raise ArgumentError, "Invalid input, expecting array or hash: #{input.inspect}"
-    end
-
-    Janeway::Parser.parse(query).each(input, &block)
-  end
-
-  # Delete the values matched by the query
-  #
-  # @param query [String] jsonpath query
-  # @param input [Hash, Array] ruby object to be searched
-  def self.delete(query, input)
-    Janeway::Parser.parse(query).delete(input)
   end
 end
 
