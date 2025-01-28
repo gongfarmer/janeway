@@ -8,14 +8,14 @@ require 'janeway'
 
 shared_examples 'a query that returns a result' do |test_name, selector, input, expected|
   it "returns the expected result for #{test_name}" do
-    results = Janeway.find_all(selector, input)
+    results = Janeway.on(selector, input).search
     expect(results).to eq(expected)
   end
 end
 
 shared_examples 'a query that returns a non-deterministic result' do |test_name, selector, input, expected|
   it "returns an expected result for #{test_name}" do
-    results = Janeway.find_all(selector, input)
+    results = Janeway.on(selector, input).search
     expect(expected).to include(results)
   end
 end

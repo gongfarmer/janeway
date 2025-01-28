@@ -170,7 +170,7 @@ module Janeway
     def lex_delimited_string(delimiter)
       allowed_delimiters = %w[' "]
       # the "other" delimiter char, which is not currently being treated as a delimiter
-      non_delimiter = allowed_delimiters.reject { _1 == delimiter }.first
+      non_delimiter = allowed_delimiters.reject { |char| char == delimiter }.first
 
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?

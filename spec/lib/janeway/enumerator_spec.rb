@@ -303,7 +303,7 @@ module Janeway
                   ],
                 },
             }
-          values = Janeway.on("$.cars['honda', 'toyota'].*['name', 'type']", input).find_all
+          values = Janeway.on("$.cars['honda', 'toyota'].*['name', 'type']", input).search
           expected = [
             'civic', 'sedan', 'cr-v', 'suv', 'pilot', 'suv', 'accord', 'sedan',
             'corolla', 'sedan', 'rav-4', 'suv', 'land cruiser', 'truck', '4runner', 'truck',

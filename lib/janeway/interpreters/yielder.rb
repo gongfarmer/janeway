@@ -62,6 +62,11 @@ module Janeway
       # non-exist 'next' link.
       # @return [void]
       def next=(*); end
+
+      # @return [Hash]
+      def as_json
+        { type: self.class.to_s.split('::').last }
+      end
     end
   end
 end

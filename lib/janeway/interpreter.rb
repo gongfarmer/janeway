@@ -128,7 +128,7 @@ __END__
 
 == Interpreter Tree Layout
 
-The interpreter tree is mostly a straight line except for the case of child segments
+The interpreter tree is a straight line of filter into filter, except for the case of child segments
 (brackets) that contain multiple selectors, eg. "$.store['bicycle', 'book']".
 
 Such child segments are branches in the tree.

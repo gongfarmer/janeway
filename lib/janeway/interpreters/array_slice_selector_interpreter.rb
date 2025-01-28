@@ -39,6 +39,11 @@ module Janeway
         end
         results
       end
+
+      # @return [Hash]
+      def as_json
+        { type: type, value: node.to_s, next: @next&.as_json }.compact
+      end
     end
   end
 end

@@ -48,9 +48,9 @@ module Janeway
       # @return [Hash]
       def as_json
         if node
-          { type: type, value: node&.value, next: @next&.as_json }
+          { type: type, value: node&.value, next: @next&.as_json }.compact
         else
-          { type: type, next: @next&.as_json }
+          { type: type, next: @next&.as_json }.compact
         end
       end
 

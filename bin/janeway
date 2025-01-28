@@ -134,7 +134,7 @@ def main(options)
     end
     exit(0)
   else
-    results = enum.find_all
+    results = enum.search
   end
 
   if options.compact_output

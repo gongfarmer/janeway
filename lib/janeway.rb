@@ -11,16 +11,6 @@ module Janeway
     INTEGER_MAX = 9_007_199_254_740_991
   end
 
-  # Apply a JSONPath query to the input, and return all matched values.
-  #
-  # @param query [String] JSONPath query
-  # @param input [Hash, Array] ruby object to be searched
-  # @return [Array] all matched objects
-  def self.find_all(query, input)
-    ast = compile(query)
-    Janeway::Interpreter.new(ast).interpret(input)
-  end
-
   # Pair a jsonpath query with data to make an enumerator.
   # This can be used to iterate over results with #each, #map an other standard
   # ruby methods.
@@ -35,7 +25,13 @@ module Janeway
 
   # Compile a JSONPath query into an Abstract Syntax Tree.
   #
-  # This can be used and re-used later on multiple inputs.
+  # This can be combined with inputs (using #on) to create Enumerators.
+  # @example
+  #     query = Janeway.compile('$.store.books[? length(@.title) > 20]')
+  #     long_title_books = query.on(local_json).search
+  #     query.on(remote_json).each do |book|
+  #       long_title_books << book
+  #     end
   #
   # @param query [String] jsonpath query
   # @return [Janeway::AST::Query]

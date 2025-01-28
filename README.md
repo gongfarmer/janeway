@@ -8,8 +8,8 @@ This does for JSON the same job that XPath does for XML.
 
 This project includes:
 
-    * command-line tool to run jsonpath queries on a JSON input
     * ruby library to run jsonpath queries on a JSON input
+    * command-line tool to do the same
 
 **Contents**
 
@@ -23,7 +23,7 @@ This project includes:
 
 Install the gem from the command-line:
 ```
-    gem install janeway-jsonpath`
+    gem install janeway-jsonpath
 ```
 
 or add it to your Gemfile:
@@ -41,45 +41,91 @@ Use single quotes around the JSON query to avoid shell interaction.
 Example:
 
 ```
-    $ janeway '$..book[?(@.price<10)]' example.json
-    [
-      {
-        "category": "reference",
-        "author": "Nigel Rees",
-        "title": "Sayings of the Century",
-        "price": 8.95
-      },
-      {
-        "category": "fiction",
-        "author": "Herman Melville",
-        "title": "Moby Dick",
-        "isbn": "0-553-21311-3",
-        "price": 8.99
+    $ cat store.json
+    { "store": {
+        "book": [
+          { "category": "reference",
+            "author": "Nigel Rees",
+            "title": "Sayings of the Century",
+            "price": 8.95
+          },
+          { "category": "fiction",
+            "author": "Evelyn Waugh",
+            "title": "Sword of Honour",
+            "price": 12.99
+          },
+          { "category": "fiction",
+            "author": "Herman Melville",
+            "title": "Moby Dick",
+            "isbn": "0-553-21311-3",
+            "price": 8.99
+          },
+          { "category": "fiction",
+            "author": "J. R. R. Tolkien",
+            "title": "The Lord of the Rings",
+            "isbn": "0-395-19395-8",
+            "price": 22.99,
+            "value": true
+          }
+        ],
+        "bicycle": {
+          "color": "red",
+          "price": 399
+        }
       }
+    }
+
+
+    ### Find and return matching values
+    $ janeway  "\$..book[?(@['price'] == 8.95 || @['price'] == 8.99)].title" store.json
+    [
+      "Sayings of the Century",
+      "Moby Dick"
     ]
+
+    ### Delete matching values from the input, print what remains
+    $ janeway -d '$.store.book' store.json
+    {
+      "store": {
+        "bicycle": {
+          "color": "red",
+          "price": 399
+        }
+      }
+    }
 ```
 
 You can also pipe JSON into it:
 ```
-    $ cat example.json | janeway '$..book[?(@.price<10)]'
+    $ cat store.json | janeway '$..book[?(@.price<10)]'
 ```
 
 See the help message for more capabilities: `janeway --help`
 
 #### Janeway ruby libarary
 
-Here's an example of using Janeway to execute a JSONPath query in ruby code:
+Here's an example of ruby code using Janeway to find values from a JSON document:
+To use the Janeway library in ruby code, providing a jsonpath query and an input object (Hash or Array) to search.
 ```ruby
-require 'janeway'
-require 'json'
+    require 'janeway'
+    require 'json'
 
-data = JSON.parse(File.read(ARGV.first))
-results = Janeway.find_all('$..book[?(@.price<10)]', data)
+    data = JSON.parse(File.read(ARGV.first))
+    Janeway.on('$.store.book[0].title', data)
+```
+This returns an Enumerator, which offers instance methods for using the query
+to operate on matching values in the input object.
+
+*#search*
+
+Returns all values that match the query.
+
+```ruby
+    results = Janeway.on('$..book[?(@.price<10)]', data).find_all
+    # Returns every book in the store cheaper than $10
 ```
 
-Alternatively, compile the query once, and share it between threads or ractors.
-
-The Janeway::AST::Query object is not modified after parsing, so it is easy to freeze and share concurrently.
+Alternatively, compile the query once, and share it between threads or ractors with different data sources:
 
 ```ruby
     # Create ractors with their own data sources
@@ -88,13 +134,137 @@ The Janeway::AST::Query object is not modified after parsing, so it is easy to f
         Ractor.new(index) do |i|
           query = receive
           data = JSON.parse File.read("input-file-#{i}.json")
-          puts query.find_all(data)
+          puts query.on(data).find_all
         end
       end
 
     # Construct JSONPath query object and send it to each ractor
     query = Janeway.compile('$..book[?(@.price<10)]')
     ractors.each { |ractor| ractor.send(query).take }
+```
+
+*#each*
+
+Iterates through matches one by one, without holding the entire set in memory.
+
+Janeway's #each iteration is particularly powerful, as it provides context for each match.
+
+The matched value is yielded:
+```ruby
+    data = {
+        'birds' => ['eagle', 'storck', 'cormorant'] }
+        'dogs' => ['poodle', 'pug', 'saint bernard'] },
+    }
+    Janeway.on('$.birds.*', data).each do |bird|
+      puts "the bird is a #{bird}"
+    end
+```
+
+This allows the matched value to be modified in place:
+```ruby
+    Janeway.on('$.birds[? @=="storck"]', data).each do |bird|
+      bird.gsub!('ck', 'k') # Fix a typo: "storck" => "stork"
+    end
+    # input list is now ['eagle', 'stork', 'cormorant']
+```
+
+However, this is not enough to replace the matched value:
+```ruby
+    Janeway.on('$.birds', data).each do |bird|
+      bird = "bald eagle" if bird == 'eagle'
+      # local variable 'bird' now points to a new value, but the original list is unchanged
+    end
+    # input list is still ['eagle', 'storck', 'cormorant']
+```
+
+The second and third yield parameters are the object that contains the value, and the array index or hash key of the value.
+This allows the list or hash to be modified:
+```ruby
+    Janeway.on('$.birds[? @=="eagle"]', data).each do |_bird, parent, index|
+      parent[index] = "golden eagle"
+    end
+    # input list is now ['golden eagle', 'storck', 'cormorant']
+```
+
+Lastly, the #each iterator's fourth yield parameter is the [normalized path](https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths) to the matched value.
+This is a jsonpath query string that uniquely points to the matched value.
+
+```ruby
+    # Collect the normalized path of every object in the input, at all levels
+    paths = []
+    Janeway.on('$..*', data).each do |_bird, _parent, _index, path| do
+        paths << path
+    end
+    pp paths
+    # ["$['birds']", "$['dogs']", "$['birds'][0]", "$['birds'][1]", "$['birds'][2]", "$['dogs'][0]", "$['dogs'][1]", "$['dogs'][2]"]
+```
+
+*#delete*
+
+The '#delete' method deletes matched values from the input.
+```ruby
+    # delete any bird whose name is "eagle" or starts with "s"
+    Janeway.on('$.birds[? @=="eagle" || search(@, "^s")]', data).delete
+    # input bird list is now ['cormorant']
+
+    # delete all dog names
+    Janeway.on('$.dogs.*', data).delete
+    # dog list is now []
+```
+
+
+The `Janeway.on` and `Janeway::Query#on` methods return an enumerator, so you can use the usual
+ruby enumerator methods, such as:
+* #map
+Return the matched elements, modified
+
+```ruby
+    # take a dollar off every price in the store
+    sale_prices = Janeway.on('$.store..price', data).map { |price| price - 1 }
+```
+
+* #select (alias #find_all)
+
+Return only values that match the JSONPath query and also return a truthy value from the block.
+
+This solves a common JSON problem: You want to do a numeric comparison on a value in your JSON, but the JSON value is stored as a string type.
+
+```ruby
+    # Poorly serialized, the prices are strings
+    data =
+      { "store" => {
+          "book" => [
+             { "title" => "Sayings of the Century", "price" => "8.95" },
+             { "title" => "Sword of Honour", "price" => "12.99" },
+             { "title" => "Moby Dick", "price" => "8.99" },
+             { "title" => "The Lord of the Rings", "price" => "22.99" },
+          ]
+        }
+      }
+
+    # Can't use a filter query with a numeric comparison on a string price
+    Janeway.on('$.store.book[? @.price > 10.00]', data).find_all
+    # result: []
+
+    # Solve the problem with ruby by filtering with #select and converting string to number:
+    Janeway.on('$.store.book.*', data).select { |book| book['price'].to_f > 10 }
+    # result: [{"title" => "Sword of Honour", "price" => "12.99"}, {"title" => "The Lord of the Rings", "price" => "22.99"}]
+```
+
+* #reject
+
+Return only values that match the JSONPath query and also return false from the block.
+
+* #filter_map
+Combines #select and #map.
+Return values that match the jsonpath query and return truthy values from the block.
+Instead of returning the value from the data, return the result of the block.
+
+* #find 
+
+Return the first value that matches the jsonpath query and also matches the
+```ruby
+    Janeway.on('$.store.book[? @.price >= 10.99]', data).find { |book| book['title'].start_with?('T') }
 ```
 
 ### Related Projects

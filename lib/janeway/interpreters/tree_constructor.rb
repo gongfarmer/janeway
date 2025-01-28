@@ -4,7 +4,10 @@ require_relative 'base'
 
 module Janeway
   module Interpreters
-    # Constructs a tree of interpreter objects
+    # Constructs a tree of interpreter objects.
+    #
+    # It is used when an iterator method such as #each has been called to
+    # construct the chain of interpreter objects to handle the query.
     module TreeConstructor
       # Fake interpreter which just returns the given value
       Literal = Struct.new(:value) do

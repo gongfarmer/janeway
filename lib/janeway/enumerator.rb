@@ -11,15 +11,13 @@ module Janeway
       @query = query
       @input = input
 
-      unless query.is_a?(Query)
-        raise ArgumentError, "expect Janeway::Query, got #{query.inspect}"
-      end
+      raise ArgumentError, "expect Janeway::Query, got #{query.inspect}" unless query.is_a?(Query)
     end
 
-    # Use this Query to search the input, and return the results.
+    # Return a list of values from the input data that match the jsonpath query
     #
     # @return [Array] all matched objects
-    def find_all
+    def search
       Janeway::Interpreter.new(@query).interpret(@input)
     end
 
