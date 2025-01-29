@@ -26,7 +26,7 @@ module Janeway
     # This can be used to iterate over results with #each, #map, etc.
     #
     # @return [Janeway::Enumerator]
-    def on(input)
+    def enum_for(input)
       Janeway::Enumerator.new(self, input)
     end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'name_selector_interpreter'
+require_relative 'index_selector_interpreter'
 
 module Janeway
   module Interpreters

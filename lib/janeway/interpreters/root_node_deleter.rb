@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'wildcard_selector_interpreter'
+require_relative 'root_node_interpreter'
 
 module Janeway
   module Interpreters

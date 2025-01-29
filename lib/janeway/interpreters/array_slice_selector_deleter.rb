@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'base'
+require_relative 'array_slice_selector_interpreter'
 
 module Janeway
   module Interpreters

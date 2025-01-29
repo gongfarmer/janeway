@@ -77,7 +77,7 @@ Example:
 
 
     ### Find and return matching values
-    $ janeway '$..book[?(@["price"] == 8.95 || @["price"] == 8.99)].title' store.json
+    $ janeway '$..book[? @.price==8.95 || @.price==8.99].title' store.json
     [
       "Sayings of the Century",
       "Moby Dick"
@@ -97,7 +97,7 @@ Example:
 
 You can also pipe JSON into it:
 ```
-    $ cat store.json | janeway '$..book[?(@.price<10)]'
+    $ cat store.json | janeway '$..book[? @.price<10]'
 ```
 
 See the help message for more capabilities: `janeway --help`
@@ -122,7 +122,7 @@ Following are examples showing how to work with the Enumerator methods.
 Returns all values that match the query.
 
 ```ruby
-    results = Janeway.enum_for('$..book[?(@.price<10)]', data).search
+    results = Janeway.enum_for('$..book[? @.price<10]', data).search
     # Returns every book in the store cheaper than $10
 ```
 
@@ -140,7 +140,7 @@ Alternatively, compile the query once, and share it between threads or ractors w
       end
 
     # Construct JSONPath query object and send it to each ractor
-    query = Janeway.compile('$..book[?(@.price<10)]')
+    query = Janeway.compile('$..book[? @.price<10]')
     ractors.each { |ractor| ractor.send(query).take }
 ```
 
@@ -159,7 +159,7 @@ The matched value is yielded:
     end
 ```
 
-This allows the matched value to be modified in place:
+Strings values can be modified in place:
 ```ruby
     Janeway.enum_for('$.birds[? @=="storck"]', data).each do |bird|
       bird.gsub!('ck', 'k') # Fix a typo: "storck" => "stork"
@@ -167,7 +167,8 @@ This allows the matched value to be modified in place:
     # input list is now ['eagle', 'stork', 'cormorant']
 ```
 
-However, this is not enough to replace the matched value:
+However, this doesn't work with numeric values because they can't be modified in place.
+Here's an example illustrating the same problem but using strings:
 ```ruby
     Janeway.enum_for('$.birds', data).each do |bird|
       bird = "bald eagle" if bird == 'eagle'
@@ -176,7 +177,8 @@ However, this is not enough to replace the matched value:
     # input list is still ['eagle', 'stork', 'cormorant']
 ```
 
-The second and third yield parameters are the object that contains the value, and the array index or hash key of the value.
+To replace list values, you need access to the parent object (a Hash or Array) and the array index / hash key.
+These are available as the second and third yield parameters.
 This allows the list or hash to be modified:
 ```ruby
     Janeway.enum_for('$.birds[? @=="eagle"]', data).each do |_bird, parent, index|
@@ -185,7 +187,15 @@ This allows the list or hash to be modified:
     # input list is now ['golden eagle', 'stork', 'cormorant']
 ```
 
-Lastly, the #each iterator's fourth yield parameter is the [normalized path](https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths) to the matched value.
+The parent / index parameters can also be used to delete values, but this requires caution to avoid index errors.
+For example, iterating over an array may yield index values 1, 2 and 3.
+Deleting the value at index 1 would change the index for the remaining values.
+Next iteration might yield index 2, but since 1 was deleted it is now really at index 1.
+
+To avoid having to deal with such problems, use the built in `#delete` method below.
+
+
+Lastly, the `#each` iterator's fourth yield parameter is the [normalized path](https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths) to the matched value.
 This is a jsonpath query string that uniquely points to the matched value.
 
 ```ruby
@@ -195,15 +205,16 @@ This is a jsonpath query string that uniquely points to the matched value.
         paths << path
     end
     paths
-    # ["$['birds']", "$['dogs']", "$['birds'][0]", "$['birds'][1]", "$['birds'][2]", "$['dogs'][0]", "$['dogs'][1]", "$['dogs'][2]"]
+    # [ #  "$['birds']", "$['dogs']", "$['birds'][0]", "$['birds'][1]", "$['birds'][2]",
+    #  "$['dogs'][0]", "$['dogs'][1]", "$['dogs'][2]"]
 ```
 
 ##### #delete
 
-The '#delete' method deletes matched values from the input.
+The `#delete` method deletes matched values from the input.
 ```ruby
-    # delete any bird whose name is "eagle" or starts with "s"
-    Janeway.enum_for('$.birds[? @=="eagle" || search(@, "^s")]', data).delete
+    # delete any bird whose name starts with "s" or is "eagle"
+    Janeway.enum_for('$.birds[? search(@, "^s") || @=="eagle"]', data).delete
     # input bird list is now ['cormorant']
 
     # delete all dog names
@@ -212,13 +223,13 @@ The '#delete' method deletes matched values from the input.
 ```
 
 
-The `Janeway.enum_for` and `Janeway::Query#on` methods return an enumerator, so you can use the usual ruby enumerator methods, such as:
+The `Janeway.enum_for` and `Janeway::Query#enum_for` methods return an enumerator, so you can use the usual ruby enumerator methods, such as:
 
 #####  #map
 Return the matched elements, as modified by the block.
 
 ```ruby
-    # take a dollar off every price in the store
+    # return all store prices, but take a dollar off each one
     sale_prices = Janeway.enum_for('$.store..price', data).map { |price| price - 1 }
     # [7.95, 11.99, 7.99, 21.99, 398]
 ```
@@ -256,15 +267,27 @@ Return only values that match the JSONPath query and also return false from the 
 
 #####  #filter_map
 
-Combines #select and #map.
 Return values that match the jsonpath query and return truthy values from the block.
-Instead of returning the value from the data, return the result of the block.
+Instead of returning the value from the data, return the result of the block:
 
-#####  #find 
-
-Return the first value that matches the jsonpath query and also returns a truthy value from the block
 ```ruby
-    Janeway.enum_for('$.store.book[? @.price >= 10.99]', data).find { |book| book['title'].start_with?('T') }
+    # Return titles of books by certain authors which cost more than the minimum price
+    APPROVED_AUTHORS = ['Evelyn Waugh', 'Herman Melville']
+    Janeway.enum_for('$.store.book[? @.price >= 8.99]', data).filter_map do |book|
+      book['title'] if APPROVED_AUTHORS.include?(book['author'])
+    end
+    # [ "Moby Dick", "Sword of Honour" ]
+```
+
+Combines functionality of `#select` and `#map`.
+
+#####  #find
+
+Return the first value that matches the jsonpath query and also returns a truthy value from the block:
+```ruby
+    Janeway.enum_for('$.store.book[? @.price >= 10.99]', data).find do |book|
+      book['title'].start_with?('T')
+    end
     # [ "The Lord of the Rings" ]
 ```
 
