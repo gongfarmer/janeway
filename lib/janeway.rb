@@ -12,13 +12,13 @@ module Janeway
   end
 
   # Pair a jsonpath query with data to make an enumerator.
-  # This can be used to iterate over results with #each, #map an other standard
-  # ruby methods.
+  # This can be used to apply the query to the data using Enumerator module
+  # methods such as #each and #map.
   #
   # @param jsonpath [String] jsonpath query
   # @param data [Array, Hash] input data
   # @return [Janeway::Enumerator]
-  def self.on(jsonpath, data)
+  def self.enum_for(jsonpath, data)
     query = compile(jsonpath)
     Janeway::Enumerator.new(query, data)
   end

@@ -15,15 +15,15 @@ HELP = <<~HELP_TEXT.freeze
     #{SCRIPT_NAME} [QUERY] [FILENAME]
 
   Purpose:
-    Print the result of applying a JsonPath query to a JSON input.
+    Print the result of applying a JSONPath query to a JSON input.
 
-    QUERY is a JsonPath query. Quote it with single quotes to avoid shell errors.
+    QUERY is a JSONPath query. Quote it with single quotes to avoid shell errors.
 
     FILENAME is the path to a JSON file to use as input.
     Alternately, input JSON can be provided on STDIN.
     If input is not provided then the query is just checked for correctness.
 
-    For an introduction to JsonPath, see https://goessner.net/articles/JsonPath/
+    For an introduction to JSONPath, see https://goessner.net/articles/JsonPath/
     For the complete reference, see https://www.rfc-editor.org/info/rfc9535
 
   Examples:
@@ -124,7 +124,7 @@ end
 def main(options)
   parse_query_and_exit(options.query) unless options.input
 
-  enum = Janeway.on(options.query, options.input)
+  enum = Janeway.enum_for(options.query, options.input)
   if options.delete
     results = enum.delete
     if options.compact_output
@@ -148,7 +148,9 @@ begin
   options = parse_args(ARGV.dup)
   main(options)
 rescue Janeway::Error => e
-  abort e.detailed_message
+  warn "Error: #{e.message}\nQuery: #{e.query}\n"
+  warn "       #{' ' * e.location.col}^" if e.location
+  exit(1)
 rescue Interrupt, Errno::EPIPE
   abort("\n")
 end

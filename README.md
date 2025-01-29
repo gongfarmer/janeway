@@ -111,7 +111,7 @@ To use the Janeway library in ruby code, providing a jsonpath query and an input
     require 'json'
 
     data = JSON.parse(File.read(ARGV.first))
-    Janeway.on('$.store.book[0].title', data)
+    Janeway.enum_for('$.store.book[0].title', data)
 ```
 This returns an Enumerator, which offers instance methods for using the query to operate on matching values in the input object.
 
@@ -122,7 +122,7 @@ Following are examples showing how to work with the Enumerator methods.
 Returns all values that match the query.
 
 ```ruby
-    results = Janeway.on('$..book[?(@.price<10)]', data).search
+    results = Janeway.enum_for('$..book[?(@.price<10)]', data).search
     # Returns every book in the store cheaper than $10
 ```
 
@@ -135,7 +135,7 @@ Alternatively, compile the query once, and share it between threads or ractors w
         Ractor.new(index) do |i|
           query = receive
           data = JSON.parse File.read("input-file-#{i}.json")
-          puts query.on(data).search
+          puts query.enum_for(data).search
         end
       end
 
@@ -154,14 +154,14 @@ The matched value is yielded:
         'birds' => ['eagle', 'stork', 'cormorant'] }
         'dogs' => ['poodle', 'pug', 'saint bernard'] },
     }
-    Janeway.on('$.birds.*', data).each do |bird|
+    Janeway.enum_for('$.birds.*', data).each do |bird|
       puts "the bird is a #{bird}"
     end
 ```
 
 This allows the matched value to be modified in place:
 ```ruby
-    Janeway.on('$.birds[? @=="storck"]', data).each do |bird|
+    Janeway.enum_for('$.birds[? @=="storck"]', data).each do |bird|
       bird.gsub!('ck', 'k') # Fix a typo: "storck" => "stork"
     end
     # input list is now ['eagle', 'stork', 'cormorant']
@@ -169,7 +169,7 @@ This allows the matched value to be modified in place:
 
 However, this is not enough to replace the matched value:
 ```ruby
-    Janeway.on('$.birds', data).each do |bird|
+    Janeway.enum_for('$.birds', data).each do |bird|
       bird = "bald eagle" if bird == 'eagle'
       # local variable 'bird' now points to a new value, but the original list is unchanged
     end
@@ -179,7 +179,7 @@ However, this is not enough to replace the matched value:
 The second and third yield parameters are the object that contains the value, and the array index or hash key of the value.
 This allows the list or hash to be modified:
 ```ruby
-    Janeway.on('$.birds[? @=="eagle"]', data).each do |_bird, parent, index|
+    Janeway.enum_for('$.birds[? @=="eagle"]', data).each do |_bird, parent, index|
       parent[index] = "golden eagle"
     end
     # input list is now ['golden eagle', 'stork', 'cormorant']
@@ -191,7 +191,7 @@ This is a jsonpath query string that uniquely points to the matched value.
 ```ruby
     # Collect the normalized path of every object in the input, at all levels
     paths = []
-    Janeway.on('$..*', data).each do |_bird, _parent, _index, path| do
+    Janeway.enum_for('$..*', data).each do |_bird, _parent, _index, path| do
         paths << path
     end
     paths
@@ -203,23 +203,23 @@ This is a jsonpath query string that uniquely points to the matched value.
 The '#delete' method deletes matched values from the input.
 ```ruby
     # delete any bird whose name is "eagle" or starts with "s"
-    Janeway.on('$.birds[? @=="eagle" || search(@, "^s")]', data).delete
+    Janeway.enum_for('$.birds[? @=="eagle" || search(@, "^s")]', data).delete
     # input bird list is now ['cormorant']
 
     # delete all dog names
-    Janeway.on('$.dogs.*', data).delete
+    Janeway.enum_for('$.dogs.*', data).delete
     # dog list is now []
 ```
 
 
-The `Janeway.on` and `Janeway::Query#on` methods return an enumerator, so you can use the usual ruby enumerator methods, such as:
+The `Janeway.enum_for` and `Janeway::Query#on` methods return an enumerator, so you can use the usual ruby enumerator methods, such as:
 
 #####  #map
 Return the matched elements, as modified by the block.
 
 ```ruby
     # take a dollar off every price in the store
-    sale_prices = Janeway.on('$.store..price', data).map { |price| price - 1 }
+    sale_prices = Janeway.enum_for('$.store..price', data).map { |price| price - 1 }
     # [7.95, 11.99, 7.99, 21.99, 398]
 ```
 
@@ -242,11 +242,11 @@ This solves a common JSON problem: You want to do a numeric comparison on a valu
       }
 
     # Can't use a filter query with a numeric comparison on a string price
-    Janeway.on('$.store.book[? @.price > 10.00]', data).find_all
+    Janeway.enum_for('$.store.book[? @.price > 10.00]', data).find_all
     # result: []
 
     # Solve the problem with ruby by filtering with #select and converting string to number:
-    Janeway.on('$.store.book.*', data).select { |book| book['price'].to_f > 10 }
+    Janeway.enum_for('$.store.book.*', data).select { |book| book['price'].to_f > 10 }
     # result: [{"title" => "Sword of Honour", "price" => "12.99"}, {"title" => "The Lord of the Rings", "price" => "22.99"}]
 ```
 
@@ -264,7 +264,7 @@ Instead of returning the value from the data, return the result of the block.
 
 Return the first value that matches the jsonpath query and also returns a truthy value from the block
 ```ruby
-    Janeway.on('$.store.book[? @.price >= 10.99]', data).find { |book| book['title'].start_with?('T') }
+    Janeway.enum_for('$.store.book[? @.price >= 10.99]', data).find { |book| book['title'].start_with?('T') }
     # [ "The Lord of the Rings" ]
 ```
 

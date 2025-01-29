@@ -12,19 +12,19 @@ module Janeway
         end
 
         it 'deletes and returns elements that match a comparison test' do
-          result = Janeway.on('$[? @.x<3]', input).delete
+          result = Janeway.enum_for('$[? @.x<3]', input).delete
           expect(result).to eq([{ 'x' => 1 }, { 'x' => 2 }])
           expect(input).to eq({ 'c' => { 'x' => 3, 'y' => nil } })
         end
 
         it 'deletes and returns nothing when filter does not match' do
-          result = Janeway.on('$[? @.y==3]', input).delete
+          result = Janeway.enum_for('$[? @.y==3]', input).delete
           expect(result).to be_empty
           expect(input.size).to eq(3)
         end
 
         it 'deletes and returns elements that match an existence test' do
-          result = Janeway.on('$[? @.y]', input).delete
+          result = Janeway.enum_for('$[? @.y]', input).delete
           expect(result).to eq([{ 'x' => 3, 'y' => nil }])
           expect(input).to eq({ 'a' => { 'x' => 1 }, 'b' => { 'x' => 2 } })
         end
@@ -40,13 +40,13 @@ module Janeway
         end
 
         it 'deletes and returns elements that match the filter' do
-          result = Janeway.on('$[? @.x<3]', input).delete
+          result = Janeway.enum_for('$[? @.x<3]', input).delete
           expect(result).to eq([{ 'x' => 1 }, { 'x' => 2 }])
           expect(input).to eq([{ 'x' => 3, 'y' => nil }])
         end
 
         it 'deletes and returns elements that match an existence test' do
-          result = Janeway.on('$[? @.y]', input).delete
+          result = Janeway.enum_for('$[? @.y]', input).delete
           expect(result).to eq([{ 'x' => 3, 'y' => nil }])
           expect(input).to eq([{ 'x' => 1 }, { 'x' => 2 }])
         end

@@ -2,7 +2,6 @@
 
 module Janeway
   # Query holds the abstract syntax tree created by parsing the query.
-  #
   # This can be frozen and passed to multiple threads or ractors for simultaneous use.
   # No instance members are modified during the interpretation stage.
   class Query
@@ -35,7 +34,7 @@ module Janeway
       @root.to_s
     end
 
-    # Return a list of all the nodes in the AST.
+    # Return a list of the nodes in the AST.
     # The AST of a jsonpath query is a straight line, so this is expressible as an array.
     # The only part of the AST with branches is inside a filter selector, but that doesn't show up here.
     # @return [Array<Expression>]
