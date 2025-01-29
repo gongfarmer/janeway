@@ -1,6 +1,6 @@
 # Janeway JSONPath parser
 
-This is a [JsonPath](https://goessner.net/articles/JsonPath/) parser.
+This is a [JSONPath](https://goessner.net/articles/JsonPath/) parser.
 It strictly follows [RFC 9535](https://www.rfc-editor.org/rfc/rfc9535.html) and passes the [JSONPath Compliance Test Suite](https://github.com/jsonpath-standard/jsonpath-compliance-test-suite).
 
 It reads a JSON input file and a query, and uses the query to find and return a set of matching values from the input.
@@ -29,7 +29,7 @@ Install the gem from the command-line:
 or add it to your Gemfile:
 
 ```
-    gem 'janeway-jsonpath', '~> 0.2.0'
+    gem 'janeway-jsonpath', '~> 0.4.0'
 ```
 
 ### Usage
@@ -77,7 +77,7 @@ Example:
 
 
     ### Find and return matching values
-    $ janeway  "\$..book[?(@['price'] == 8.95 || @['price'] == 8.99)].title" store.json
+    $ janeway '$..book[?(@["price"] == 8.95 || @["price"] == 8.99)].title' store.json
     [
       "Sayings of the Century",
       "Moby Dick"
@@ -113,15 +113,16 @@ To use the Janeway library in ruby code, providing a jsonpath query and an input
     data = JSON.parse(File.read(ARGV.first))
     Janeway.on('$.store.book[0].title', data)
 ```
-This returns an Enumerator, which offers instance methods for using the query
-to operate on matching values in the input object.
+This returns an Enumerator, which offers instance methods for using the query to operate on matching values in the input object.
 
-*#search*
+Following are examples showing how to work with the Enumerator methods.
+
+##### #search
 
 Returns all values that match the query.
 
 ```ruby
-    results = Janeway.on('$..book[?(@.price<10)]', data).find_all
+    results = Janeway.on('$..book[?(@.price<10)]', data).search
     # Returns every book in the store cheaper than $10
 ```
 
@@ -134,7 +135,7 @@ Alternatively, compile the query once, and share it between threads or ractors w
         Ractor.new(index) do |i|
           query = receive
           data = JSON.parse File.read("input-file-#{i}.json")
-          puts query.on(data).find_all
+          puts query.on(data).search
         end
       end
 
@@ -143,16 +144,14 @@ Alternatively, compile the query once, and share it between threads or ractors w
     ractors.each { |ractor| ractor.send(query).take }
 ```
 
-*#each*
+##### #each
 
 Iterates through matches one by one, without holding the entire set in memory.
-
 Janeway's #each iteration is particularly powerful, as it provides context for each match.
-
 The matched value is yielded:
 ```ruby
     data = {
-        'birds' => ['eagle', 'storck', 'cormorant'] }
+        'birds' => ['eagle', 'stork', 'cormorant'] }
         'dogs' => ['poodle', 'pug', 'saint bernard'] },
     }
     Janeway.on('$.birds.*', data).each do |bird|
@@ -174,7 +173,7 @@ However, this is not enough to replace the matched value:
       bird = "bald eagle" if bird == 'eagle'
       # local variable 'bird' now points to a new value, but the original list is unchanged
     end
-    # input list is still ['eagle', 'storck', 'cormorant']
+    # input list is still ['eagle', 'stork', 'cormorant']
 ```
 
 The second and third yield parameters are the object that contains the value, and the array index or hash key of the value.
@@ -183,7 +182,7 @@ This allows the list or hash to be modified:
     Janeway.on('$.birds[? @=="eagle"]', data).each do |_bird, parent, index|
       parent[index] = "golden eagle"
     end
-    # input list is now ['golden eagle', 'storck', 'cormorant']
+    # input list is now ['golden eagle', 'stork', 'cormorant']
 ```
 
 Lastly, the #each iterator's fourth yield parameter is the [normalized path](https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths) to the matched value.
@@ -195,11 +194,11 @@ This is a jsonpath query string that uniquely points to the matched value.
     Janeway.on('$..*', data).each do |_bird, _parent, _index, path| do
         paths << path
     end
-    pp paths
+    paths
     # ["$['birds']", "$['dogs']", "$['birds'][0]", "$['birds'][1]", "$['birds'][2]", "$['dogs'][0]", "$['dogs'][1]", "$['dogs'][2]"]
 ```
 
-*#delete*
+##### #delete
 
 The '#delete' method deletes matched values from the input.
 ```ruby
@@ -213,20 +212,20 @@ The '#delete' method deletes matched values from the input.
 ```
 
 
-The `Janeway.on` and `Janeway::Query#on` methods return an enumerator, so you can use the usual
-ruby enumerator methods, such as:
-* #map
-Return the matched elements, modified
+The `Janeway.on` and `Janeway::Query#on` methods return an enumerator, so you can use the usual ruby enumerator methods, such as:
+
+#####  #map
+Return the matched elements, as modified by the block.
 
 ```ruby
     # take a dollar off every price in the store
     sale_prices = Janeway.on('$.store..price', data).map { |price| price - 1 }
+    # [7.95, 11.99, 7.99, 21.99, 398]
 ```
 
-* #select (alias #find_all)
+#####  #select (alias #find_all)
 
 Return only values that match the JSONPath query and also return a truthy value from the block.
-
 This solves a common JSON problem: You want to do a numeric comparison on a value in your JSON, but the JSON value is stored as a string type.
 
 ```ruby
@@ -251,21 +250,25 @@ This solves a common JSON problem: You want to do a numeric comparison on a valu
     # result: [{"title" => "Sword of Honour", "price" => "12.99"}, {"title" => "The Lord of the Rings", "price" => "22.99"}]
 ```
 
-* #reject
+#####  #reject
 
 Return only values that match the JSONPath query and also return false from the block.
 
-* #filter_map
+#####  #filter_map
+
 Combines #select and #map.
 Return values that match the jsonpath query and return truthy values from the block.
 Instead of returning the value from the data, return the result of the block.
 
-* #find 
+#####  #find 
 
-Return the first value that matches the jsonpath query and also matches the
+Return the first value that matches the jsonpath query and also returns a truthy value from the block
 ```ruby
     Janeway.on('$.store.book[? @.price >= 10.99]', data).find { |book| book['title'].start_with?('T') }
+    # [ "The Lord of the Rings" ]
 ```
+
+There are many other Enumerable methods too, see the ruby Enumerable module documenation for more.
 
 ### Related Projects
 
@@ -291,7 +294,7 @@ Also there are many non-ruby implementations of RFC 9535, here are just a few:
 * don't use `eval`, which is known to be an attack vector
 * be simple and fast with minimal dependencies
 * provide ruby-like accessors (eg. #each, #delete_if) for processing results
-* modern, linted ruby 3 code with frozen string literals
+* idiomatic, linted ruby 3 code with frozen string literals everywhere
 
 ### Non-goals
 
