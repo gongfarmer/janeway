@@ -44,17 +44,6 @@ module Janeway
           raise "Unknown jsonpath function #{name}"
         end
       end
-
-      # True if the function's return value is a boolean
-      # @return [Boolean]
-      def logical?
-        case name
-        when 'length', 'count', 'value' then false
-        when 'search', 'match' then true
-        else
-          raise "Unknown jsonpath function #{name}"
-        end
-      end
     end
   end
 end

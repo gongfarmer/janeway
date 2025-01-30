@@ -25,11 +25,11 @@ module Janeway
 
   # Compile a JSONPath query into an Abstract Syntax Tree.
   #
-  # This can be combined with inputs (using #on) to create Enumerators.
+  # This can be combined with inputs (using #enum_for) to create Enumerators.
   # @example
   #     query = Janeway.compile('$.store.books[? length(@.title) > 20]')
-  #     long_title_books = query.on(local_json).search
-  #     query.on(remote_json).each do |book|
+  #     long_title_books = query.enum_for(some_data).search
+  #     query.enum_for(other_data).each do |book|
   #       long_title_books << book
   #     end
   #
