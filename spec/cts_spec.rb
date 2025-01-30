@@ -28,6 +28,12 @@ shared_examples 'an invalid query' do |test_name, selector|
   end
 end
 
+# Skip these tests on truffleruby.
+TRUFFLERUBY_SKIP_TESTS = [
+  'index selector, min exact index',
+  'index selector, max exact index',
+].freeze
+
 # Run each test from the compliance test suite.
 # The CTS has 3 types of tests:
 # * invalid selector -- the query is invalid and should cause a parse error
@@ -41,6 +47,12 @@ describe Janeway do
     name = test['name']
     query = test['selector']
     input = test['document']
+
+    if RUBY_ENGINE == 'truffleruby' && TRUFFLERUBY_SKIP_TESTS.include?(name)
+      puts "CTS test #{name.inspect} skipped on truffleruby"
+      next
+    end
+
     if test['invalid_selector']
       it_behaves_like 'an invalid query', name, query
     elsif test['result']

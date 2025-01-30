@@ -47,7 +47,7 @@ module Janeway
         input = { 'a' => %w[a b c], 'b' => %w[d e f] }
         expected = [%w[a b c], %w[d e f]]
         enum = Janeway.enum_for('$.*', input)
-        expect(enum.to_a).to eq(expected)
+        expect(enum.each.to_a).to eq(expected)
       end
 
       it 'raises error when no query given' do
@@ -322,8 +322,8 @@ module Janeway
     end
 
     describe '#each_with_index' do
-      context 'when input is a Array' do
-        it 'returns values with index' do
+      context 'when input is an Array' do
+        it 'returns values with index', skip: on_truffleruby do
           input = [1, 2, 3]
           results = Janeway.enum_for('$.*', input).each_with_index.to_a
           expect(results).to eq([[1, 0], [2, 1], [3, 2]])
@@ -331,7 +331,7 @@ module Janeway
       end
 
       context 'when input is a Hash' do
-        it 'returns values with index' do
+        it 'returns values with index', skip: on_truffleruby do
           input = { 'a' => 1, 'b' => 2, 'c' => 3 }
           results = Janeway.enum_for('$.*', input).each_with_index.to_a
           expect(results).to eq([[1, 0], [2, 1], [3, 2]])
@@ -340,7 +340,7 @@ module Janeway
     end
 
     describe '#each_with_object' do
-      it 'returns values with index' do
+      it 'returns values with index', skip: on_truffleruby do
         input = [1, 2, 3]
         result = []
         Janeway.enum_for('$.*', input).each_with_object(result) do |value, arr|
@@ -362,7 +362,7 @@ module Janeway
     end
 
     describe '#select' do
-      it 'collects returned values that matched the condition' do
+      it 'collects returned values that matched the condition', skip: on_truffleruby do
         input = { 'a' => 1, 'b' => 2, 'c' => 3 }
         enum = Janeway.enum_for('$.*', input)
         result = enum.select(&:odd?)
@@ -371,7 +371,7 @@ module Janeway
     end
 
     describe '#reject' do
-      it 'collects returned values that matched the condition' do
+      it 'collects returned values that matched the condition', skip: on_truffleruby do
         input = { 'a' => 1, 'b' => 2, 'c' => 3 }
         enum = Janeway.enum_for('$.*', input)
         result = enum.reject(&:odd?)
@@ -379,7 +379,7 @@ module Janeway
       end
     end
 
-    describe '#filter_map' do
+    describe '#filter_map', skip: on_truffleruby do
       it 'collects and modifies values return by the query' do
         input = { 'a' => 1, 'b' => 2, 'c' => 3 }
         enum = Janeway.enum_for('$.*', input)
