@@ -33,7 +33,7 @@ HELP = <<~HELP_TEXT.freeze
 HELP_TEXT
 
 # Command-line options
-Options = Struct.new(:query, :query_file, :input, :compact_output, :delete, :verbose)
+Options = Struct.new(:query, :query_file, :action, :value, :input, :compact_output, :delete, :verbose, keyword_init: true)
 
 # Parse the command-line arguments.
 # This includes both bare words and hyphenated options.
@@ -47,6 +47,9 @@ def parse_args(argv)
   # Next get jsonpath query and input jsonn
   options.query = read_query(options.query_file, argv)
   options.input = read_input(argv.first)
+  if options.action == :replace && options.value.nil?
+    abort('Need value for replacement, use -v or -V')
+  end
   options
 end
 
@@ -54,14 +57,20 @@ end
 #
 # @param argv [Array<String>]
 def parse_options(argv)
-  options = Options.new
+  options = Options.new(action: :search)
   op = OptionParser.new do |opts|
     opts.banner = HELP
     opts.separator('Options:')
 
     opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
     opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
-    opts.on('-d', '--delete', 'Print the input, with matching values deleted') { options.delete = true }
+    opts.on('-d', '--delete', 'Print the input, with matching values deleted') { options.action = :delete }
+    opts.on('-r', '--replace', 'Print the input, with matching values replaced') { options.action = :replace }
+    opts.on('-v', '--value STRING', 'replacement value (string or number only)') { |o| options.value = o }
+    opts.on('-V', '--value-file FILENAME', 'file containing replacement value') do |o|
+      options.value = read_value_file(o)
+    end
+
     opts.on('--version', 'Show version number') { abort(Janeway::VERSION) }
     opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
   end
@@ -99,6 +108,14 @@ def read_input(path)
   parse_json(json)
 end
 
+# Read replacement value from file
+# @return [Array,Hash,String,Numberic,nil]
+def read_value_file(path)
+  abort("File not readable: #{path}") unless File.exist?(path)
+
+  parse_json File.read(path)
+end
+
 # Parse JSON, and abort if it is invalid
 # @param json [String]
 # @return [Hash, Array] un-serialized json, as ruby objects
@@ -125,17 +142,19 @@ def main(options)
   parse_query_and_exit(options.query) unless options.input
 
   enum = Janeway.enum_for(options.query, options.input)
-  if options.delete
-    results = enum.delete
-    if options.compact_output
-      puts JSON.generate(options.input)
+  results =
+    case options.action
+    when :search
+      enum.search
+    when :replace
+      enum.replace(options.value)
+      options.input
+    when :delete
+      enum.delete
+      options.input
     else
-      puts JSON.pretty_generate(options.input)
+      raise "Unknown action: #{options.action}"
     end
-    exit(0)
-  else
-    results = enum.search
-  end
 
   if options.compact_output
     puts JSON.generate(results)
