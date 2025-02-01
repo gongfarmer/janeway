@@ -357,6 +357,93 @@ module Janeway
       end
     end
 
+    describe '#insert' do
+      let(:input) do
+        {
+          'a' => nil,
+          'b' => {
+            'a' => 5,
+            'b' => { 'a' => 'bird' },
+          },
+        }
+      end
+
+      it 'raises error when query is not a singular query' do
+        %w[$.* $..a $['a','b'] $.a[?@.b]].each do |jsonpath|
+          expect {
+            Janeway.enum_for(jsonpath, input).insert({})
+          }.to raise_error(Janeway::Error, /insert may only be used with a singular query/)
+        end
+      end
+
+      it 'inserts new value into hash that already exists' do
+        Janeway.enum_for('$.b.b.new_key', input).insert('new_value')
+        expect(input.dig('b', 'b')).to eq({ 'a' => 'bird', 'new_key' => 'new_value' })
+      end
+
+      it 'inserts new value into array that already exists when new index is correct' do
+        arr = [0, 1, 2, 3]
+        Janeway.enum_for('$[4]', arr).insert(4)
+        expect(arr).to eq([0, 1, 2, 3, 4])
+      end
+
+      it 'rejects array index that is too small' do
+        arr = [0, 1, 2, 3]
+        expect {
+          Janeway.enum_for('$[3]', arr).insert(4)
+        }.to raise_error(/array at \$ already has index 3/)
+      end
+
+      it 'rejects array index that is too large' do
+        arr = [0, 1, 2, 3]
+        expect {
+          Janeway.enum_for('$[5]', arr).insert(4)
+        }.to raise_error(/cannot add index 5 because array at \$ is too small/)
+      end
+
+      it 'does not alter the Query object inside the Enumerator' do
+        enum = Janeway.enum_for('$.b.b.new_key', input)
+        expect(enum.search).to be_empty
+        enum.insert({ a: 6 })
+        expect(enum.search).to eq([{ a: 6 }])
+      end
+
+      it 'raises error when value already exists and no block is given' do
+        input = { 'a' => { 'b' => 1 } }
+        enum = Janeway.enum_for('$.a', input)
+        expect {
+          enum.insert({})
+        }.to raise_error(Error, /hash at \$ already has key a/)
+      end
+
+      it 'calls block when hash key already exists and block is given' do
+        input = { 'a' => { 'b' => 1 } }
+        enum = Janeway.enum_for('$.a', input)
+        called = false
+        enum.insert({}) do |hash, key|
+          called = true
+          expect(hash).to eq(input)
+          expect(key).to eq('a')
+        end
+        expect(called).to be(true)
+      end
+
+      it 'calls block when array index already exists and block is given' do
+        input = { 'a' => [0] }
+        enum = Janeway.enum_for('$.a[0]', input)
+        called = false
+        enum.insert({}) do |array, index|
+          called = true
+          expect(array).to eq([0])
+          expect(index).to eq(0)
+        end
+        expect(called).to be(true)
+      end
+    end
+
+    # The remaining methods are provided by the Enumerable module.
+    # These tests just confirm that the methods exist and work as expected for simple inputs
+
     describe '#map' do
       it 'transforms matched values' do
         input = [1, 2, 3]

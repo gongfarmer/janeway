@@ -30,8 +30,17 @@ module Janeway
       Janeway::Enumerator.new(self, input)
     end
 
+    # @return [String]
     def to_s
       @root.to_s
+    end
+
+    # Return true if this query can only possibly match 0 or 1 elements in any input.
+    # Such a query must be composed exclusively of the root identifier followed by
+    # name selectors and / or index selectors.
+    # @return [Boolean]
+    def singular_query?
+      @root.singular_query?
     end
 
     # Return a list of the nodes in the AST.
@@ -65,6 +74,37 @@ module Janeway
       result = @root.tree(0)
 
       result.flatten.join("\n")
+    end
+
+    # Deep copy the query
+    # @return [Query]
+    def dup
+      Parser.parse(to_s)
+    end
+
+    # Delete the last element from the chain of selectors.
+    # For a singular query, this makes the query point to the match's parent instead of the match itself.
+    #
+    # Don't do this for a non-singular query, those may contain child segments and
+    # descendant segments which would lead to different results.
+    #
+    # @return [AST::Selector]
+    def pop
+      unless singular_query?
+        raise Janeway::Error.new('not allowed to pop from a non-singular query', to_s)
+      end
+
+      # Sever the link to the last selector
+      nodes = node_list
+      if nodes.size == 1
+        # Special case: cannot pop from the query "$" even though it is a singular query
+        raise Janeway::Error.new('cannot pop from single-element query', to_s)
+      end
+
+      nodes[-2].next = nil
+
+      # Return the last selector
+      nodes.last
     end
   end
 end
