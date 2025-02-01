@@ -6,6 +6,9 @@ module Janeway
   class Enumerator
     include Enumerable
 
+    # @return [Janeway::Query]
+    attr_reader :query
+
     # @param query [Janeway::Query] @param input [Array, Hash]
     def initialize(query, input)
       @query = query
@@ -38,6 +41,30 @@ module Janeway
     # @return [Array, Hash]
     def delete
       Janeway::Interpreter.new(@query, as: :deleter).interpret(@input)
+    end
+
+    # Assign the given value at every query match.
+    # @param value [Object]
+    # @return [void]
+    def replace(value)
+      # Avoid infinite loop when the replacement value contains data that matches the query
+      previous = []
+      each do |_, parent, key|
+        # Update the previous match
+        unless previous.empty?
+          prev_parent, prev_key = *previous
+          prev_parent[prev_key] = value
+        end
+
+        # Record this match to be updated later
+        previous = [parent, key]
+      end
+      return if previous.empty?
+
+      # Update the final match
+      prev_parent, prev_key = *previous
+      prev_parent[prev_key] = value
+      nil
     end
   end
 end

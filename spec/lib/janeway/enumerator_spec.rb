@@ -13,7 +13,7 @@ module Janeway
     # The #delete method is also implemented in Janeway, but it is tested in detail
     # in the files spec/lib/janeway/interpreter/*_deleter_spec.rb
     #
-    describe '.each' do
+    describe '#each' do
       it 'yields one input value from a singular query' do
         input = { 'a' => { 'b' => { 'c' => 5 } } }
         seen = Janeway.enum_for('$.a.b.c', input).map do |value|
@@ -310,6 +310,50 @@ module Janeway
           ]
           expect(values).to eq(expected)
         end
+      end
+    end
+
+    describe '#replace' do
+      let(:input) do
+        {
+          'a' => nil,
+          'b' => {
+            'a' => 5,
+            'b' => { 'a' => 'bird' },
+          },
+        }
+      end
+
+      it 'sets value for a singular query to a top level key' do
+        Janeway.enum_for('$.a', input).replace(100)
+        expect(input['a']).to eq(100)
+        expect(input.dig('b', 'a')).to eq(5)
+        expect(input.dig('b', 'b', 'a')).to eq('bird')
+      end
+
+      it 'sets value for a singular query to a lower level key' do
+        Janeway.enum_for('$.b.b.a', input).replace(100)
+        expect(input['a']).to eq(nil)
+        expect(input.dig('b', 'a')).to eq(5)
+        expect(input.dig('b', 'b', 'a')).to eq(100)
+      end
+
+      it 'sets all values for a descendant segment query that matches multiple keys' do
+        Janeway.enum_for('$..a', input).replace(100)
+        expect(input['a']).to eq(100)
+        expect(input.dig('b', 'a')).to eq(100)
+        expect(input.dig('b', 'b', 'a')).to eq(100)
+      end
+
+      it 'does not enter infinite loop when the replacement introduces a new match' do
+        replacement = { 'a' => nil }
+        Janeway.enum_for('$..a', input).replace(replacement)
+        expect(input['a']).to eq(replacement)
+        expect(input.dig('a', 'a')).to be_nil
+        expect(input.dig('b', 'a')).to eq(replacement)
+        expect(input.dig('b', 'a', 'a')).to be_nil
+        expect(input.dig('b', 'b', 'a')).to eq(replacement)
+        expect(input.dig('b', 'b', 'a', 'a')).to be_nil
       end
     end
 
