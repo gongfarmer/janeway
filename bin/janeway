@@ -15,7 +15,9 @@ HELP = <<~HELP_TEXT.freeze
     #{SCRIPT_NAME} [QUERY] [FILENAME]
 
   Purpose:
-    Print the result of applying a JSONPath query to a JSON input.
+    Print values from the input that match the given JSONPath query.
+
+    Alternatively, use one of the action flags to modify the input JSON specified by the query.
 
     QUERY is a JSONPath query. Quote it with single quotes to avoid shell errors.
 
@@ -47,7 +49,7 @@ def parse_args(argv)
   # Next get jsonpath query and input jsonn
   options.query = read_query(options.query_file, argv)
   options.input = read_input(argv.first)
-  if options.action == :replace && options.value.nil?
+  if %i[insert replace].include?(options.action) && !options.value
     abort('Need value for replacement, use -v or -V')
   end
   options
@@ -64,14 +66,17 @@ def parse_options(argv)
 
     opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
     opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
-    opts.on('-d', '--delete', 'Print the input, with matching values deleted') { options.action = :delete }
-    opts.on('-p', '--paths', 'List normalized path for each match') { options.action = :paths }
-    opts.on('-r', '--replace', 'Print the input, with matching values replaced') { options.action = :replace }
-    opts.on('-v', '--value STRING', 'replacement value (string or number only)') { |o| options.value = o }
-    opts.on('-V', '--value-file FILENAME', 'file containing replacement value') do |o|
+    opts.on('-v', '--value STRING', 'value to insert or replace (string or number only)') do |o|
+      options.value = read_value(o)
+    end
+    opts.on('-V', '--value-file FILENAME', 'file containing value to insert or replace') do |o|
       options.value = read_value_file(o)
     end
-
+    opts.separator('Actions:')
+    opts.on('-d', '--delete', 'Print the input, with matching values deleted') { options.action = :delete }
+    opts.on('-r', '--replace', 'Print the input, replacing matches with given value') { options.action = :replace }
+    opts.on('-i', '--insert', 'Print the input, with the given value inserted') { options.action = :insert }
+    opts.on('-p', '--paths', 'List normalized path for each match') { options.action = :paths }
     opts.on('--version', 'Show version number') { abort(Janeway::VERSION) }
     opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
   end
@@ -109,12 +114,22 @@ def read_input(path)
   parse_json(json)
 end
 
-# Read replacement value from file
-# @return [Array,Hash,String,Numberic,nil]
+# Read insert/replacement value from file
+# @return [Array,Hash,String,Numeric,nil]
 def read_value_file(path)
   abort("File not readable: #{path}") unless File.exist?(path)
 
   parse_json File.read(path)
+end
+
+# Read insert/replacement value from command-line argument
+# @return [Integer, Float, String]
+def read_value(value_str)
+  case value_str
+  when /^\d+$/ then value_str.to_i # integer
+  when /^\d+\.\d+$/ then value_str.to_f # float
+  else value_str # string
+  end
 end
 
 # Parse JSON, and abort if it is invalid
@@ -149,6 +164,9 @@ def main(options)
     when :paths then enum.map { |_, _, _, path| path }
     when :replace
       enum.replace(options.value)
+      options.input
+    when :insert
+      enum.insert(options.value)
       options.input
     when :delete
       enum.delete

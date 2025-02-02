@@ -333,7 +333,7 @@ module Janeway
 
       it 'sets value for a singular query to a lower level key' do
         Janeway.enum_for('$.b.b.a', input).replace(100)
-        expect(input['a']).to eq(nil)
+        expect(input['a']).to be_nil
         expect(input.dig('b', 'a')).to eq(5)
         expect(input.dig('b', 'b', 'a')).to eq(100)
       end
@@ -413,7 +413,7 @@ module Janeway
         enum = Janeway.enum_for('$.a', input)
         expect {
           enum.insert({})
-        }.to raise_error(Error, /hash at \$ already has key a/)
+        }.to raise_error(Error, /hash at \$ already has key "a"/)
       end
 
       it 'calls block when hash key already exists and block is given' do

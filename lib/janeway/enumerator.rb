@@ -127,12 +127,13 @@ module Janeway
     # @param path [String] jsonpath singular query to parent
     # @yieldparam [Hash] parent object
     # @yieldparam [String] hash key
-    def insert_into_hash(hash, key, value, path, &block)
+    def insert_into_hash(hash, key, value, path, &)
       unless key.is_a?(String) || key.is_a?(Symbol)
         raise Error.new("cannot use #{key.inspect} as hash key", @query.to_s)
       end
+
       if hash.key?(key)
-        raise Error.new("hash at #{path} already has key #{key}", @query.to_s) unless block_given?
+        raise Error.new("hash at #{path} already has key #{key.inspect}", @query.to_s) unless block_given?
 
         yield hash, key
       end
@@ -147,10 +148,9 @@ module Janeway
     # @param path [String] jsonpath singular query to parent
     # @yieldparam [Array] parent object
     # @yieldparam [Integer] array index
-    def insert_into_array(array, index, value, path, &block)
-      unless index.is_a?(Integer)
-        raise Error.new("cannot use #{index.inspect} as array index", @query.to_s)
-      end
+    def insert_into_array(array, index, value, path, &)
+      raise Error.new("cannot use #{index.inspect} as array index", @query.to_s) unless index.is_a?(Integer)
+
       if index < array.size
         raise Error.new("array at #{path} already has index #{index}", @query.to_s) unless block_given?
 
