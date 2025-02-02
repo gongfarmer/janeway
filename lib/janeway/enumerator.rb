@@ -127,7 +127,7 @@ module Janeway
     # @param path [String] jsonpath singular query to parent
     # @yieldparam [Hash] parent object
     # @yieldparam [String] hash key
-    def insert_into_hash(hash, key, value, path, &)
+    def insert_into_hash(hash, key, value, path, &block)
       unless key.is_a?(String) || key.is_a?(Symbol)
         raise Error.new("cannot use #{key.inspect} as hash key", @query.to_s)
       end
@@ -148,7 +148,7 @@ module Janeway
     # @param path [String] jsonpath singular query to parent
     # @yieldparam [Array] parent object
     # @yieldparam [Integer] array index
-    def insert_into_array(array, index, value, path, &)
+    def insert_into_array(array, index, value, path, &block)
       raise Error.new("cannot use #{index.inspect} as array index", @query.to_s) unless index.is_a?(Integer)
 
       if index < array.size
