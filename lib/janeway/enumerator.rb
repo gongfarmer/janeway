@@ -103,6 +103,7 @@ module Janeway
 
     # Find the 'parent' of the object pointed to by the query. For singular query only.
     #
+    # @!visibility private
     # @return [Object, Object, String] parent object (Hash / Array), key/index (String / Integer), path to parent
     def find_parent
       # Make a Query that points to the target's parent
@@ -121,6 +122,8 @@ module Janeway
     end
 
     # Insert value into hash at the given key
+    #
+    # @!visibility private
     # @param hash [Hash]
     # @param key [String]
     # @param value [Object]
@@ -142,6 +145,8 @@ module Janeway
     end
 
     # Insert value into array at the given index
+    #
+    # @!visibility private
     # @param array [Array]
     # @param index [Integer]
     # @param value [Object]
