@@ -4,6 +4,7 @@ require_relative 'ast'
 require_relative 'error'
 require_relative 'functions'
 require_relative 'lexer'
+require_relative 'query'
 
 module Janeway
   # Transform a list of tokens into an Abstract Syntax Tree

@@ -126,7 +126,7 @@ Returns all values that match the query.
     # Returns every book in the store cheaper than $10
 ```
 
-Alternatively, compile the query once, and share it between threads or ractors with different data sources:
+Alternatively, parse the query once, and share it between threads or ractors with different data sources:
 
 ```ruby
     # Create ractors with their own data sources
@@ -140,7 +140,7 @@ Alternatively, compile the query once, and share it between threads or ractors w
       end
 
     # Construct JSONPath query object and send it to each ractor
-    query = Janeway.compile('$..book[? @.price<10]')
+    query = Janeway.parse('$..book[? @.price<10]')
     ractors.each { |ractor| ractor.send(query).take }
 ```
 

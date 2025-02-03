@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
 module Janeway
-  # Gem version
+  # Version for janeway-jsonpath gem
   VERSION = '0.5.0'
 end

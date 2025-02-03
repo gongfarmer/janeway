@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'interpreter'
+
 module Janeway
   # Enumerator combines a JSONPath query with input.
   # It provides methods for running queries on the input and enumerating over the results.

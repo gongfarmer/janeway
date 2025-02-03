@@ -15,27 +15,30 @@ HELP = <<~HELP_TEXT.freeze
     #{SCRIPT_NAME} [QUERY] [FILENAME]
 
   Purpose:
-    Print values from the input that match the given JSONPath query.
+    Print values from the input data that match the given JSONPath query.
 
-    Alternatively, use one of the action flags to modify the input JSON specified by the query.
+    Alternatively, use one of the action flags to modify values from the input JSON specified by the query.
 
     QUERY is a JSONPath query. Quote it with single quotes to avoid shell errors.
 
-    FILENAME is the path to a JSON file to use as input.
-    Alternately, input JSON can be provided on STDIN.
-    If input is not provided then the query is just checked for correctness.
+    FILENAME is the path to a JSON file to use as input data.
+    Alternately, JSON can be provided on STDIN.
+    If data is not provided then the query is just checked for correctness.
 
     For an introduction to JSONPath, see https://goessner.net/articles/JsonPath/
     For the complete reference, see https://www.rfc-editor.org/info/rfc9535
 
   Examples:
-    #{SCRIPT_NAME} '$.store.book[*].author' input.json
-    cat input.json | #{SCRIPT_NAME} '$.store.book[*].author'
+    #{SCRIPT_NAME} '$.store.book[*].author' data.json
+    cat data.json | #{SCRIPT_NAME} '$.store.book[*].author'
 
 HELP_TEXT
 
 # Command-line options
-Options = Struct.new(:query, :query_file, :action, :value, :input, :compact_output, :delete, :verbose, keyword_init: true)
+Options = Struct.new(
+  :query, :query_file, :action, :value, :value_given, :data,
+  :compact_output, :verbose, keyword_init: true
+)
 
 # Parse the command-line arguments.
 # This includes both bare words and hyphenated options.
@@ -46,11 +49,11 @@ def parse_args(argv)
   argv << '--help' if argv.empty?
   options = parse_options(argv)
 
-  # Next get jsonpath query and input jsonn
+  # Get jsonpath query and input json
   options.query = read_query(options.query_file, argv)
-  options.input = read_input(argv.first)
-  if %i[insert replace].include?(options.action) && !options.value
-    abort('Need value for replacement, use -v or -V')
+  options.data = read_input(argv.first)
+  if %i[insert replace].include?(options.action) && !options.value_given
+    abort("Need value for #{options.action}, use -v or -V")
   end
   options
 end
@@ -65,17 +68,22 @@ def parse_options(argv)
     opts.separator('Options:')
 
     opts.on('-q', '--query FILE', 'Read jsonpath query from file') { |o| options.query_file = o }
-    opts.on('-c', '--compact', 'Express result in compact json format') { options.compact_output = true }
-    opts.on('-v', '--value STRING', 'value to insert or replace (string or number only)') do |o|
+    opts.on('-c', '--compact', 'Print result in compact json format') { options.compact_output = true }
+    opts.on('-v', '--value STRING', 'VALUE for insert or replace (str/number/null/true/false)') do |o|
       options.value = read_value(o)
+      options.value_given = true # must track this separately since value may be false / nil
     end
-    opts.on('-V', '--value-file FILENAME', 'file containing value to insert or replace') do |o|
+    desc =
+      'JSON file containing VALUE for insert or replace ' \
+      '(bare literals are valid JSON, eg. 9, "string", null)'
+    opts.on('-V', '--value-file FILENAME', desc) do |o|
       options.value = read_value_file(o)
+      options.value_given = true
     end
     opts.separator('Actions:')
-    opts.on('-d', '--delete', 'Print the input, with matching values deleted') { options.action = :delete }
-    opts.on('-r', '--replace', 'Print the input, replacing matches with given value') { options.action = :replace }
-    opts.on('-i', '--insert', 'Print the input, with the given value inserted') { options.action = :insert }
+    opts.on('-d', '--delete', 'Print data, with matches deleted') { options.action = :delete }
+    opts.on('-r', '--replace', 'Print data, with matches replaced by VALUE') { options.action = :replace }
+    opts.on('-i', '--insert', 'Print data, with VALUE inserted at query location') { options.action = :insert }
     opts.on('-p', '--paths', 'List normalized path for each match') { options.action = :paths }
     opts.on('--version', 'Show version number') { abort(Janeway::VERSION) }
     opts.on('-h', '--help', 'Show this help message') { abort(opts.to_s) }
@@ -126,6 +134,9 @@ end
 # @return [Integer, Float, String]
 def read_value(value_str)
   case value_str
+  when 'null' then nil
+  when 'true' then true
+  when 'false' then false
   when /^\d+$/ then value_str.to_i # integer
   when /^\d+\.\d+$/ then value_str.to_f # float
   else value_str # string
@@ -138,39 +149,39 @@ end
 def parse_json(json)
   JSON.parse(json)
 rescue JSON::JSONError => e
-  # JSON error messages may include the entire input, so limit how much is printed.
+  # JSON error messages may include the entire data, so limit how much is printed.
   msg = e.message[0..256]
   msg += "\n..." if e.message.length > 256
-  abort "Input is not valid JSON: #{msg}"
+  abort "Input data is not valid JSON: #{msg}"
 end
 
 # Just pares the query ane then exit.
 # Useful for testing whether a query is valid.
 # @param query [String] jsonpath
 def parse_query_and_exit(query)
-  Janeway.compile(query)
+  Janeway.parse(query)
   puts 'Query is valid. Provide input json to run the query.'
   exit(0)
 end
 
 # @param options [Options]
 def main(options)
-  parse_query_and_exit(options.query) unless options.input
+  parse_query_and_exit(options.query) unless options.data
 
-  enum = Janeway.enum_for(options.query, options.input)
+  enum = Janeway.enum_for(options.query, options.data)
   results =
     case options.action
     when :search then enum.search
     when :paths then enum.map { |_, _, _, path| path }
     when :replace
       enum.replace(options.value)
-      options.input
+      options.data
     when :insert
       enum.insert(options.value)
-      options.input
+      options.data
     when :delete
       enum.delete
-      options.input
+      options.data
     else
       raise "Unknown action: #{options.action}"
     end

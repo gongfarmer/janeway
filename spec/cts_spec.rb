@@ -23,7 +23,7 @@ end
 shared_examples 'an invalid query' do |test_name, selector|
   it "raises parse error for #{test_name}" do
     expect {
-      Janeway.compile(selector)
+      Janeway.parse(selector)
     }.to raise_error(Janeway::Error)
   end
 end

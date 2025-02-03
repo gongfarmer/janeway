@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'English'
+require_relative 'janeway/enumerator'
+require_relative 'janeway/parser'
 
 # Janeway JSONPath query library
 #
@@ -11,11 +13,22 @@ module Janeway
   # The Enumerator can be used to apply the query to the data using Enumerator
   # module methods such as #each and #map.
   #
+  # @example Apply query to data and search to get array of results
+  #   results = Janeway.parse('$.store.books[? length(@.title) > 20]').search
+  #
+  # @example Apply query to data and iterate over results
+  #   enum = Janeway.parse('$.store.books[? length(@.title) > 20]')
+  #   enum.each do |book|
+  #     results << book
+  #   end
+  #
+  # @see Janeway::Enumerator docs for more ways to use the Enumerator
+  #
   # @param jsonpath [String] jsonpath query
   # @param data [Array, Hash] input data
   # @return [Janeway::Enumerator]
   def self.enum_for(jsonpath, data)
-    query = compile(jsonpath)
+    query = parse(jsonpath)
     Janeway::Enumerator.new(query, data)
   end
 
@@ -27,28 +40,17 @@ module Janeway
   #
   # Otherwise, use Janeway.enum_for to parse the query and pair it with data in a single step.
   #
-  # @example
-  #     query = Janeway.compile('$.store.books[? length(@.title) > 20]')
-  #     long_title_books = query.enum_for(data_source_one).search
-  #     query.enum_for(data_source_two).each do |book|
-  #       long_title_books << book
-  #     end
+  # @example Use a query to search several JSON files
+  #   results = []
+  #   query = Janeway.parse('$.store.books[? length(@.title) > 20]')
+  #   data_files.each do |path|
+  #     data = JSON.parse File.read(path)
+  #     results.concat query.enum_for(data).search
+  #   end
   #
   # @param query [String] jsonpath query
   # @return [Janeway::AST::Query]
-  def self.compile(query)
+  def self.parse(query)
     Janeway::Parser.parse(query)
   end
 end
-
-require_relative 'janeway/enumerator'
-require_relative 'janeway/error'
-require_relative 'janeway/functions'
-require_relative 'janeway/interpreter'
-require_relative 'janeway/lexer'
-require_relative 'janeway/location'
-require_relative 'janeway/normalized_path'
-require_relative 'janeway/parser'
-require_relative 'janeway/query'
-require_relative 'janeway/token'
-require_relative 'janeway/version'
