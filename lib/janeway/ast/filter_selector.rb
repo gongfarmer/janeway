@@ -2,8 +2,6 @@
 
 require_relative 'selector'
 
-# https://datatracker.ietf.org/doc/rfc9535/
-
 module Janeway
   module AST
     # Filter selectors are used to iterate over the elements or members of

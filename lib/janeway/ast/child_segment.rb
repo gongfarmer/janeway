@@ -2,16 +2,17 @@
 
 require 'forwardable'
 
-# A set of selectors within brackets, as a comma-separated list.
-# https://www.rfc-editor.org/rfc/rfc9535.html#child-segment
-#
-# @example
-#    $[*, *]
-#    $[1, 2, 3]
-#    $[name1, [1:10]]
 module Janeway
   module AST
     # Represent a union of 2 or more selectors.
+    #
+    # A set of selectors within brackets, as a comma-separated list.
+    # https://www.rfc-editor.org/rfc/rfc9535.html#child-segment
+    #
+    # @example
+    #    $[*, *]
+    #    $[1, 2, 3]
+    #    $[name1, [1:10]]
     class ChildSegment < Janeway::AST::Expression
       extend Forwardable
       def_delegators :@value, :size, :first, :last, :each, :map, :empty?

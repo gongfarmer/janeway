@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'ast'
 require_relative 'error'
 require_relative 'functions'
 require_relative 'lexer'

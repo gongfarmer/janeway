@@ -2,18 +2,14 @@
 
 require 'English'
 
-# Janeway JSONPath parsing library
+# Janeway JSONPath query library
+#
+# https://github.com/gongfarmer/janeway
 module Janeway
-  # Abstract Syntax Tree
-  module AST
-    # These are the limits of what javascript's Number type can represent
-    INTEGER_MIN = -9_007_199_254_740_991
-    INTEGER_MAX = 9_007_199_254_740_991
-  end
-
-  # Pair a jsonpath query with data to make an enumerator.
-  # This can be used to apply the query to the data using Enumerator module
-  # methods such as #each and #map.
+  # Parse a jsonpath string and combine it with data to make an Enumerator.
+  #
+  # The Enumerator can be used to apply the query to the data using Enumerator
+  # module methods such as #each and #map.
   #
   # @param jsonpath [String] jsonpath query
   # @param data [Array, Hash] input data
@@ -23,13 +19,18 @@ module Janeway
     Janeway::Enumerator.new(query, data)
   end
 
-  # Compile a JSONPath query into an Abstract Syntax Tree.
+  # Parse a JSONPath string into a Janeway::Query object.
   #
-  # This can be combined with inputs (using #enum_for) to create Enumerators.
+  # This object can be combined with data to create Enumerators that apply the query to the data.
+  #
+  # Use this method if you want to parse the query once and re-use it for multiple data sets.
+  #
+  # Otherwise, use Janeway.enum_for to parse the query and pair it with data in a single step.
+  #
   # @example
   #     query = Janeway.compile('$.store.books[? length(@.title) > 20]')
-  #     long_title_books = query.enum_for(some_data).search
-  #     query.enum_for(other_data).each do |book|
+  #     long_title_books = query.enum_for(data_source_one).search
+  #     query.enum_for(data_source_two).each do |book|
   #       long_title_books << book
   #     end
   #
@@ -40,20 +41,14 @@ module Janeway
   end
 end
 
-# Require ruby source files in the given dir. Do not recurse to subdirs.
-# @param dir [String] dir path relative to __dir__
-# @return [void]
-def require_libs(dir)
-  absolute_path = File.join(__dir__, dir)
-  raise "No such dir: #{dir.inspect}" unless File.directory?(absolute_path)
-
-  Dir.children(absolute_path).sort.each do |filename|
-    next if File.directory?(File.join(absolute_path, filename))
-
-    rel_path = File.join(dir, filename)
-    require_relative(rel_path[0..-4]) # omits ".rb" extension
-  end
-end
-
-require_libs('janeway/ast')
-require_libs('janeway')
+require_relative 'janeway/enumerator'
+require_relative 'janeway/error'
+require_relative 'janeway/functions'
+require_relative 'janeway/interpreter'
+require_relative 'janeway/lexer'
+require_relative 'janeway/location'
+require_relative 'janeway/normalized_path'
+require_relative 'janeway/parser'
+require_relative 'janeway/query'
+require_relative 'janeway/token'
+require_relative 'janeway/version'

@@ -1,15 +1,16 @@
 # frozen_string_literal: true
 
 module Janeway
-  # Enumerator combines a parsed JSONpath query with input.
-  # It provides enumerator methods.
+  # Enumerator combines a JSONPath query with input.
+  # It provides methods for running queries on the input and enumerating over the results.
   class Enumerator
     include Enumerable
 
     # @return [Janeway::Query]
     attr_reader :query
 
-    # @param query [Janeway::Query] @param input [Array, Hash]
+    # @param query [Janeway::Query]
+    # @param input [Array, Hash]
     def initialize(query, input)
       @query = query
       @input = input
@@ -37,8 +38,8 @@ module Janeway
       Janeway::Interpreter.new(@query, as: :iterator, &block).interpret(@input)
     end
 
-    # Delete each value matched by the JSONPath query.
-    # @return [Array, Hash]
+    # Delete values from the input that are matched by the JSONPath query.
+    # @return [Array] deleted values
     def delete
       Janeway::Interpreter.new(@query, as: :deleter).interpret(@input)
     end
@@ -47,7 +48,7 @@ module Janeway
     # @param value [Object]
     # @return [void]
     def replace(value)
-      # Avoid infinite loop when the replacement value contains data that matches the query
+      # Avoid infinite loop when the replacement data would also be matched by the query
       previous = []
       each do |_, parent, key|
         # Update the previous match
@@ -67,16 +68,21 @@ module Janeway
       nil
     end
 
-    # Insert `value` at the location specified by a singular query.
+    # Insert `value` into the input at a location specified by a singular query.
+    #
     # This has restrictions:
-    #   * only for singular queries (no wildcards, filter expressions, child segments, etc.)
-    #   * the "parent" node must exist. eg. for $.a[1].name, the path $.a[1] must exist
-    #   * cannot create array index N unless the array already has exactly n-1 elements
-    #   * if element already exists, block is run if providedd. Otherwise an exception is raised.
+    #   * Only for singular queries
+    #     (no wildcards, filter expressions, child segments, etc.)
+    #   * The "parent" node must exist
+    #     eg. for $.a[1].name, the path $.a[1] must exist and be a Hash
+    #   * Cannot create array index N unless the array
+    #     already has exactly n-1 elements
+    #   * If query path already exists, the block is called if provided.
+    #     Otherwise an exception is raised.
     #
     # Optionally, pass in a block to be called when there is already a value at the
-    # specified array index / hash key. The block will be passed the parent object and the
-    # array index or hash key.
+    # specified array index / hash key. The parent object and the array index
+    # or hash key will be yielded to the block.
     #
     # @yieldparam [Array, Hash] parent object
     # @yieldparam [Intgeer, String] array index or hash key

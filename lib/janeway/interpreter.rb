@@ -25,7 +25,7 @@ module Janeway
     # @param query [Query] abstract syntax tree of the jsonpath query
     def initialize(query, as: :finder, &block)
       raise ArgumentError, "expect Query, got #{query.inspect}" unless query.is_a?(Query)
-      unless %i[finder iterator deleter].include?(as)
+      unless %i[finder iterator deleter delete_if].include?(as)
         raise ArgumentError, "invalid interpreter type: #{as.inspect}"
       end
 
@@ -80,6 +80,7 @@ module Janeway
       case @type
       when :iterator then interpreters.push(Yielder.new(&block))
       when :deleter then interpreters.push make_deleter(interpreters.pop)
+      when :delete_if then interpreters.push make_delete_if(interpreters.pop)
       end
 
       # Link interpreters together
@@ -109,6 +110,14 @@ module Janeway
     end
 
     # Make a Deleter that will delete the results matched by a Selector.
+    # @param interpreter [Interpreters::Base] interpeter subclass
+    def make_deleter(interpreter)
+      TreeConstructor.ast_node_to_deleter(interpreter.node)
+    end
+
+    # Make a DeleteIf that will delete the results matched by a Selector,
+    # after yielding to a block for approval.
+    #
     # @param interpreter [Interpreters::Base] interpeter subclass
     def make_deleter(interpreter)
       TreeConstructor.ast_node_to_deleter(interpreter.node)

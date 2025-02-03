@@ -5,49 +5,49 @@ require_relative 'token'
 require_relative 'error'
 
 module Janeway
-  OPERATORS = {
-    and: '&&',
-    array_slice_separator: ':',
-    child_end: ']',
-    child_start: '[',
-    current_node: '@',
-    descendants: '..',
-    dot: '.',
-    equal: '==',
-    filter: '?',
-    greater_than: '>',
-    greater_than_or_equal: '>=',
-    group_end: ')',
-    group_start: '(',
-    less_than: '<',
-    less_than_or_equal: '<=',
-    minus: '-',
-    not: '!',
-    not_equal: '!=',
-    or: '||',
-    root: '$',
-    union: ',',
-    wildcard: '*',
-  }.freeze
-  ONE_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 1 }.freeze
-  TWO_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 2 }.freeze
-  TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.freeze
-  ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.freeze
-
-  WHITESPACE = " \t\n\r"
-  KEYWORD = %w[true false null].freeze
-  FUNCTIONS = %w[length count match search value].freeze
-
-  # faster to check membership in a string than an array of char (benchmarked ruby 3.1.2)
-  ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  DIGITS = '0123456789'
-
-  # chars that may be used as the first letter of member-name-shorthand
-  NAME_FIRST = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
-
   # Transforms source code into tokens
   class Lexer
     class Error < Janeway::Error; end
+
+    OPERATORS = {
+      and: '&&',
+      array_slice_separator: ':',
+      child_end: ']',
+      child_start: '[',
+      current_node: '@',
+      descendants: '..',
+      dot: '.',
+      equal: '==',
+      filter: '?',
+      greater_than: '>',
+      greater_than_or_equal: '>=',
+      group_end: ')',
+      group_start: '(',
+      less_than: '<',
+      less_than_or_equal: '<=',
+      minus: '-',
+      not: '!',
+      not_equal: '!=',
+      or: '||',
+      root: '$',
+      union: ',',
+      wildcard: '*',
+    }.freeze
+    ONE_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 1 }.freeze
+    TWO_CHAR_LEX = OPERATORS.values.select { |lexeme| lexeme.size == 2 }.freeze
+    TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.freeze
+    ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.freeze
+
+    WHITESPACE = " \t\n\r"
+    KEYWORD = %w[true false null].freeze
+    FUNCTIONS = %w[length count match search value].freeze
+
+    # faster to check membership in a string than an array of char (benchmarked ruby 3.1.2)
+    ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    DIGITS = '0123456789'
+
+    # chars that may be used as the first letter of member-name-shorthand
+    NAME_FIRST = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 
     attr_reader :source, :tokens
     attr_accessor :next_p, :lexeme_start_p
