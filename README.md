@@ -222,6 +222,19 @@ The `#delete` method deletes matched values from the input.
     # dog list is now []
 ```
 
+##### #delete_if
+
+The `#delete_if` method yields matched values to a block, and deletes them if the block returns a truthy value.
+This allows input values to be deleted based on conditions that can't be tested by a JSONPath query:
+```ruby
+    # delete any book from the store json data that is no longer in the database
+    Janeway.enum_for('$.store.book.*', data).delete_if do |book|
+        results = db.query('SELECT * FROM books WHERE author=? AND title=?', book['author'], book['title'])
+        results.size == 0
+    end
+```
+
+#### Ruby Enumerable module methods
 
 The `Janeway.enum_for` and `Janeway::Query#enum_for` methods return an enumerator, so you can use the usual ruby enumerator methods, such as:
 
