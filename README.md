@@ -225,12 +225,75 @@ The `#delete` method deletes matched values from the input.
 ##### #delete_if
 
 The `#delete_if` method yields matched values to a block, and deletes them if the block returns a truthy value.
-This allows input values to be deleted based on conditions that can't be tested by a JSONPath query:
+This allows values to be deleted based on conditions that can't be tested by a JSONPath query:
 ```ruby
-    # delete any book from the store json data that is no longer in the database
+    # delete any book from the store json data that is not in the database
     Janeway.enum_for('$.store.book.*', data).delete_if do |book|
         results = db.query('SELECT * FROM books WHERE author=? AND title=?', book['author'], book['title'])
         results.size == 0
+    end
+```
+
+##### #replace
+
+Replaces every value matched by the query with the given value.
+The replacement does not need to be the same type (eg. you can replace a string value with Hash or nil.)
+
+Alternatively, provide a block which receives the value and returns a replacement value.
+
+```ruby
+    # Set every price to nil
+    Janeway.enum_for('$..price', data).replace(nil)
+
+    # Suppose the prices were serialized as strings, eg. "price" => "9.99"
+    # Convert them to floating point values:
+    Janeway.enum_for('$..price', data).replace { |price| price.to_f }
+
+    # Same thing, but using more terse ruby:
+    Janeway.enum_for('$..price', data).replace(&:to_f)
+
+    # Convert price to hash:
+    Janeway.enum_for('$..price', data).replace do |price|
+        {
+          'price' => price.to_f,
+          'currency' => 'CAD',
+        }
+    end
+```
+
+##### #insert
+
+Adds the given value to the input data, at the place specified by the JSONPath query.
+
+The query must be a singular query, meaning it can only be made of of name selectors (hash keys) and index selectors (array indexes.)
+The normalized paths which are yielded to `#each` are usable here.
+Examples of singular queries:
+```
+    $.store.book.0.price
+    $['store']['book'][0]
+```
+Examples of queries that are valid JSONPath but are not useable here:
+```
+    $.store.book.*
+    $.store.book[1:2]
+    $.store.book[? @.price >= 8.99]
+```
+
+Additionally, some other restrictions apply:
+   * The "parent" node must exist, eg. for `$.a[1].name`, the path `$.a[1]` must exist and be a Hash
+   * Cannot create array index `n` unless the array contains exactly `n-1` elements
+   * If query path already exists, the block is called if provided. Otherwise an exception is raised.
+
+Here is an example of adding a new book to the store:
+```ruby
+    # Add a new book to the store
+    book_count = data['store']['book'].size
+    Janeway.enum_for("$.store.book[#{book_count}]", data).insert do
+      { "category": "fiction",
+        "author": "Kameron Hurley",
+        "title": "The Light Brigade",
+        "price": 33.11
+      }
     end
 ```
 

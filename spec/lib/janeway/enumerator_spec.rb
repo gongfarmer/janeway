@@ -355,6 +355,29 @@ module Janeway
         expect(input.dig('b', 'b', 'a')).to eq(replacement)
         expect(input.dig('b', 'b', 'a', 'a')).to be_nil
       end
+
+      it 'accepts nil as a replacement value' do
+        Janeway.enum_for('$..a', input).replace(nil)
+        expect(input).to eq({ 'a' => nil, 'b' => { 'a' => nil, 'b' => { 'a' => nil } } })
+      end
+
+      it 'accepts a block which creates the replacement value' do
+        input = %w[1 2 3 4 5]
+        Janeway.enum_for('$.*', input).replace(&:to_i)
+        expect(input).to eq([1, 2, 3, 4, 5])
+      end
+
+      it 'raises if block and replacement value are both given' do
+        expect {
+          Janeway.enum_for('$.*', input).replace(1) { |value| value + 1 }
+        }.to raise_error(Janeway::Error, /#replace needs either replacement value or block, not both/)
+      end
+
+      it 'raises if block and nil replacement value are both given' do
+        expect {
+          Janeway.enum_for('$.*', input).replace(nil) { |value| value + 1 }
+        }.to raise_error(Janeway::Error, /#replace needs either replacement value or block, not both/)
+      end
     end
 
     describe '#insert' do

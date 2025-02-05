@@ -56,14 +56,18 @@ module Janeway
     # Assign the given value at every query match.
     # @param value [Object]
     # @return [void]
-    def replace(value)
+    def replace(replacement = :no_replacement_value_was_given, &block)
+      if replacement != :no_replacement_value_was_given && block_given?
+        raise Janeway::Error.new('#replace needs either replacement value or block, not both', @query)
+      end
+
       # Avoid infinite loop when the replacement data would also be matched by the query
       previous = []
       each do |_, parent, key|
         # Update the previous match
         unless previous.empty?
           prev_parent, prev_key = *previous
-          prev_parent[prev_key] = value
+          prev_parent[prev_key] = block_given? ? yield(prev_parent[prev_key]) : replacement
         end
 
         # Record this match to be updated later
@@ -73,7 +77,7 @@ module Janeway
 
       # Update the final match
       prev_parent, prev_key = *previous
-      prev_parent[prev_key] = value
+      prev_parent[prev_key] = block_given? ? yield(prev_parent[prev_key]) : replacement
       nil
     end
 
@@ -85,7 +89,7 @@ module Janeway
     #   * The "parent" node must exist
     #     eg. for $.a[1].name, the path $.a[1] must exist and be a Hash
     #   * Cannot create array index N unless the array
-    #     already has exactly n-1 elements
+    #     already has exactly N-1 elements
     #   * If query path already exists, the block is called if provided.
     #     Otherwise an exception is raised.
     #
