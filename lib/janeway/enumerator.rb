@@ -54,7 +54,7 @@ module Janeway
     end
 
     # Assign the given value at every query match.
-    # @param value [Object]
+    # @param replacement [Object]
     # @return [void]
     def replace(replacement = :no_replacement_value_was_given, &block)
       if replacement != :no_replacement_value_was_given && block_given?

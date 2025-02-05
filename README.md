@@ -192,7 +192,7 @@ For example, iterating over an array may yield index values 1, 2 and 3.
 Deleting the value at index 1 would change the index for the remaining values.
 Next iteration might yield index 2, but since 1 was deleted it is now really at index 1.
 
-To avoid having to deal with such problems, use the built in `#delete` method below.
+To avoid having to deal with such problems, use the `#delete` method instead.
 
 
 Lastly, the `#each` iterator's fourth yield parameter is the [normalized path](https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths) to the matched value.
@@ -205,8 +205,10 @@ This is a jsonpath query string that uniquely points to the matched value.
         paths << path
     end
     paths
-    # [ #  "$['birds']", "$['dogs']", "$['birds'][0]", "$['birds'][1]", "$['birds'][2]",
-    #  "$['dogs'][0]", "$['dogs'][1]", "$['dogs'][2]"]
+    #  [
+    #    "$['birds']", "$['dogs']", "$['birds'][0]", "$['birds'][1]",
+    #    "$['birds'][2]", "$['dogs'][0]", "$['dogs'][1]", "$['dogs'][2]"
+    #  ]
 ```
 
 ##### #delete
@@ -224,7 +226,7 @@ The `#delete` method deletes matched values from the input.
 
 ##### #delete_if
 
-The `#delete_if` method yields matched values to a block, and deletes them if the block returns a truthy value.
+The `#delete_if` method yields matched values to a block, and deletes them if the block returns a truthy result.
 This allows values to be deleted based on conditions that can't be tested by a JSONPath query:
 ```ruby
     # delete any book from the store json data that is not in the database
