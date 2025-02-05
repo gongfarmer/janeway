@@ -1,31 +1,22 @@
 # frozen_string_literal: true
 
 require_relative 'base'
-require_relative '../normalized_path'
+require_relative 'iteration_helper'
 
 module Janeway
   module Interpreters
     # Yields each input value.
     #
-    # It is inserted at the end of the "real" selectors in the AST, to receive and yield the output.
+    # This is inserted at the end of the "real" selectors in the AST, to receive and yield the output.
     # This is a supporting class for the Janeway.each method.
     class Yielder
+      include IterationHelper
+
       def initialize(&block)
         @block = block
 
-        # Decide how many parameters to yield to this block.
-        # block.arity is -1 when no block was given, and an enumerator is being returned from #each
-        @yield_to_block =
-          if block.arity.negative?
-            # Yield values only to an enumerator.
-            proc { |value, _parent, _path| @block.call(value) }
-          elsif block.arity > 3
-            # Only do the work of constructing the normalized path when it is actually used
-            proc { |value, parent, path| @block.call(value, parent, path.last, normalized_path(path)) }
-          else
-            # block arity is 1, 2 or 3. Send all 3.
-            proc { |value, parent, path| @block.call(value, parent, path.last) }
-          end
+        # Make a proc that yields the correct number of values to a block
+        @yield_proc = make_yield_proc(&block)
       end
 
       # Yield each input value
@@ -37,25 +28,8 @@ module Janeway
       # @yieldparam [Object] matched value
       # @return [Object] input as node list
       def interpret(input, parent, _root, path)
-        @yield_to_block.call(input, parent, path)
+        @yield_proc.call(input, parent, path)
         input.is_a?(Array) ? input : [input]
-      end
-
-      # Convert the list of path elements into a normalized query string.
-      #
-      # This form uses a subset of jsonpath that unambiguously points to a value
-      # using only name and index selectors.
-      # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths
-      #
-      # Name selectors must use bracket notation, not shorthand.
-      #
-      # @param components [Array<String, Integer>]
-      # @return [String]
-      def normalized_path(components)
-        # First component is the root identifer, the remaining components are
-        # all index selectors or name selectors.
-        # Handle the root identifier separately, because .normalize does not handle those.
-        '$' + components[1..].map { NormalizedPath.normalize(_1) }.join
       end
 
       # Dummy method from Interpreters::Base, allow child segment interpreter to disable the

@@ -17,6 +17,12 @@ module Janeway
         alias_method :node, :interpret
       end
 
+      # Return an interpreter for the given AST node.
+      # This interpreter forwards matcheed values to the next interpreter, or
+      # returns them if there is no next interpreter.
+      #
+      # @param expr [AST::Expression]
+      # @return [Interprteters::Base]
       def self.ast_node_to_interpreter(expr)
         case expr
         when AST::RootNode then Interpreters::RootNodeInterpreter.new(expr)
@@ -38,6 +44,11 @@ module Janeway
         end
       end
 
+      # Return a Deleter interpreter for the given AST node.
+      # This interpreter deletes matched values.
+      #
+      # @param expr [AST::Expression]
+      # @return [Interprteters::Base]
       def self.ast_node_to_deleter(expr)
         case expr
         when AST::IndexSelector then IndexSelectorDeleter.new(expr)
@@ -47,8 +58,27 @@ module Janeway
         when AST::WildcardSelector then WildcardSelectorDeleter.new(expr)
         when AST::ChildSegment then ChildSegmentDeleter.new(expr)
         when AST::RootNode then RootNodeDeleter.new(expr)
-
         when nil then nil # caller has no @next node
+        else
+          raise "Unknown AST expression: #{expr.inspect}"
+        end
+      end
+
+      # Return a DeleteIf interpreter for the given AST node.
+      # This interpreter deletes matched values, but only after
+      # yielding to a block that returns a truthy value.
+      #
+      # @param expr [AST::Expression]
+      # @return [Interprteters::Base]
+      def self.ast_node_to_delete_if(expr, &block)
+        case expr
+        when AST::IndexSelector then IndexSelectorDeleteIf.new(expr, &block)
+        when AST::ArraySliceSelector then ArraySliceSelectorDeleteIf.new(expr, &block)
+        when AST::NameSelector then NameSelectorDeleteIf.new(expr, &block)
+        when AST::FilterSelector then FilterSelectorDeleteIf.new(expr, &block)
+        when AST::WildcardSelector then WildcardSelectorDeleteIf.new(expr, &block)
+        when AST::ChildSegment then ChildSegmentDeleteIf.new(expr, &block)
+        when AST::RootNode then RootNodeDeleteIf.new(expr, &block)
         else
           raise "Unknown AST expression: #{expr.inspect}"
         end

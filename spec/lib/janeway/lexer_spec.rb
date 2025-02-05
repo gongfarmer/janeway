@@ -35,7 +35,7 @@ module Janeway
       end
 
       # Escaping rules are defined here:
-      # https://ietf-wg-jsonpath.github.io/draft-ietf-jsonpath-base/draft-ietf-jsonpath-base.html#name-semantics-3
+      # https://www.rfc-editor.org/rfc/rfc9535.html#name-semantics-3
       it 'converts chars \b to backspace' do
         expect(described_class.lex('$.["\b"]')).to eq([:root, :dot, :child_start, "\b", :child_end, :eof])
       end
@@ -60,7 +60,7 @@ module Janeway
         expect(described_class.lex('$.["\""]')).to eq([:root, :dot, :child_start, '"', :child_end, :eof])
       end
 
-      it "converts chars ' to apostrophe, inside single quotes" do
+      it "converts chars \\' to apostrophe, inside single quotes" do
         expect(described_class.lex("$.['\\'']")).to eq([:root, :dot, :child_start, "'", :child_end, :eof])
       end
 

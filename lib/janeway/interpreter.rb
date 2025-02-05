@@ -11,6 +11,7 @@ module Janeway
   # It should be created for a single query and then discarded.
   class Interpreter
     attr_reader :jsonpath, :output
+
     include Interpreters
 
     # Interpret a query on the given input, return result
@@ -80,7 +81,7 @@ module Janeway
       case @type
       when :iterator then interpreters.push(Yielder.new(&block))
       when :deleter then interpreters.push make_deleter(interpreters.pop)
-      when :delete_if then interpreters.push make_delete_if(interpreters.pop)
+      when :delete_if then interpreters.push make_delete_if(interpreters.pop, &block)
       end
 
       # Link interpreters together
@@ -119,8 +120,8 @@ module Janeway
     # after yielding to a block for approval.
     #
     # @param interpreter [Interpreters::Base] interpeter subclass
-    def make_deleter(interpreter)
-      TreeConstructor.ast_node_to_deleter(interpreter.node)
+    def make_delete_if(interpreter, &block)
+      TreeConstructor.ast_node_to_delete_if(interpreter.node, &block)
     end
 
     # Return an Interpreter::Error with the specified message, include the query.

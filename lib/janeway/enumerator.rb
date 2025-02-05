@@ -46,6 +46,13 @@ module Janeway
       Janeway::Interpreter.new(@query, as: :deleter).interpret(@input)
     end
 
+    # Delete values from the input that are matched by the JSONPath query and also return a truthy value
+    # from the block.
+    # @return [Array] deleted values
+    def delete_if(&block)
+      Janeway::Interpreter.new(@query, as: :delete_if, &block).interpret(@input)
+    end
+
     # Assign the given value at every query match.
     # @param value [Object]
     # @return [void]
