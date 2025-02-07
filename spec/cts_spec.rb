@@ -6,17 +6,27 @@ require 'janeway'
 
 # Shim that reads tests from the jsonpath compliance test suite and runs them as rspec tests
 
-shared_examples 'a query that returns a result' do |test_name, selector, input, expected|
+shared_examples 'a query that returns a result' do |test_name, selector, input, expected, paths|
   it "returns the expected result for #{test_name}" do
     results = Janeway.enum_for(selector, input).search
     expect(results).to eq(expected)
   end
+
+  it "returns normalized paths for #{test_name}" do
+    result_paths = Janeway.enum_for(selector, input).find_paths
+    expect(result_paths).to eq(paths)
+  end
 end
 
-shared_examples 'a query that returns a non-deterministic result' do |test_name, selector, input, expected|
+shared_examples 'a query that returns a non-deterministic result' do |test_name, selector, input, expected, paths|
   it "returns an expected result for #{test_name}" do
     results = Janeway.enum_for(selector, input).search
     expect(expected).to include(results)
+  end
+
+  it "returns normalized paths for #{test_name}" do
+    result_paths = Janeway.enum_for(selector, input).find_paths
+    expect(paths).to include(result_paths)
   end
 end
 
@@ -47,6 +57,7 @@ describe Janeway do
     name = test['name']
     query = test['selector']
     input = test['document']
+    paths = test['result_paths'] || test['results_paths']
 
     if RUBY_ENGINE == 'truffleruby' && TRUFFLERUBY_SKIP_TESTS.include?(name)
       puts "CTS test #{name.inspect} skipped on truffleruby"
@@ -56,9 +67,9 @@ describe Janeway do
     if test['invalid_selector']
       it_behaves_like 'an invalid query', name, query
     elsif test['result']
-      it_behaves_like 'a query that returns a result', name, query, input, test['result']
+      it_behaves_like 'a query that returns a result', name, query, input, test['result'], paths
     else
-      it_behaves_like 'a query that returns a non-deterministic result', name, query, input, test['results']
+      it_behaves_like 'a query that returns a non-deterministic result', name, query, input, test['results'], paths
     end
   end
 end
