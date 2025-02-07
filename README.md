@@ -29,7 +29,7 @@ Install the gem from the command-line:
 or add it to your Gemfile:
 
 ```
-    gem 'janeway-jsonpath', '~> 0.4.0'
+    gem 'janeway-jsonpath', '~> 0.6'
 ```
 
 ### Usage

@@ -54,8 +54,8 @@ module Janeway
     Janeway::Parser.parse(query)
   end
 
-  # Transform a jsonpath singular query into an array of values suitable for
-  # providing to Hash#dig or Array#dig.
+  # Transform a jsonpath singular query into an array of hash keys and/or array
+  # indexes suitable for providing to Hash#dig or Array#dig.
   #
   # Only singular queries are allowed, meaning queries that contain only name
   # selectors (ie. hash keys) and index selectors (array indexes.)
@@ -67,6 +67,19 @@ module Janeway
   # @param jsonpath [String] jsonpath query
   # @return [Array<String, Integer>]
   def self.path_to_diggable(jsonpath)
-    raise NotImplementedError
+    raise Janeway::Error.new('Query has nothing to dig', jsonpath) if jsonpath == '$'
+
+    # Parse query and determine whether it can be converted
+    query = parse(jsonpath)
+    unless query.singular_query?
+      raise Janeway::Error.new('Only a singular query can be converted to dig parameters', jsonpath)
+    end
+
+    # Convert query to a list of name and index selectors
+    nodes = query.node_list
+    nodes.shift # discard the root identifier
+
+    # Extract values from selectors
+    nodes.map(&:value)
   end
 end
