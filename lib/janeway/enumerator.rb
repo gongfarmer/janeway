@@ -118,6 +118,15 @@ module Janeway
       end
     end
 
+    # Return the normalized path of every query match.
+    #
+    # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-normalized-paths
+    #
+    # @return [Array<String>] normalized paths, eg. [ "$['key'][0]"] ]
+    def find_paths
+      map { |_, _, _, path| path }
+    end
+
     private
 
     # Find the 'parent' of the object pointed to by the query. For singular query only.

@@ -464,6 +464,17 @@ module Janeway
       end
     end
 
+    describe '#find_paths' do
+      let(:input) { { 'a' => { 'b' => { 'c' => 1 } } } }
+      it 'returns normalized paths for query matches' do
+        expected = ["$['a']", "$['a']['b']", "$['a']['b']['c']"]
+        expect(Janeway.enum_for('$..*', input).find_paths).to eq(expected)
+      end
+      it 'returns empty list when query does not match anything' do
+        expect(Janeway.enum_for('$.a[0]', input).find_paths).to be_empty
+      end
+    end
+
     # The remaining methods are provided by the Enumerable module.
     # These tests just confirm that the methods exist and work as expected for simple inputs
 
