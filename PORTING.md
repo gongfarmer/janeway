@@ -63,7 +63,7 @@ For the queries that reference the "store", you can run the same queries using t
 }
 ```
 
-### Differences
+### Differences in query syntax
 
 * `joshbuddy/jsonpath` allows unquoted strings in filter comparisons.
 Janeway requires string literals to be quoted.
@@ -117,6 +117,21 @@ The spaces can be omitted too, or more added.
 
 No doubt there are other differences that I haven't found.  Feel free to open bug requests or PRs to add more to this list.
 
+### Differences in library feature sets
+
+|feature    |jsonpath | janeway | description |
+|-----------|---------|---------|-------|
+| query language | custom | standard RFC9535  | |
+| search    |    ✓    |    ✓    | return values matched by query      |
+| iteration | ✓  |  ✓ | janeway `#each` has extra yield parameters: `parent`, `key`, `path` |
+| delete    |    ✓    |    ✓    | delete values matched by query      |
+| modify    | gsub! only |   ✓  | janeway can call any instance method on matched value    |
+| replace   | 𐄂  |  ✓ | can replace matched value with a different value  |
+| insert   | 𐄂  | ✓ | add values at a location specified by a singular query|
+| find paths |    ✓    |    ✓    | jsonpath returns a list of all paths in the input, janeway `#each` yields paths of matched values |
+|-----------|---------|---------|-------|
+| symbol keys   | ✓  |  𐄂 | match on hashes with either symbol or string keys |
+| diggable objects | ✓  |  𐄂 |  match on custom objects as long as they implement `#dig` |
 
 ### Performance
 
