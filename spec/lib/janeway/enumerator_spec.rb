@@ -470,8 +470,19 @@ module Janeway
         expected = ["$['a']", "$['a']['b']", "$['a']['b']['c']"]
         expect(Janeway.enum_for('$..*', input).find_paths).to eq(expected)
       end
+
       it 'returns empty list when query does not match anything' do
         expect(Janeway.enum_for('$.a[0]', input).find_paths).to be_empty
+      end
+
+      it 'returns positive array index when index selector uses negative index' do
+        input = %w[a b c]
+        expect(Janeway.enum_for('$[-1]', input).find_paths).to eq(['$[2]'])
+      end
+
+      it 'returns positive array index when array slice selector uses negative index' do
+        input = %w[a b c]
+        expect(Janeway.enum_for('$[-1]', input).find_paths).to eq(['$[2]'])
       end
     end
 

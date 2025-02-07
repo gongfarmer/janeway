@@ -31,7 +31,9 @@ module Janeway
         result = input.fetch(selector.value) # raises IndexError if no such index
         return [result] unless @next
 
-        @next.interpret(result, input, root, path + [selector.value])
+        index = selector.value
+        index += input.size if index.negative?
+        @next.interpret(result, input, root, path + [index])
       rescue IndexError
         []
       end

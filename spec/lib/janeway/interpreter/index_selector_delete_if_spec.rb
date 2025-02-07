@@ -39,6 +39,13 @@ module Janeway
       it 'returns no values when negative index is out of range' do
         expect(Janeway.enum_for('$[-7]', input).delete_if { true }).to be_empty
       end
+
+      it 'yields a normalized path containing positive array index when selector has negative index' do
+        Janeway.enum_for('$[-1]', input).delete_if do |_, _, _, normalized_path|
+          last_index = input.size - 1
+          expect(normalized_path).to eq("$[#{last_index}]")
+        end
+      end
     end
   end
 end
