@@ -475,14 +475,24 @@ module Janeway
         expect(Janeway.enum_for('$.a[0]', input).find_paths).to be_empty
       end
 
-      it 'returns positive array index when index selector uses negative index' do
+      it 'uses positive array index when index selector has negative index' do
         input = %w[a b c]
         expect(Janeway.enum_for('$[-1]', input).find_paths).to eq(['$[2]'])
       end
 
-      it 'returns positive array index when array slice selector uses negative index' do
+      it 'uses positive array index when array slice selector has negative range' do
         input = %w[a b c]
-        expect(Janeway.enum_for('$[-1]', input).find_paths).to eq(['$[2]'])
+        expect(Janeway.enum_for('$[-2:-1]', input).find_paths).to eq(['$[1]'])
+      end
+
+      it 'uses positive array index when array slice selector has negative step' do
+        input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        expect(Janeway.enum_for('$[3:1:-1]', input).find_paths).to eq(['$[3]', '$[2]'])
+      end
+
+      it 'uses positive array index when array slice selector has negative range and step' do
+        input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        expect(Janeway.enum_for('$[-1:-3:-1]', input).find_paths).to eq(['$[9]', '$[8]'])
       end
     end
 
