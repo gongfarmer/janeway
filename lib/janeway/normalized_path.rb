@@ -46,11 +46,18 @@ module Janeway
     def self.escape_char(char)
       # Character ranges defined by https://www.rfc-editor.org/rfc/rfc9535.html#section-2.7-8
       case char.ord
-      when 0x20..0x26, 0x28..0x5B, 0x5D..0xD7FF, 0xE000..0x10FFFF # normal-unescaped range
-        char # unescaped
-      when 0x62, 0x66, 0x6E, 0x72, 0x74, 0x27, 0x5C # normal-escapable range
-        # backspace, form feed, line feed, carriage return, horizontal tab, apostrophe, backslash
-        "\\#{char}" # escaped
+      # normal-unescaped range
+      when 0x20..0x26, 0x28..0x5B, 0x5D..0xD7FF, 0xE000..0x10FFFF then char # unescaped
+
+      # normal-escapable range
+      when 0x08 then '\\b' # backspace
+      when 0x0C then '\\f' # form feed
+      when 0x0A then '\\n' # line feed / newline
+      when 0x0D then '\\r' # carriage return
+      when 0x09 then '\\t' # horizontal tab
+      when 0x27 then '\\\'' # apostrophe
+      when 0x5C then '\\\\' # backslash
+
       else # normal-hexchar range
         hex_encode_char(char)
       end
