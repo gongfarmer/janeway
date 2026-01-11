@@ -506,6 +506,12 @@ module Janeway
           described_class.lex('$["\\uDC00"]')
         }.to raise_error(Error, /Invalid unicode escape sequence: \\uDC00/)
       end
+
+      it 'raises when query is empty' do
+        expect {
+          described_class.lex('')
+        }.to raise_error(Error, /JSONPath query is empty/)
+      end
     end
   end
 end
