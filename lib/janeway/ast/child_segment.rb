@@ -15,6 +15,7 @@ module Janeway
     #    $[name1, [1:10]]
     class ChildSegment < Janeway::AST::Expression
       extend Forwardable
+
       def_delegators :@value, :size, :first, :last, :each, :map, :empty?
 
       # Subsequent expression that modifies the result of this selector list.

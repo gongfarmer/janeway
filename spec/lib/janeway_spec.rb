@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'janeway'
 
 describe Janeway do

@@ -52,11 +52,11 @@ module Janeway
 
       it 'raises error when no query given' do
         expect {
-          Janeway.enum_for(nil, {}).each { puts }
+          Janeway.enum_for(nil, {}).each { $stderr.puts }
         }.to raise_error(ArgumentError, /expect jsonpath string, got nil/)
       end
 
-      context 'when iterating with a name selector' do
+      context 'when iterating a name selector' do
         let(:input) { { 'a' => { 'b' => { 'c' => 1 } } } }
 
         it "yields the value and also the hash that contains the value's key" do
@@ -78,7 +78,7 @@ module Janeway
           end
         end
 
-        context 'over a hash with keys that need special quoting' do
+        context 'with a hash whose keys need special quoting' do
           let(:input) do
             JSON.parse(<<~JSON_STRING)
               {
@@ -102,8 +102,8 @@ module Janeway
         end
       end
 
-      context 'when iterating with a wildcard selector' do
-        context 'over an array' do
+      context 'when iterating a wildcard selector' do
+        context 'with an array' do
           let(:input) { %w[a b c] }
 
           it 'yields value, array that contains value, and array index' do
@@ -122,7 +122,7 @@ module Janeway
           end
         end
 
-        context 'over a hash' do
+        context 'with a hash' do
           let(:input) { { 'a' => { 'b' => { 'c' => 1 } } } }
 
           it 'yields value, hash that contains value, and hash key' do
@@ -466,6 +466,7 @@ module Janeway
 
     describe '#find_paths' do
       let(:input) { { 'a' => { 'b' => { 'c' => 1 } } } }
+
       it 'returns normalized paths for query matches' do
         expected = ["$['a']", "$['a']['b']", "$['a']['b']['c']"]
         expect(Janeway.enum_for('$..*', input).find_paths).to eq(expected)

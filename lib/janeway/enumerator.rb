@@ -56,7 +56,7 @@ module Janeway
     # Assign the given value at every query match.
     # @param replacement [Object]
     # @return [void]
-    def replace(replacement = :no_replacement_value_was_given, &block)
+    def replace(replacement = :no_replacement_value_was_given, &_)
       if replacement != :no_replacement_value_was_given && block_given?
         raise Janeway::Error.new('#replace needs either replacement value or block, not both', @query)
       end
@@ -158,7 +158,7 @@ module Janeway
     # @param path [String] jsonpath singular query to parent
     # @yieldparam [Hash] parent object
     # @yieldparam [String] hash key
-    def insert_into_hash(hash, key, value, path, &block)
+    def insert_into_hash(hash, key, value, path, &_)
       unless key.is_a?(String) || key.is_a?(Symbol)
         raise Error.new("cannot use #{key.inspect} as hash key", @query.to_s)
       end
@@ -181,7 +181,7 @@ module Janeway
     # @param path [String] jsonpath singular query to parent
     # @yieldparam [Array] parent object
     # @yieldparam [Integer] array index
-    def insert_into_array(array, index, value, path, &block)
+    def insert_into_array(array, index, value, path)
       raise Error.new("cannot use #{index.inspect} as array index", @query.to_s) unless index.is_a?(Integer)
 
       if index < array.size

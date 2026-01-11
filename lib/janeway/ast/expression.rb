@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require_relative 'helpers'
 require_relative 'error'
 
@@ -37,7 +38,7 @@ module Janeway
       # @param msg [String]
       # @return [String]
       def indented(level, msg)
-        format('%s%s', (INDENT * level), msg)
+        format('%s%s', INDENT * level, msg)
       end
 
       # @param level [Integer]

@@ -76,7 +76,6 @@ module Janeway
         expect(described_class.lex('$.["\u263a"]')).to eq([:root, :dot, :child_start, '☺', :child_end, :eof])
       end
 
-      # rubocop: disable RSpec/MultipleExpectations
       it 'converts UTF-16 surrogate pair to UTF-8' do
         token = described_class.lex('$["\\uD83D\\uDE09"]').find { |tk| tk.type == :string }
         expect(token.literal.encoding).to be(Encoding::UTF_8)

@@ -60,7 +60,7 @@ describe Janeway do
     paths = test['result_paths'] || test['results_paths']
 
     if RUBY_ENGINE == 'truffleruby' && TRUFFLERUBY_SKIP_TESTS.include?(name)
-      puts "CTS test #{name.inspect} skipped on truffleruby"
+      warn "CTS test #{name.inspect} skipped on truffleruby"
       next
     end
 
