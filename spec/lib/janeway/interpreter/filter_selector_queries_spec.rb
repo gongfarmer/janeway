@@ -40,7 +40,6 @@ module Janeway
         expect(result).to eq([5, 4, 6])
       end
 
-      # rubocop: disable RSpec/ExampleLength
       it 'tests key existence on array values' do
         result = described_class.interpret(input, '$.a[?@.b]')
         expect(result).to eq(
@@ -52,7 +51,6 @@ module Janeway
           ]
         )
       end
-      # rubocop: enable RSpec/ExampleLength
 
       it 'does existence check using only the current_node operator' do
         input = { 'a' => 1, 'b' => nil }

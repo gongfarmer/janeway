@@ -1,6 +1,6 @@
 inherit_from: .rubocop_todo.yml
 
-require:
+plugins:
   - rubocop-rake
   - rubocop-rspec
   - rubocop-performance
@@ -32,19 +32,28 @@ Style/BlockDelimiters:
 Lint/DuplicateBranch:
   Enabled: false
 
-Metrics/MethodLength:
-  Max: 15
+Metrics/AbcSize:
+  Max: 30
 
 Metrics/ClassLength:
   Enabled: false
 
 Metrics/CyclomaticComplexity:
-  Max: 9
+  Max: 12
+
+Metrics/MethodLength:
+  Max: 20
+
+Metrics/PerceivedComplexity:
+  Max: 11
 
 # Rspec cops
 
 RSpec/ExampleLength:
-  Max: 7
+  Max: 9
+
+RSpec/MultipleExpectations:
+  Enabled: false
 
 # Many jsonpath queries have results without a strict order defined.
 # Accomodate this by using Rspec.match_array to test result arrays without requiring any specific order.

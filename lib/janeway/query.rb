@@ -90,9 +90,7 @@ module Janeway
     #
     # @return [AST::Selector]
     def pop
-      unless singular_query?
-        raise Janeway::Error.new('not allowed to pop from a non-singular query', to_s)
-      end
+      raise Janeway::Error.new('not allowed to pop from a non-singular query', to_s) unless singular_query?
 
       # Sever the link to the last selector
       nodes = node_list

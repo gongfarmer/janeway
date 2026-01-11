@@ -4,7 +4,6 @@ require 'janeway'
 
 module Janeway
   describe Interpreter do
-    # rubocop: disable RSpec/MultipleExpectations
     describe '#interpret_index_selector' do
       let(:input) { ('a'..'c').to_a }
 
