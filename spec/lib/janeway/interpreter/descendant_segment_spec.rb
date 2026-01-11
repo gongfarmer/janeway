@@ -31,6 +31,18 @@ module Janeway
         expect(described_class.interpret(input, '$..*')).to match_array(expected)
       end
       # rubocop: enable RSpec/ExampleLength
+
+      it 'does not omit nil resuts from array' do
+        input = [1, nil, 3]
+        expected = [1, nil, 3]
+        expect(described_class.interpret(input, '$..*')).to match_array(expected)
+      end
+
+      it 'does not omit nil resuts from hash' do
+        input = { a: 1, b: nil, c: 3 }
+        expected = [1, nil, 3]
+        expect(described_class.interpret(input, '$..*')).to match_array(expected)
+      end
     end
   end
 end
