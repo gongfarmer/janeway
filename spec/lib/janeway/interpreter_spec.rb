@@ -8,9 +8,20 @@ module Janeway
   describe Interpreter do
     let(:interpreter) { described_class.new({}) }
 
-    it 'returns input when query is just a root selector' do
-      input = { 'a' => 1 }
-      expect(described_class.interpret(input, '$')).to eq([input])
+    it 'returns input with composite type when query is just a root selector' do
+      inputs = [
+        { 'a' => 1 },
+        %i[a b c],
+      ]
+      inputs.each do |input|
+        expect(described_class.interpret(input, '$')).to eq([input])
+      end
+    end
+
+    it 'returns input with scalar type when query is just a root selector' do
+      ['a', 1, true, false, nil].each do |input|
+        expect(described_class.interpret(input, '$')).to eq([input])
+      end
     end
 
     # Compliance test suite requires this to raise a parse error
