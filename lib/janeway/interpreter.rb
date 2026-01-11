@@ -50,10 +50,6 @@ module Janeway
     # @param input [Array, Hash] object to be searched
     # @return [Object]
     def interpret(input)
-      unless input.is_a?(Hash) || input.is_a?(Array)
-        return [] # can't query on any other types, but need to check because a string is also valid json
-      end
-
       @root.interpret(nil, nil, input, [])
     rescue StandardError => e
       # Error during interpretation. Convert it to a Janeway::Error and include the query in the message
