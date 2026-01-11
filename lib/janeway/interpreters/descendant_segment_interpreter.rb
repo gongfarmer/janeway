@@ -37,7 +37,7 @@ module Janeway
         end
         # basic types are ignored, they will be added by one of the above
 
-        results.flatten(1).compact
+        results.flatten(1)
       end
     end
   end
