@@ -72,6 +72,7 @@ module Janeway
     end
 
     def start_tokenization
+      raise err('JSONPath query is empty') if @source.empty?
       if WHITESPACE.include?(@source[0]) || WHITESPACE.include?(@source[-1])
         raise err('JSONPath query may not start or end with whitespace')
       end
