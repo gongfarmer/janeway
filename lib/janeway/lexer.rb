@@ -471,6 +471,7 @@ module Janeway
     end
 
     # Lex a member name that is found within dot notation.
+    # This name is not delimited and allows a subset of the characters that can appear in a delimited string.
     #
     # Recognize keywords and given them the correct type.
     # @see https://www.rfc-editor.org/rfc/rfc9535.html#section-2.5.1.1-3
@@ -478,6 +479,10 @@ module Janeway
     # @param ignore_keywords [Boolean]
     # @return [Token]
     def lex_member_name_shorthand(ignore_keywords: false)
+      # Abort if name is preceded by child_start.  Catches non-delimited identifiers in brackets,
+      # eg.  $["key"] is allowed, but $[key] is not
+      raise err('Identifier within brackets must be surrounded by quotes') if @tokens.last&.type == :child_start
+
       consume while name_char?(lookahead)
       identifier = source[lexeme_start_p..(next_p - 1)]
       type =

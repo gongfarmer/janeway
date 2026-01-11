@@ -100,6 +100,12 @@ module Janeway
         expected = [:root, :child_start, :filter, :dot, 'one', :equal, :number, :child_end, :eof]
         expect(described_class.lex("$[?\n.one == 1]")).to eq(expected)
       end
+
+      it 'rejects un-delimited identifier inside brackets' do
+        expect {
+          described_class.lex('$[key]')
+        }.to raise_error(Error, /Identifier within brackets must be surrounded by quotes/)
+      end
     end
 
     context 'when tokenizing index selector' do
