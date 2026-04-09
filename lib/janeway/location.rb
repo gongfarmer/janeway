@@ -1,3 +1,5 @@
 # frozen_string_literal: true
 
-Location = Struct.new(:col, :length)
+module Janeway
+  Location = Struct.new(:col, :length)
+end
