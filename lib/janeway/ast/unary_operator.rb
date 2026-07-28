@@ -13,13 +13,23 @@ module Janeway
       end
 
       def to_s
-        "#{@operator} #{operand}"
+        "#{operator_to_s}#{operand}"
       end
 
       # @param level [Integer]
       # @return [Array]
       def tree(level)
-        indented(level, "#{operator}#{operand}")
+        indented(level, "#{operator_to_s}#{operand}")
+      end
+
+      private
+
+      def operator_to_s
+        case @name
+        when :not then '!'
+        else
+          raise "unknown unary operator #{@name}"
+        end
       end
     end
   end

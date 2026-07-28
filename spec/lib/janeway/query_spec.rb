@@ -52,6 +52,15 @@ module Janeway
       it 'stringifies a descendant segment followed by a child segment' do
         expect(Parser.parse('$..[1,2]').to_s).to eq('$..[1, 2]')
       end
+
+      it 'preserves the logical-not operator when stringifying' do
+        expect(Parser.parse('$[?!@.x]').to_s).to include('!')
+      end
+
+      it 'round-trips a logical-not filter through parse -> to_s -> parse' do
+        original = Parser.parse('$[?!@.x]')
+        expect(Parser.parse(original.to_s).to_s).to eq(original.to_s)
+      end
     end
   end
 end
