@@ -137,5 +137,17 @@ module Janeway
       # Return the last selector
       nodes.last
     end
+
+    # Return a data-free split of this singular query into a "parent" Query
+    # plus the leaf selector — the parent addresses one level up from what
+    # `self` addresses. Used by Enumerator#insert to locate the container
+    # that a new value should be inserted into.
+    #
+    # @return [Array(Query, AST::Selector)] [parent_query, leaf_selector]
+    def parent_query
+      parent = dup
+      leaf = parent.pop
+      [parent, leaf]
+    end
   end
 end

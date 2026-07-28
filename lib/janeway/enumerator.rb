@@ -134,9 +134,7 @@ module Janeway
     # @!visibility private
     # @return [Object, Object, String] parent object (Hash / Array), key/index (String / Integer), path to parent
     def find_parent
-      # Make a Query that points to the target's parent
-      parent_query = @query.dup
-      selector = parent_query.pop # returns a name or index selector
+      parent_query, leaf = @query.parent_query
 
       # Find parent element, give up if parent does not exist
       results = Interpreter.new(parent_query).interpret(@input)
@@ -146,7 +144,7 @@ module Janeway
       else raise "query #{parent_query} matched multiple elements!" # not possible for singular query
       end
 
-      [parent, selector.value, parent_query.to_s]
+      [parent, leaf.value, parent_query.to_s]
     end
 
     # Insert value into hash at the given key
