@@ -20,8 +20,10 @@ module Janeway
       # Value provided by subclass constructor.
       attr_accessor :value
 
-      # Next expression in the AST, if any
-      attr_reader :next
+      # Next expression in the AST, if any. Writable so the parser can link
+      # nodes as it constructs the chain, and so Query#dup / #pop can rewire
+      # the top-level chain.
+      attr_accessor :next
 
       def initialize(val = nil)
         # don't set the instance variable if unused, because it makes the

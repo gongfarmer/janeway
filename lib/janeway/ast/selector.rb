@@ -23,9 +23,6 @@ module Janeway
     # Filter expressions ?<logical-expr> select certain children of an object or array, as in:
     #     $.store.book[?@.price < 10].title
     class Selector < Janeway::AST::Expression
-      # Subsequent expression that modifies the result of this selector list.
-      attr_accessor :next
-
       # Intentionally NO #== override. The previous implementation compared
       # only `value`, ignoring class and @next, which made two selector chains
       # with identical heads but different tails compare equal (and matched

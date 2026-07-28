@@ -29,9 +29,6 @@ module Janeway
     #
     # Construct accepts an optional Selector which will be applied to the "current" node
     class CurrentNode < Janeway::AST::Expression
-      # Subsequent expression that modifies the output of this expression
-      attr_accessor :next
-
       def to_s
         "@#{@next}"
       end

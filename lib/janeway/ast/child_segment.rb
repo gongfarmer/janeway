@@ -18,9 +18,6 @@ module Janeway
 
       def_delegators :@value, :size, :first, :last, :each, :map, :empty?
 
-      # Subsequent expression that modifies the result of this selector list.
-      attr_accessor :next
-
       def initialize
         super([]) # @value holds the expressions in the selector
       end
