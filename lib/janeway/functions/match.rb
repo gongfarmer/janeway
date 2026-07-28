@@ -52,12 +52,29 @@ module Janeway
       parameters << parse_function_parameter
       raise Error, 'Too many parameters for match() function call' unless current.type == :group_end
 
-      AST::Function.new('match', parameters) do |str, str_iregexp|
-        if str.is_a?(String) && str_iregexp.is_a?(String)
-          regexp = translate_iregex_to_ruby_regex(str_iregexp)
-          regexp.match?(str)
-        else
-          false # result defined by RFC9535
+      # If the pattern is a string literal, compile the regex once at parse time
+      # instead of recompiling it on every row.
+      literal_regexp =
+        if parameters[1].is_a?(AST::StringType)
+          begin
+            translate_iregex_to_ruby_regex(parameters[1].value)
+          rescue RegexpError
+            nil # fall back to per-call compilation, which will raise at eval time
+          end
+        end
+
+      if literal_regexp
+        AST::Function.new('match', parameters) do |str, _str_iregexp|
+          str.is_a?(String) ? literal_regexp.match?(str) : false
+        end
+      else
+        AST::Function.new('match', parameters) do |str, str_iregexp|
+          if str.is_a?(String) && str_iregexp.is_a?(String)
+            regexp = translate_iregex_to_ruby_regex(str_iregexp)
+            regexp.match?(str)
+          else
+            false # result defined by RFC9535
+          end
         end
       end
     end
