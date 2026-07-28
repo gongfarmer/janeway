@@ -19,14 +19,17 @@ module Janeway
 
       # @param brackets [Boolean] request for bracket syntax
       # @param dot_prefix [Boolean] include . prefix, if shorthand notation is used
-      def to_s(brackets: false, dot_prefix: true)
+      # @param bracketed [Boolean] caller already provided brackets (e.g. within a union);
+      #   emit the quoted name only, without adding brackets
+      def to_s(brackets: false, dot_prefix: true, bracketed: false)
         # Add quotes and surrounding brackets if the name includes chars that require quoting.
         # These chars are not allowed in dotted notation, only bracket notation.
         special_chars = [' ', '.']
         brackets ||= special_chars.any? { |char| @value.include?(char) }
-        if brackets
-          name_str = quote(@value)
-          "[#{name_str}]#{@next}"
+        if bracketed
+          "#{quote(@value)}#{@next}"
+        elsif brackets
+          "[#{quote(@value)}]#{@next}"
         elsif dot_prefix
           ".#{@value}#{@next}"
         else # omit dot prefix after a descendant segment

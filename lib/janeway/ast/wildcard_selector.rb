@@ -23,7 +23,7 @@ module Janeway
       end
 
       # @return [String]
-      def to_s(brackets: false, dot_prefix: true)
+      def to_s(brackets: false, dot_prefix: true, **)
         if brackets
           "[*]#{@next&.to_s(brackets: true)}"
         elsif dot_prefix
