@@ -5,48 +5,31 @@ module Janeway
     # AST node for binary operators:
     #   == != <= >= < > || &&
     class BinaryOperator < Janeway::AST::Expression
-      attr_reader :name, :left, :right
+      attr_reader :name
+      attr_accessor :left, :right
 
       def initialize(operator, left = nil, right = nil)
         super(nil)
         raise ArgumentError, "expect symbol, got #{operator.inspect}" unless operator.is_a?(Symbol)
 
         @name = operator # eg. :equal
-        self.left = left if left
-        self.right = right if right
+        @left = left
+        @right = right
       end
 
-      # Set the left-hand-side expression
-      # @param expr [AST::Expression]
-      def left=(expr)
-        if comparison_operator? && !(expr.literal? || expr.singular_query?)
-          raise Error, "Expression #{expr} does not produce a singular value for #{operator_to_s} comparison"
-        elsif comparison_operator? && expr.is_a?(AST::Function) && !expr.literal?
-          msg = "Function #{expr} returns a non-comparable value which is not usable for #{operator_to_s} comparison"
-          raise Error, msg
-        end
+      # Validate the currently-set left and right operands as a well-formed
+      # binary expression. Called by the parser once both sides are assigned —
+      # the previous per-setter validation was order-dependent (left=
+      # couldn't see right and vice-versa) and missed the both-literal case
+      # when the parser assigned left first.
+      #
+      # @raise [Janeway::Error] on any semantic error
+      def validate!
+        raise Error, 'BinaryOperator requires both left and right' unless @left && @right
 
-        # Compliance test suite requires error for this, but don't have go so far as to bar every literal
-        if expr.is_a?(Boolean) && right.is_a?(Boolean)
-          raise Error, "Literal \"#{expr}\" must be compared to an expression, not another literal (\"#{left}\")"
-        end
-
-        @left = expr
-      end
-
-      # Set the left-hand-side expression
-      # @param expr [AST::Expression]
-      def right=(expr)
-        if comparison_operator? && !(expr.literal? || expr.singular_query?)
-          raise Error, "Expression #{expr} does not produce a singular value for #{operator_to_s} comparison"
-        end
-
-        # Compliance test suite requires error for this, but don't have go so far as to bar every literal
-        if expr.is_a?(Boolean) && left.is_a?(Boolean)
-          raise Error, "Literal \"#{expr}\" must be compared to an expression, not another literal (\"#{left}\")"
-        end
-
-        @right = expr
+        validate_side(@left)
+        validate_side(@right)
+        validate_pair
       end
 
       def to_s
@@ -101,6 +84,28 @@ module Janeway
 
       def operator_type
         operator_meta[:type]
+      end
+
+      # Per-side checks that apply to either operand of a comparison.
+      def validate_side(expr)
+        return unless comparison_operator?
+
+        unless expr.literal? || expr.singular_query?
+          raise Error, "Expression #{expr} does not produce a singular value for #{operator_to_s} comparison"
+        end
+        if expr.is_a?(AST::Function) && !expr.literal?
+          raise Error,
+                "Function #{expr} returns a non-comparable value which is not usable for #{operator_to_s} comparison"
+        end
+      end
+
+      # Checks that need both sides in scope.
+      def validate_pair
+        return unless @left.is_a?(Boolean) && @right.is_a?(Boolean)
+
+        # Compliance test suite requires error for this, but don't go so far as to bar every literal.
+        raise Error,
+              "Literal \"#{@right}\" must be compared to an expression, not another literal (\"#{@left}\")"
       end
     end
   end

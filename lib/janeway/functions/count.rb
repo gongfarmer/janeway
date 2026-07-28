@@ -29,14 +29,7 @@ module Janeway
       raise Error, "Invalid parameter - count() expects node list, got #{arg.value.inspect}" if arg.literal?
       raise Error, 'Too many parameters for count() function call' unless current.type == :group_end
 
-      # Define function body
-      AST::Function.new('count', parameters) do |node_list|
-        if node_list.is_a?(Array)
-          node_list.size
-        else
-          1 # the count of a non-empty singular nodelist such as count(@) is always 1.
-        end
-      end
+      AST::Function.new('count', parameters)
     end
   end
 end

@@ -27,19 +27,13 @@ module Janeway
       # @return [Array]
       def interpret(input, _parent, _root, path)
         return [] unless input.is_a?(Array)
-        return [] if selector&.step&.zero? # RFC: When step is 0, no elements are selected.
+        return [] if effective_step.zero? # RFC: When step is 0, no elements are selected.
 
-        # Calculate the upper and lower indices of the target range
-        lower = selector.lower_index(input.size)
-        upper = selector.upper_index(input.size)
-
-        # Convert bounds and step to index values.
-        # Omit the final index, since no value is collected for that.
-        # Delete indexes from largest to smallest, so that deleting an index does
-        # not change the remaining indexes
+        # Delete matching indexes from largest to smallest so that deletion
+        # does not shift the remaining indexes.
+        indexes = index_range(input.size)
         results = []
-        if selector.step.positive?
-          indexes = lower.step(to: upper - 1, by: selector.step).to_a
+        if effective_step.positive?
           indexes.reverse_each do |i|
             next unless @yield_proc.call(input[i], input, path + [i])
 
@@ -47,7 +41,6 @@ module Janeway
           end
           results.reverse
         else
-          indexes = upper.step(to: lower + 1, by: selector.step).to_a
           indexes.each do |i|
             next unless @yield_proc.call(input[i], input, path + [i])
 

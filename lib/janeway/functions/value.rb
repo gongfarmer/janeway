@@ -36,13 +36,7 @@ module Janeway
       parameters = [parse_function_parameter]
       raise Error, 'Too many parameters for value() function call' unless current.type == :group_end
 
-      AST::Function.new('value', parameters) do |nodes|
-        if nodes.is_a?(Array) && nodes.size == 1
-          nodes.first
-        else
-          :nothing
-        end
-      end
+      AST::Function.new('value', parameters)
     end
   end
 end

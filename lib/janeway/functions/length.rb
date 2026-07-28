@@ -21,18 +21,7 @@ module Janeway
       end
       raise err('Too many parameters for length() function call') unless current.type == :group_end
 
-      # Meaning of return value depends on the JSON type:
-      #   * string - number of Unicode scalar values in the string.
-      #   * array -  number of elements in the array.
-      #   * object - number of members in the object.
-      # For any other argument value, the result is the special result Nothing.
-      AST::Function.new('length', parameters) do |value|
-        if [Array, Hash, String].include?(value.class)
-          value.size
-        else
-          :nothing
-        end
-      end
+      AST::Function.new('length', parameters)
     end
   end
 end
