@@ -36,6 +36,15 @@ module Janeway
       # @param input [Array]
       # @param path [Array]
       def maybe_delete_array_values(input, path)
+        # Fast path: unconditional delete (from Interpreter#make_deleter).
+        # Bulk clear is O(n) with much smaller constants than reverse-iterate
+        # + delete_at + per-element proc call.
+        if @block.equal?(IterationHelper::PASS_ALL)
+          results = input.dup
+          input.clear
+          return results
+        end
+
         results = []
         (input.size - 1).downto(0).each do |i|
           next unless @yield_proc.yield(input[i], input, path + [i])
@@ -48,6 +57,13 @@ module Janeway
       # @param input [Hash]
       # @param path [Array]
       def maybe_delete_hash_values(input, path)
+        # Fast path: unconditional delete (from Interpreter#make_deleter).
+        if @block.equal?(IterationHelper::PASS_ALL)
+          results = input.values
+          input.clear
+          return results
+        end
+
         results = []
         input.each do |key, value|
           next unless @yield_proc.yield(value, input, path + [key])

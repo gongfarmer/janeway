@@ -6,6 +6,10 @@ module Janeway
   module Interpreters
     # Mixin for interpreter classes that yield to a block
     module IterationHelper
+      # Sentinel block used by Interpreter#make_deleter to turn a DeleteIf
+      # into an unconditional deleter. `equal?`-comparable so future fast
+      # paths (bulk clear) can detect it.
+      PASS_ALL = proc { true }.freeze
       # Returns a Proc that yields the correct number of parameters to a block
       #
       # block.arity is -1 when no block is given, and an enumerator is being returned

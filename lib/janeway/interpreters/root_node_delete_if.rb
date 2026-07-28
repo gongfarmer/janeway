@@ -37,6 +37,13 @@ module Janeway
 
       # @param input [Array]
       def maybe_delete_array_values(input)
+        # Fast path: unconditional delete (from Interpreter#make_deleter).
+        if @block.equal?(IterationHelper::PASS_ALL)
+          results = input.dup
+          input.clear
+          return results
+        end
+
         results = []
         (input.size - 1).downto(0).each do |i|
           next unless @yield_proc.call(input[i], input, ['$', i])
@@ -48,6 +55,13 @@ module Janeway
 
       # @param input [Hash]
       def maybe_delete_hash_values(input)
+        # Fast path: unconditional delete (from Interpreter#make_deleter).
+        if @block.equal?(IterationHelper::PASS_ALL)
+          results = input.values
+          input.clear
+          return results
+        end
+
         results = []
         input.each do |key, value|
           next unless @yield_proc.call(value, input, ['$', key])

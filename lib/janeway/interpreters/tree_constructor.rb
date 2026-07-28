@@ -44,26 +44,6 @@ module Janeway
         end
       end
 
-      # Return a Deleter interpreter for the given AST node.
-      # This interpreter deletes matched values.
-      #
-      # @param expr [AST::Expression]
-      # @return [Interprteters::Base]
-      def self.ast_node_to_deleter(expr)
-        case expr
-        when AST::IndexSelector then IndexSelectorDeleter.new(expr)
-        when AST::ArraySliceSelector then ArraySliceSelectorDeleter.new(expr)
-        when AST::NameSelector then NameSelectorDeleter.new(expr)
-        when AST::FilterSelector then FilterSelectorDeleter.new(expr)
-        when AST::WildcardSelector then WildcardSelectorDeleter.new(expr)
-        when AST::ChildSegment then ChildSegmentDeleter.new(expr)
-        when AST::RootNode then RootNodeDeleter.new(expr)
-        when nil then nil # caller has no @next node
-        else
-          raise "Unknown AST expression: #{expr.inspect}"
-        end
-      end
-
       # Return a DeleteIf interpreter for the given AST node.
       # This interpreter deletes matched values, but only after
       # yielding to a block that returns a truthy value.

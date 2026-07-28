@@ -5,7 +5,7 @@ require 'janeway'
 
 module Janeway
   module Interpreters
-    describe FilterSelectorDeleter do
+    describe FilterSelectorDeleteIf do
       context 'when input is a hash' do
         let(:input) do
           { 'a' => { 'x' => 1 }, 'b' => { 'x' => 2 }, 'c' => { 'x' => 3, 'y' => nil } }

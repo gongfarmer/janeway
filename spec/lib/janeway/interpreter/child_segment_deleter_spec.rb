@@ -4,7 +4,7 @@ require 'janeway'
 
 module Janeway
   module Interpreters
-    describe ChildSegmentDeleter do
+    describe ChildSegmentDeleteIf do
       context 'with name selectors' do
         it 'deletes matching hash elements' do
           input = { 'a' => 1, 'b' => 2, 'c' => 3 }

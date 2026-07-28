@@ -112,9 +112,11 @@ module Janeway
     end
 
     # Make a Deleter that will delete the results matched by a Selector.
+    # Implemented as a DeleteIf with the PASS_ALL sentinel block — the
+    # separate Deleter classes were folded into DeleteIf.
     # @param interpreter [Interpreters::Base] interpeter subclass
     def make_deleter(interpreter)
-      TreeConstructor.ast_node_to_deleter(interpreter.node)
+      TreeConstructor.ast_node_to_delete_if(interpreter.node, &Interpreters::IterationHelper::PASS_ALL)
     end
 
     # Make a DeleteIf that will delete the results matched by a Selector,
