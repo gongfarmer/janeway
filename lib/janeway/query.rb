@@ -76,10 +76,19 @@ module Janeway
       result.flatten.join("\n")
     end
 
-    # Deep copy the query
+    # Deep copy the query.
+    #
+    # Only the top-level linked list of segments/selectors is cloned — that is
+    # the only part `pop` mutates. Nested contents (filter expressions,
+    # function parameters, child-segment members) are shared with the original,
+    # which is safe because the interpreter never mutates the AST.
+    #
     # @return [Query]
     def dup
-      Parser.parse(to_s)
+      cloned = node_list.map(&:dup)
+      cloned.each_cons(2) { |a, b| a.next = b }
+      cloned.last.next = nil
+      Query.new(cloned.first, @jsonpath)
     end
 
     # Delete the last element from the chain of selectors.
