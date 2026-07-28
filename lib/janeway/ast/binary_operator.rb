@@ -76,30 +76,31 @@ module Janeway
         operator_type == :logical
       end
 
+      # Single source of truth for what binary operators exist and how they
+      # render / classify. Adding a new operator here fills both call sites.
+      OPERATOR_META = {
+        and: { str: '&&', type: :logical },
+        or: { str: '||', type: :logical },
+        equal: { str: '==', type: :comparison },
+        not_equal: { str: '!=', type: :comparison },
+        less_than: { str: '<', type: :comparison },
+        less_than_or_equal: { str: '<=', type: :comparison },
+        greater_than: { str: '>', type: :comparison },
+        greater_than_or_equal: { str: '>=', type: :comparison },
+      }.freeze
+
       private
 
+      def operator_meta
+        OPERATOR_META.fetch(name) { raise "unknown binary operator #{name}" }
+      end
+
       def operator_to_s
-        case name
-        when :and then '&&'
-        when :equal then '=='
-        when :greater_than then '>'
-        when :greater_than_or_equal then '>='
-        when :less_than then '<'
-        when :less_than_or_equal then '<='
-        when :not_equal then '!='
-        when :or then '||'
-        else
-          raise "unknown binary operator #{name}"
-        end
+        operator_meta[:str]
       end
 
       def operator_type
-        case name
-        when :and, :or then :logical
-        when :equal, :not_equal, :greater_than, :greater_than_or_equal, :less_than, :less_than_or_equal then :comparison
-        else
-          raise "unknown binary operator #{name}"
-        end
+        operator_meta[:type]
       end
     end
   end
