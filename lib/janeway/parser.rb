@@ -536,6 +536,7 @@ module Janeway
 
       consume
       op.right = parse_expr_recursively(op_precedence)
+      op.validate!
 
       op
     end
