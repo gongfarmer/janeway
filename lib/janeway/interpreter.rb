@@ -67,48 +67,60 @@ module Janeway
 
     # Build a tree of interpreter classes based on the query's abstract syntax tree.
     #
-    # Child segments require special handling.
-    # See the detailed explanation at the end of this file.
+    # Four phases, one per private helper:
+    #   1. build_interpreters  — one interpreter per AST node
+    #   2. append_terminal     — Yielder / Deleter / DeleteIf for the caller's mode
+    #   3. link_next_pointers  — wire each interpreter to the next one
+    #   4. rewire_child_segments — push tail selectors into each ChildSegmentInterpreter
+    #      (branch rewrite explained in the docstring at the end of this file)
     #
     # @return [Interpreters::RootNodeInterpreter]
     def query_to_interpreter_tree(query, &block)
-      # Build an interpreter for each selector
-      interpreters =
-        query.node_list.map do |node|
-          Interpreters::TreeConstructor.ast_node_to_interpreter(node)
-        end
+      interpreters = build_interpreters(query)
+      append_terminal(interpreters, &block)
+      link_next_pointers(interpreters)
+      rewire_child_segments(interpreters)
+    end
 
-      # Append iterotor / deleter as needed, to support #each, #delete operations
+    # Phase 1: one interpreter per AST node in the query's top-level chain.
+    def build_interpreters(query)
+      query.node_list.map { |node| Interpreters::TreeConstructor.ast_node_to_interpreter(node) }
+    end
+
+    # Phase 2: append the terminal interpreter that matches the caller's mode.
+    # Deleter / delete_if REPLACE the last selector (the terminal semantics
+    # live in the leaf itself); iterator APPENDS a Yielder after it.
+    def append_terminal(interpreters, &block)
       case @type
       when :iterator then interpreters.push(Yielder.new(&block))
-      when :deleter then interpreters.push make_deleter(interpreters.pop)
-      when :delete_if then interpreters.push make_delete_if(interpreters.pop, &block)
+      when :deleter then interpreters.push(make_deleter(interpreters.pop))
+      when :delete_if then interpreters.push(make_delete_if(interpreters.pop, &block))
       end
+    end
 
-      # Link interpreters together
+    # Phase 3: link `.next` from each interpreter to the following one.
+    def link_next_pointers(interpreters)
       interpreters.each_with_index do |node, i|
         node.next = interpreters[i + 1]
       end
+    end
 
-      # Child segments which contain multiple selectors are branches in the interpreter tree.
-      #
-      # For every child segment, remove all following interpreters and push
-      # them "inside" the child segment interpreter.
-      #
-      # Work backwards in case there are multiple child segments.
-      # For full explanation see the explanation at the end of this file.
-      selectors = []
+    # Phase 4: for every ChildSegmentInterpreter, remove the interpreters that
+    # follow it in the flat chain and push them into the child segment as
+    # branches. Work backwards so nested child segments compose correctly.
+    # @return [Interpreters::Base] root of the resulting tree
+    def rewire_child_segments(interpreters)
+      pending = []
       interpreters.reverse_each do |node|
         if node.is_a?(Interpreters::ChildSegmentInterpreter)
           node.next = nil
-          node.push(selectors.pop) until selectors.empty?
-          selectors = [node]
+          node.push(pending.pop) until pending.empty?
+          pending = [node]
         else
-          selectors << node
+          pending << node
         end
       end
-
-      selectors.last
+      pending.last
     end
 
     # Make a Deleter that will delete the results matched by a Selector.
