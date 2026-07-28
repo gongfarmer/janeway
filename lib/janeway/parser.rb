@@ -28,7 +28,20 @@ module Janeway
       %I[identifier number string true false nil function if while root current_node]
       .each_with_object({}) { |t, h| h[t] = true }.freeze
     TERMINATOR_TYPES = %I[child_end union eof].each_with_object({}) { |t, h| h[t] = true }.freeze
-    NEWLINE_OR_EOF_TYPES = { :"\n" => true, eof: true }.freeze
+
+    # O(1) dispatch table for determine_parsing_function's type-driven cases.
+    # Sits next to the PARSE_METHOD_TYPES set (the other type branch) so both
+    # are visible when adding a new token type.
+    PARSE_DISPATCH_BY_TYPE = {
+      group_start: :parse_grouped_expr,
+      :"\n" => :parse_terminator,
+      eof: :parse_terminator,
+      child_start: :parse_child_segment,
+      dot: :parse_dot_notation,
+      descendants: :parse_descendant_segment,
+      filter: :parse_filter_selector,
+      null: :parse_null,
+    }.freeze
     LOWEST_PRECEDENCE = 0
     OPERATOR_PRECEDENCE = {
       ',' => 0,
@@ -144,27 +157,16 @@ module Janeway
     end
 
     def determine_parsing_function
-      if PARSE_METHOD_TYPES.include?(current.type)
-        :"parse_#{current.type}"
-      elsif current.type == :group_start # (
-        :parse_grouped_expr
-      elsif NEWLINE_OR_EOF_TYPES.include?(current.type)
-        :parse_terminator
-      elsif UNARY_OPERATOR_SET.include?(current.lexeme)
-        :parse_unary_operator
-      elsif current.type == :child_start # [
-        :parse_child_segment
-      elsif current.type == :dot # .
-        :parse_dot_notation
-      elsif current.type == :descendants # ..
-        :parse_descendant_segment
-      elsif current.type == :filter # ?
-        :parse_filter_selector
-      elsif current.type == :null # null
-        :parse_null
-      else
-        raise err("Don't know how to parse #{current}")
-      end
+      # Two type-driven tables plus a lexeme-driven check for unary operators.
+      # PARSE_METHOD_TYPES synthesizes the method name (`:parse_<type>`);
+      # PARSE_DISPATCH_BY_TYPE maps to a fixed method name.
+      return :"parse_#{current.type}" if PARSE_METHOD_TYPES.include?(current.type)
+
+      dispatch = PARSE_DISPATCH_BY_TYPE[current.type]
+      return dispatch if dispatch
+      return :parse_unary_operator if UNARY_OPERATOR_SET.include?(current.lexeme)
+
+      raise err("Don't know how to parse #{current}")
     end
 
     # @return [nil, Symbol]
