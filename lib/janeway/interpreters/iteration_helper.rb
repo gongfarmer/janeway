@@ -11,16 +11,19 @@ module Janeway
       # block.arity is -1 when no block is given, and an enumerator is being returned
       # @return [Proc] which takes 3 parameters
       def make_yield_proc(&block)
+        # Bind the block locally so the returned proc captures a local, not the
+        # containing instance's @block ivar (avoids an ivar read per yield).
+        b = block
         if block.arity.negative?
           # Yield just the value to an enumerator, to enable instance method calls on
           # matched values like this: enum.delete_if(&:even?)
-          proc { |value, _parent, _path| @block.call(value) }
+          proc { |value, _parent, _path| b.call(value) }
         elsif block.arity > 3
           # Only do the work of constructing the normalized path when it is actually used
-          proc { |value, parent, path| @block.call(value, parent, path.last, normalized_path(path)) }
+          proc { |value, parent, path| b.call(value, parent, path.last, normalized_path(path)) }
         else
           # block arity is 1, 2 or 3. Send all 3 parameters regardless.
-          proc { |value, parent, path| @block.call(value, parent, path.last) }
+          proc { |value, parent, path| b.call(value, parent, path.last) }
         end
       end
 
@@ -37,8 +40,15 @@ module Janeway
       def normalized_path(components)
         # First component is the root identifer, the remaining components are
         # all index selectors or name selectors.
-        # Handle the root identifier separately, because .normalize does not handle those.
-        '$' + components[1..].map { NormalizedPath.normalize(_1) }.join
+        # Build the result string in a single pass — avoids `components[1..]`
+        # (slice allocation) plus `.map { ... }.join` (intermediate Array).
+        result = +'$'
+        i = 1
+        while i < components.size
+          result << NormalizedPath.normalize(components[i])
+          i += 1
+        end
+        result
       end
     end
   end

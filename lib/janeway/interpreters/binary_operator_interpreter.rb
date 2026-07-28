@@ -13,6 +13,18 @@ module Janeway
         super
         @left = TreeConstructor.ast_node_to_interpreter(operator.left)
         @right = TreeConstructor.ast_node_to_interpreter(operator.right)
+
+        # Bind the per-op behavior at construction time to avoid dispatching
+        # on operator.name and allocating a symbol on every candidate value.
+        case operator.name
+        when :and, :or
+          @extract_single_value = false
+        when :equal, :not_equal, :less_than, :greater_than, :less_than_or_equal, :greater_than_or_equal
+          @extract_single_value = true
+        else
+          raise "Don't know how to handle binary operator #{operator.name.inspect}"
+        end
+        @op = method(:"interpret_#{operator.name}")
       end
 
       # The binary operators are all comparison operators that test equality.
@@ -28,20 +40,13 @@ module Janeway
       # @param root [Array, Hash] the entire input
       # @param _path [Array] ignored
       def interpret(input, parent, root, _path = nil)
-        # FIXME: this branch could be pushed into the constructor, to convert O(n) work to O(1)
-        case operator.name
-        when :and, :or
-          # handle node list for existence check
-          lhs = @left.interpret(input, parent, root, [])
-          rhs = @right.interpret(input, parent, root, [])
-        when :equal, :not_equal, :less_than, :greater_than, :less_than_or_equal, :greater_than_or_equal
-          # handle node values for comparison check
-          lhs = to_single_value @left.interpret(input, parent, root, [])
-          rhs = to_single_value @right.interpret(input, parent, root, [])
-        else
-          raise "Don't know how to handle binary operator #{operator.name.inspect}"
+        lhs = @left.interpret(input, parent, root, [])
+        rhs = @right.interpret(input, parent, root, [])
+        if @extract_single_value
+          lhs = to_single_value(lhs)
+          rhs = to_single_value(rhs)
         end
-        send(:"interpret_#{operator.name}", lhs, rhs)
+        @op.call(lhs, rhs)
       end
 
       # Interpret a node and extract its value, in preparation for using the node
