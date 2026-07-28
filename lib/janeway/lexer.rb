@@ -114,7 +114,7 @@ module Janeway
         elsif digit?(c)
           lex_number
         elsif name_first_char?(c)
-          lex_member_name_shorthand(ignore_keywords: tokens.last&.type == :dot)
+          lex_member_name_shorthand(ignore_keywords: previous_token_type == :dot)
         end
       raise err("Unknown character: #{c.inspect}") unless token
 
@@ -183,6 +183,14 @@ module Janeway
     # @return [String] source substring for the lexeme currently being built
     def current_lexeme
       source[lexeme_start_p..(next_p - 1)]
+    end
+
+    # Type of the most-recently-emitted token, or nil if none.
+    # Named lookback for the two context-sensitive lexing decisions
+    # (identifier-in-brackets rejection; keyword ignore after `.`).
+    # @return [Symbol, nil]
+    def previous_token_type
+      @tokens.last&.type
     end
 
     # @param delimiter [String] eg. ' or "
@@ -455,7 +463,7 @@ module Janeway
     def lex_member_name_shorthand(ignore_keywords: false)
       # Abort if name is preceded by child_start.  Catches non-delimited identifiers in brackets,
       # eg.  $["key"] is allowed, but $[key] is not
-      raise err('Identifier within brackets must be surrounded by quotes') if @tokens.last&.type == :child_start
+      raise err('Identifier within brackets must be surrounded by quotes') if previous_token_type == :child_start
 
       consume while name_char?(lookahead)
       identifier = current_lexeme
