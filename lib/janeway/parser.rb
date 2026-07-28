@@ -78,12 +78,8 @@ module Janeway
 
     private
 
-    def pending_tokens?
-      @next_p < tokens.length
-    end
-
     def next_not_terminator?
-      next_token && next_token.type != :"\n" && next_token.type != :eof
+      next_token && next_token.type != :eof
     end
 
     # Make "next" token become "current" by moving the pointer

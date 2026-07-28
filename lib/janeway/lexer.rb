@@ -392,36 +392,6 @@ module Janeway
 
     # Consume an alphanumeric string.
     # If `ignore_keywords`, the result is always an :identifier token.
-    # Otherwise, keywords and function names will be recognized and tokenized as those types.
-    #
-    # @param ignore_keywords [Boolean]
-    def lex_identifier(ignore_keywords: false)
-      consume while alpha_numeric?(lookahead)
-
-      identifier = current_lexeme
-      type =
-        if KEYWORD_SET.include?(identifier) && !ignore_keywords
-          identifier.to_sym
-        elsif FUNCTIONS_SET.include?(identifier) && !ignore_keywords
-          :function
-        else
-          :identifier
-        end
-
-      Token.new(type, identifier, identifier, current_location)
-    end
-
-    # Parse an identifier string which is not within delimiters.
-    # The standard set of unicode code points are allowed.
-    # No character escapes are allowed.
-    # Keywords and function names are ignored in this context.
-    # @return [Token]
-    def lex_unescaped_identifier
-      consume while unescaped?(lookahead)
-      identifier = current_lexeme
-      Token.new(:identifier, identifier, identifier, current_location)
-    end
-
     # Return true if string matches the definition of "unescaped" from RFC9535:
     # unescaped     = %x20-21 /        ; see RFC 8259
     #                    ; omit 0x22 "
@@ -441,19 +411,6 @@ module Janeway
       when 0x5D..0xD7FF then true # remaining ascii and lots of unicode code points
         # omit surrogate code points
       when 0xE000..0x10FFFF then true # much more unicode code points
-      else false
-      end
-    end
-
-    def escapable?(char)
-      case char.ord
-      when 0x62 then true # backspace
-      when 0x66 then true # form feed
-      when 0x6E then true # line feed
-      when 0x72 then true # carriage return
-      when 0x74 then true # horizontal tab
-      when 0x2F then true # slash
-      when 0x5C then true # backslash
       else false
       end
     end

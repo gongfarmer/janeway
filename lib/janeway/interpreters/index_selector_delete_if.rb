@@ -31,7 +31,6 @@ module Janeway
         index += input.size if index.negative? # yield positive index for the normalize path
         return unless @yield_proc.call(input[index], input, path + [index])
 
-        index += input.size if index.negative?
         input.delete_at(index) # returns nil if deleted value is nil, or if no value was deleted
         [result]
       rescue IndexError
