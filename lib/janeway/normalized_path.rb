@@ -11,6 +11,15 @@ module Janeway
     # Characters that do not need escaping, defined by hexadecimal range
     NORMAL_UNESCAPED_RANGES = [(0x20..0x26), (0x28..0x5B), (0x5D..0xD7FF), (0xE000..0x10FFFF)].freeze
 
+    # Fast-path check for `escape`: a single anchored regex covering the same
+    # ranges as NORMAL_UNESCAPED_RANGES. Avoids allocating a `chars` array and
+    # scanning four Range objects per character on the common all-normal case.
+    NORMAL_UNESCAPED_REGEX = Regexp.new(
+      '\A[' +
+      NORMAL_UNESCAPED_RANGES.map { |r| "\\u{#{r.min.to_s(16)}}-\\u{#{r.max.to_s(16)}}" }.join +
+      ']*\z'
+    ).freeze
+
     def self.normalize(value)
       case value
       when String then normalize_name(value)
@@ -33,8 +42,8 @@ module Janeway
     end
 
     def self.escape(str)
-      # Common case, all chars are normal.
-      return str if str.chars.all? { |char| NORMAL_UNESCAPED_RANGES.any? { |range| range.include?(char.ord) } }
+      # Common case, all chars are normal — one regex match, no allocations.
+      return str if NORMAL_UNESCAPED_REGEX.match?(str)
 
       # Some escaping must be done
       str.chars.map { |char| escape_char(char) }.join
