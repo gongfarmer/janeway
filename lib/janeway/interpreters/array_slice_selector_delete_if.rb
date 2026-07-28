@@ -48,7 +48,11 @@ module Janeway
           results.reverse
         else
           indexes = upper.step(to: lower + 1, by: selector.step).to_a
-          indexes.each { |i| results << input.delete_at(i) }
+          indexes.each do |i|
+            next unless @yield_proc.call(input[i], input, path + [i])
+
+            results << input.delete_at(i)
+          end
           results
         end
       end

@@ -47,6 +47,18 @@ module Janeway
         expect(input).to eq(('a'..'g').to_a)
       end
 
+      it 'does not delete values with negative step when block returns false' do
+        Janeway.enum_for('$[::-1]', input).delete_if { false }
+        expect(input).to eq(('a'..'g').to_a)
+      end
+
+      it 'selectively deletes values with negative step based on block result' do
+        input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        result = Janeway.enum_for('$[::-1]', input).delete_if(&:even?)
+        expect(input).to eq([1, 3, 5, 7, 9])
+        expect(result).to eq([8, 6, 4, 2, 0])
+      end
+
       it 'can call instance methods on the matched values within the block' do
         input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         Janeway.enum_for('$[::]', input).delete_if(&:even?)
