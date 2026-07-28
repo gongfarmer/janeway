@@ -48,6 +48,16 @@ module Janeway
       end
     end
 
+    describe '#tree' do
+      it 'does not raise for a bare root query' do
+        expect { Parser.parse('$').tree }.not_to raise_error
+      end
+
+      it 'does not raise for a wildcard selector as the terminal segment' do
+        expect { Parser.parse('$.a[*]').tree }.not_to raise_error
+      end
+    end
+
     describe '#to_s' do
       it 'stringifies a descendant segment followed by a child segment' do
         expect(Parser.parse('$..[1,2]').to_s).to eq('$..[1, 2]')
