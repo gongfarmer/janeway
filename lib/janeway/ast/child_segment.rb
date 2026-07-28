@@ -32,7 +32,7 @@ module Janeway
         @value << selector
       end
 
-      def to_s(with_child: true)
+      def to_s(with_child: true, **)
         str = @value.map { |selector| selector.to_s(brackets: false, dot_prefix: false) }.join(', ')
         with_child ? "[#{str}]#{@next}" : "[#{str}]"
       end

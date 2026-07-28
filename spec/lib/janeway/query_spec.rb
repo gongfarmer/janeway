@@ -47,5 +47,11 @@ module Janeway
         end
       end
     end
+
+    describe '#to_s' do
+      it 'stringifies a descendant segment followed by a child segment' do
+        expect(Parser.parse('$..[1,2]').to_s).to eq('$..[1, 2]')
+      end
+    end
   end
 end
