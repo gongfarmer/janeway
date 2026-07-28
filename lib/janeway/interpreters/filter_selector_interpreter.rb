@@ -43,27 +43,9 @@ module Janeway
       # @param root [Array, Hash] the entire input
       # @param path [Array<String>] elements of normalized path to the current input
       def interpret_hash(input, root, path)
-        # Apply filter expressions to the input data
         node_list = []
-        input.each do |key, value|
-          # Run filter and interpret result
-          result = @expr.interpret(value, nil, root, [])
-          case result
-          when TrueClass then node_list << [key, value] # comparison test - pass
-          when FalseClass then nil # comparison test - fail
-          when Array then node_list << [key, value] unless result.empty? # existence test - node list
-          else
-            node_list << [key, value] # existence test. Null values here == success.
-          end
-        end
-        return node_list.map(&:last) unless @next
-
-        # Apply child selector to each node in the output node list
-        results = []
-        node_list.each do |key, value|
-          results.concat @next.interpret(value, input, root, path + [key])
-        end
-        results
+        input.each { |key, value| node_list << [key, value] if filter_match?(value, root) }
+        forward_matches(node_list, input, root, path)
       end
 
       # Interpret selector on the input.
@@ -71,28 +53,38 @@ module Janeway
       # @param root [Array, Hash] the entire input
       # @param path [Array<String>] elements of normalized path to the current input
       def interpret_array(input, root, path)
-        # Apply filter expressions to the input data
         node_list = []
-        input.each_with_index do |value, i|
-          # Run filter and interpret result
-          result = @expr.interpret(value, nil, root, [])
-          case result
-          when TrueClass then node_list << [i, value] # comparison test - pass
-          when FalseClass then nil # comparison test - fail
-          when Array then node_list << [i, value] unless result.empty? # existence test - node list
-          else
-            node_list << [i, value] # existence test. Null values here == success.
-          end
+        input.each_with_index { |value, i| node_list << [i, value] if filter_match?(value, root) }
+        forward_matches(node_list, input, root, path)
+      end
+
+      private
+
+      # Classify the result of running the filter expression against a value.
+      # Returns true if the value should be kept.
+      def filter_match?(value, root)
+        result = @expr.interpret(value, nil, root, [])
+        case result
+        when TrueClass then true    # comparison test - pass
+        when FalseClass then false  # comparison test - fail
+        when Array then !result.empty? # existence test - non-empty node list
+        else true                   # existence test - null / other values count as success
         end
+      end
+
+      # Given a node_list of [key_or_index, value] pairs, apply @next to each
+      # and concat the results. If no @next, return just the values.
+      def forward_matches(node_list, input, root, path)
         return node_list.map(&:last) unless @next
 
-        # Apply child selector to each node in the output node list
         results = []
-        node_list.each do |i, value|
-          results.concat @next.interpret(value, input, root, path + [i])
+        node_list.each do |key, value|
+          results.concat @next.interpret(value, input, root, path + [key])
         end
         results
       end
+
+      public
 
       # @return [Hash]
       def as_json
