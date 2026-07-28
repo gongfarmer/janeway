@@ -31,7 +31,7 @@ module Janeway
       when Integer, String then @literal == other
       when Symbol then @type == other
       when Token
-        @type == other.type && @lexeme == other.lexem && @literal = other.literal
+        @type == other.type && @lexeme == other.lexeme && @literal == other.literal
       else
         raise ArgumentError, "don't know how to compare Token with #{other.inspect}"
       end
