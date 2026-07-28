@@ -208,14 +208,16 @@ module Janeway
       end
 
       # '-' must be followed by a number token.
-      # Parse number and apply - sign to its literal value
+      # Consume the minus, then replace the following number token in the
+      # token stream with a copy that has the negated literal. Replacing —
+      # rather than mutating in place — keeps Token immutable.
       consume
-      parse_number
       unless current.literal.is_a?(Numeric)
         raise err("Minus operator \"-\" must be followed by number, got #{current.lexeme.inspect}")
       end
 
-      current.literal *= -1
+      original = current
+      @tokens[@next_p - 1] = Token.new(original.type, original.lexeme, -original.literal, original.location)
       current
     end
 
