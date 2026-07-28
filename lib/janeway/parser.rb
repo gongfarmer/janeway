@@ -16,6 +16,19 @@ module Janeway
     UNARY_OPERATORS = %w[! -].freeze
     BINARY_OPERATORS = %w[== != > < >= <= ,].freeze
     LOGICAL_OPERATORS = %w[&& ||].freeze
+
+    # O(1)-lookup Hash companions to the arrays above, plus the union used by
+    # determine_infix_function. Building these inline in the hot path
+    # allocated a fresh Array per token; hoisting eliminates it.
+    UNARY_OPERATOR_SET = UNARY_OPERATORS.each_with_object({}) { |op, h| h[op] = true }.freeze
+    BINARY_OPERATOR_SET = BINARY_OPERATORS.each_with_object({}) { |op, h| h[op] = true }.freeze
+    INFIX_OPERATOR_SET =
+      (BINARY_OPERATORS + LOGICAL_OPERATORS).each_with_object({}) { |op, h| h[op] = true }.freeze
+    PARSE_METHOD_TYPES =
+      %I[identifier number string true false nil function if while root current_node]
+      .each_with_object({}) { |t, h| h[t] = true }.freeze
+    TERMINATOR_TYPES = %I[child_end union eof].each_with_object({}) { |t, h| h[t] = true }.freeze
+    NEWLINE_OR_EOF_TYPES = { :"\n" => true, eof: true }.freeze
     LOWEST_PRECEDENCE = 0
     OPERATOR_PRECEDENCE = {
       ',' => 0,
@@ -135,14 +148,13 @@ module Janeway
     end
 
     def determine_parsing_function
-      parse_methods = %I[identifier number string true false nil function if while root current_node]
-      if parse_methods.include?(current.type)
+      if PARSE_METHOD_TYPES.include?(current.type)
         :"parse_#{current.type}"
       elsif current.type == :group_start # (
         :parse_grouped_expr
-      elsif %I[\n eof].include?(current.type)
+      elsif NEWLINE_OR_EOF_TYPES.include?(current.type)
         :parse_terminator
-      elsif UNARY_OPERATORS.include?(current.lexeme)
+      elsif UNARY_OPERATOR_SET.include?(current.lexeme)
         :parse_unary_operator
       elsif current.type == :child_start # [
         :parse_child_segment
@@ -161,7 +173,7 @@ module Janeway
 
     # @return [nil, Symbol]
     def determine_infix_function(token = current)
-      return unless (BINARY_OPERATORS + LOGICAL_OPERATORS).include?(token.lexeme)
+      return unless INFIX_OPERATOR_SET.include?(token.lexeme)
 
       :parse_binary_operator
     end
@@ -481,11 +493,10 @@ module Janeway
     # Feed tokens to the FilterSelector until hitting a terminator
     def parse_filter_selector
       selector = AST::FilterSelector.new
-      terminator_types = %I[child_end union eof]
-      while next_token && !terminator_types.include?(next_token.type)
+      while next_token && !TERMINATOR_TYPES.include?(next_token.type)
         consume
         node =
-          if BINARY_OPERATORS.include?(current.lexeme)
+          if BINARY_OPERATOR_SET.include?(current.lexeme)
             parse_binary_operator(selector.value)
           else
             parse_expr_recursively

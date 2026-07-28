@@ -38,9 +38,23 @@ module Janeway
     TWO_CHAR_LEX_FIRST = TWO_CHAR_LEX.map { |lexeme| lexeme[0] }.freeze
     ONE_OR_TWO_CHAR_LEX = ONE_CHAR_LEX & TWO_CHAR_LEX.map { |str| str[0] }.freeze
 
+    # O(1)-lookup companions to the arrays above. Hash#include? and the reverse
+    # lookup avoid the linear scan that .include? / .key would do per token.
+    LEXEME_TO_TYPE = OPERATORS.invert.freeze
+    ONE_CHAR_LEX_SET = ONE_CHAR_LEX.each_with_object({}) { |c, h| h[c] = true }.freeze
+    TWO_CHAR_LEX_SET = TWO_CHAR_LEX.each_with_object({}) { |c, h| h[c] = true }.freeze
+    TWO_CHAR_LEX_FIRST_SET = TWO_CHAR_LEX_FIRST.each_with_object({}) { |c, h| h[c] = true }.freeze
+    ONE_OR_TWO_CHAR_LEX_SET = ONE_OR_TWO_CHAR_LEX.each_with_object({}) { |c, h| h[c] = true }.freeze
+
     WHITESPACE = " \t\n\r"
     KEYWORD = %w[true false null].freeze
+    KEYWORD_SET = KEYWORD.each_with_object({}) { |k, h| h[k] = true }.freeze
     FUNCTIONS = %w[length count match search value].freeze
+    FUNCTIONS_SET = FUNCTIONS.each_with_object({}) { |k, h| h[k] = true }.freeze
+
+    # Hoisted from lex_delimited_string. Given a delimiter, the value is the "other" delimiter.
+    OTHER_DELIMITER = { "'" => '"', '"' => "'" }.freeze
+    QUOTE_LEX_SET = { "'" => true, '"' => true }.freeze
 
     # faster to check membership in a string than an array of char (benchmarked ruby 3.1.2)
     ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -89,13 +103,13 @@ module Janeway
       return if WHITESPACE.include?(c)
 
       token =
-        if ONE_OR_TWO_CHAR_LEX.include?(c)
+        if ONE_OR_TWO_CHAR_LEX_SET.include?(c)
           token_from_one_or_two_char_lex(c)
-        elsif ONE_CHAR_LEX.include?(c)
+        elsif ONE_CHAR_LEX_SET.include?(c)
           token_from_one_char_lex(c)
-        elsif TWO_CHAR_LEX_FIRST.include?(c)
+        elsif TWO_CHAR_LEX_FIRST_SET.include?(c)
           token_from_two_char_lex(c)
-        elsif %w[" '].include?(c)
+        elsif QUOTE_LEX_SET.include?(c)
           lex_delimited_string(c)
         elsif digit?(c)
           lex_number
@@ -127,20 +141,20 @@ module Janeway
         raise err("Operator #{lexeme.inspect} must not be followed by whitespace")
       end
 
-      Token.new(OPERATORS.key(lexeme), lexeme, nil, current_location)
+      Token.new(LEXEME_TO_TYPE[lexeme], lexeme, nil, current_location)
     end
 
     # Consumes an operator that could be either 1 or 2 chars in length
     # @return [Token]
     def token_from_one_or_two_char_lex(lexeme)
-      next_two_chars = [lexeme, lookahead].join
-      if TWO_CHAR_LEX.include?(next_two_chars)
+      next_two_chars = lexeme + lookahead
+      if TWO_CHAR_LEX_SET.include?(next_two_chars)
         consume
         if next_two_chars == '..' && WHITESPACE.include?(lookahead)
           raise err("Operator #{next_two_chars.inspect} must not be followed by whitespace")
         end
 
-        Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
+        Token.new(LEXEME_TO_TYPE[next_two_chars], next_two_chars, nil, current_location)
       else
         token_from_one_char_lex(lexeme)
       end
@@ -149,11 +163,11 @@ module Janeway
     # Consumes a 2 char operator
     # @return [Token]
     def token_from_two_char_lex(lexeme)
-      next_two_chars = [lexeme, lookahead].join
-      raise err("Unknown operator \"#{lexeme}\"") unless TWO_CHAR_LEX.include?(next_two_chars)
+      next_two_chars = lexeme + lookahead
+      raise err("Unknown operator \"#{lexeme}\"") unless TWO_CHAR_LEX_SET.include?(next_two_chars)
 
       consume
-      Token.new(OPERATORS.key(next_two_chars), next_two_chars, nil, current_location)
+      Token.new(LEXEME_TO_TYPE[next_two_chars], next_two_chars, nil, current_location)
     end
 
     def consume
@@ -169,9 +183,8 @@ module Janeway
     # @param delimiter [String] eg. ' or "
     # @return [Token] string token
     def lex_delimited_string(delimiter)
-      allowed_delimiters = %w[' "]
       # the "other" delimiter char, which is not currently being treated as a delimiter
-      non_delimiter = allowed_delimiters.reject { |char| char == delimiter }.first
+      non_delimiter = OTHER_DELIMITER[delimiter]
 
       literal_chars = []
       while lookahead != delimiter && source_uncompleted?
@@ -190,7 +203,7 @@ module Janeway
             end
           elsif unescaped?(next_char)
             consume
-          elsif allowed_delimiters.include?(next_char) && next_char != delimiter
+          elsif QUOTE_LEX_SET.include?(next_char) && next_char != delimiter
             consume
           else
             raise err("invalid character #{next_char.inspect}")
@@ -383,9 +396,9 @@ module Janeway
 
       identifier = source[lexeme_start_p..(next_p - 1)]
       type =
-        if KEYWORD.include?(identifier) && !ignore_keywords
+        if KEYWORD_SET.include?(identifier) && !ignore_keywords
           identifier.to_sym
-        elsif FUNCTIONS.include?(identifier) && !ignore_keywords
+        elsif FUNCTIONS_SET.include?(identifier) && !ignore_keywords
           :function
         else
           :identifier
@@ -486,9 +499,9 @@ module Janeway
       consume while name_char?(lookahead)
       identifier = source[lexeme_start_p..(next_p - 1)]
       type =
-        if KEYWORD.include?(identifier) && !ignore_keywords
+        if KEYWORD_SET.include?(identifier) && !ignore_keywords
           identifier.to_sym
-        elsif FUNCTIONS.include?(identifier) && !ignore_keywords
+        elsif FUNCTIONS_SET.include?(identifier) && !ignore_keywords
           :function
         else
           :identifier
