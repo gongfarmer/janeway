@@ -21,23 +21,42 @@ module Janeway
         end
       end
 
-      # Visit all descendants of `input`.
-      # Return results of applying `action` on each.
+      # Visit all descendants of `input` and concatenate the results of
+      # `block` at each node. Iterative depth-first pre-order — a recursive
+      # implementation would risk SystemStackError on deep JSON and allocated
+      # an array-per-node plus a flatten pass.
+      #
       # @param input [Array, Hash] the results of processing so far
-      # @param path [Array<String>] elements of normalized path to the current input
       # @param parent [Array, Hash] parent of the input object
-      def visit(input, parent, path, &block)
-        results = [yield(input, parent, path)]
+      # @param path [Array<String>] elements of normalized path to the current input
+      def visit(input, parent, path)
+        results = []
+        stack = [[input, parent, path]]
+        until stack.empty?
+          node, node_parent, node_path = stack.pop
+          results.concat(yield(node, node_parent, node_path))
 
-        case input
-        when Array
-          results.concat(input.map.with_index { |value, i| visit(value, input, path + [i], &block) })
-        when Hash
-          results.concat(input.map { |key, value| visit(value, input, path + [key], &block) })
+          case node
+          when Array
+            # Push in reverse so the leftmost child is popped first (pre-order).
+            i = node.size - 1
+            while i >= 0
+              stack.push([node[i], node, node_path + [i]])
+              i -= 1
+            end
+          when Hash
+            # Iterate to an array once so we can walk it in reverse.
+            pairs = node.to_a
+            i = pairs.size - 1
+            while i >= 0
+              k, v = pairs[i]
+              stack.push([v, node, node_path + [k]])
+              i -= 1
+            end
+          end
+          # Basic (non-container) types have no descendants — nothing to push.
         end
-        # basic types are ignored, they will be added by one of the above
-
-        results.flatten(1)
+        results
       end
     end
   end
