@@ -71,6 +71,10 @@ module Janeway
         original = Parser.parse('$[?!@.x]')
         expect(Parser.parse(original.to_s).to_s).to eq(original.to_s)
       end
+
+      it 'preserves quotes around name selectors in a union' do
+        expect(Parser.parse("$['a','b']").to_s).to eq("$['a', 'b']")
+      end
     end
   end
 end
