@@ -71,6 +71,22 @@ module Janeway
       def singular_query?
         false
       end
+
+      # True if every selector in the @next chain is one of the allowed classes.
+      # An empty chain (no @next) returns true. Extracted from the identical
+      # implementations that used to live in CurrentNode and RootNode.
+      #
+      # @param allowed_classes [Array<Class>]
+      # @return [Boolean]
+      def chain_of?(*allowed_classes)
+        selector = @next
+        while selector
+          return false unless allowed_classes.include?(selector.class)
+
+          selector = selector.next
+        end
+        true
+      end
     end
   end
 end
