@@ -33,7 +33,7 @@ module Janeway
       @query = query
       @type = as
       @jsonpath = query.jsonpath
-      @root = query_to_interpreter_tree(@query, &block)
+      @root = query.interpreter_tree_for(@type) { query_to_interpreter_tree(@query, &block) }
     end
 
     # Return multiline JSON string describing the interpreter tree.

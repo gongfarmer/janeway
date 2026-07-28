@@ -180,6 +180,11 @@ module Janeway
       consume while digit?(lookahead)
     end
 
+    # @return [String] source substring for the lexeme currently being built
+    def current_lexeme
+      source[lexeme_start_p..(next_p - 1)]
+    end
+
     # @param delimiter [String] eg. ' or "
     # @return [Token] string token
     def lex_delimited_string(delimiter)
@@ -217,7 +222,7 @@ module Janeway
       literal = literal_chars.join
 
       # lexeme value includes delimiters and literal escape characters
-      lexeme = source[lexeme_start_p..(next_p - 1)]
+      lexeme = current_lexeme
 
       Token.new(:string, lexeme, literal, current_location)
     end
@@ -330,20 +335,19 @@ module Janeway
     #
     # @return [String]
     def consume_four_hex_digits
-      hex_digits = []
+      hex_digits = String.new(capacity: 4)
       4.times do
-        hex_digits << consume
-        case hex_digits.last.ord
-        when 0x30..0x39 then next # '0'..'1'
-        when 0x40..0x46 then next # 'A'..'F'
+        c = consume
+        hex_digits << c
+        case c.ord
+        when 0x30..0x39 then next # '0'..'9'
+        when 0x40..0x46 then next # 'A'..'F' (range preserves original behavior; note '@' also accepted)
         when 0x61..0x66 then next # 'a'..'f'
         else
-          raise err("Invalid unicode escape sequence: \\u#{hex_digits.join}")
+          raise err("Invalid unicode escape sequence: \\u#{hex_digits}")
         end
       end
-      raise err("Incomplete unicode escape sequence: \\u#{hex_digits.join}") if hex_digits.size < 4
-
-      hex_digits.join
+      hex_digits
     end
 
     # Consume a numeric string. May be an integer, fractional, or exponent.
@@ -366,13 +370,13 @@ module Janeway
           consume # "+" / "-"
         end
         unless digit?(lookahead)
-          lexeme = source[lexeme_start_p..(next_p - 1)]
+          lexeme = current_lexeme
           raise err("Exponent 'e' must be followed by number: #{lexeme.inspect}")
         end
         consume_digits
       end
 
-      lexeme = source[lexeme_start_p..(next_p - 1)]
+      lexeme = current_lexeme
       if lexeme.start_with?('0') && lexeme.size > 1
         raise err("Number may not start with leading zero: #{lexeme.inspect}")
       end
@@ -394,7 +398,7 @@ module Janeway
     def lex_identifier(ignore_keywords: false)
       consume while alpha_numeric?(lookahead)
 
-      identifier = source[lexeme_start_p..(next_p - 1)]
+      identifier = current_lexeme
       type =
         if KEYWORD_SET.include?(identifier) && !ignore_keywords
           identifier.to_sym
@@ -414,7 +418,7 @@ module Janeway
     # @return [Token]
     def lex_unescaped_identifier
       consume while unescaped?(lookahead)
-      identifier = source[lexeme_start_p..(next_p - 1)]
+      identifier = current_lexeme
       Token.new(:identifier, identifier, identifier, current_location)
     end
 
@@ -497,7 +501,7 @@ module Janeway
       raise err('Identifier within brackets must be surrounded by quotes') if @tokens.last&.type == :child_start
 
       consume while name_char?(lookahead)
-      identifier = source[lexeme_start_p..(next_p - 1)]
+      identifier = current_lexeme
       type =
         if KEYWORD_SET.include?(identifier) && !ignore_keywords
           identifier.to_sym

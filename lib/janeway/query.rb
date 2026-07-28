@@ -43,6 +43,26 @@ module Janeway
       @root.singular_query?
     end
 
+    # Return a cached interpreter tree for the given type, building it via
+    # the block on the first call. Only stateless interpreter types
+    # (`:finder`, `:deleter`) benefit from caching — `:iterator` and
+    # `:delete_if` capture the caller's block, so their trees are
+    # per-call.
+    #
+    # No-op (yields fresh every time) if the Query is frozen — respecting
+    # the docstring's "can be frozen" contract.
+    #
+    # @param type [Symbol] :finder, :deleter, :iterator, :delete_if
+    # @yield build the tree if not cached
+    # @return [Interpreters::Base]
+    def interpreter_tree_for(type)
+      return yield unless %i[finder deleter].include?(type)
+      return yield if frozen?
+
+      @interpreter_tree_cache ||= {}
+      @interpreter_tree_cache[type] ||= yield
+    end
+
     # Return a list of the nodes in the AST.
     # The AST of a jsonpath query is a straight line, so this is expressible as an array.
     # The only part of the AST with branches is inside a filter selector, but that doesn't show up here.
@@ -82,6 +102,10 @@ module Janeway
     # the only part `pop` mutates. Nested contents (filter expressions,
     # function parameters, child-segment members) are shared with the original,
     # which is safe because the interpreter never mutates the AST.
+    #
+    # The tree cache is intentionally NOT shared with the dup: cached trees
+    # reference the original's top-level chain and are invalid for a dup that
+    # may later be popped.
     #
     # @return [Query]
     def dup

@@ -17,15 +17,17 @@ module Janeway
         raise "Invalid name: #{value.inspect}:#{value.class}" unless value.is_a?(String)
       end
 
+      # Chars that force bracket notation (they are not permitted in the
+      # dotted shorthand).
+      SPECIAL_CHARS = /[ .]/
+
       # @param brackets [Boolean] request for bracket syntax
       # @param dot_prefix [Boolean] include . prefix, if shorthand notation is used
       # @param bracketed [Boolean] caller already provided brackets (e.g. within a union);
       #   emit the quoted name only, without adding brackets
       def to_s(brackets: false, dot_prefix: true, bracketed: false)
         # Add quotes and surrounding brackets if the name includes chars that require quoting.
-        # These chars are not allowed in dotted notation, only bracket notation.
-        special_chars = [' ', '.']
-        brackets ||= special_chars.any? { |char| @value.include?(char) }
+        brackets ||= @value.match?(SPECIAL_CHARS)
         if bracketed
           "#{quote(@value)}#{@next}"
         elsif brackets

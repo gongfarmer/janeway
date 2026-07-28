@@ -6,6 +6,9 @@ require_relative 'error'
 module Janeway
   module AST
     INDENT = '  '
+    # Precomputed indent prefixes so #indented does not do `INDENT * level`
+    # (a fresh String allocation) on every line printed.
+    INDENTS = Array.new(16) { |i| (INDENT * i).freeze }.freeze
 
     # Base class for jsonpath expressions.
     #
@@ -28,8 +31,16 @@ module Janeway
 
       # @return [String]
       def type
-        name = self.class.to_s.split('::').last # eg. Janeway::AST::FunctionCall => "FunctionCall"
-        Helpers.camelcase_to_underscore(name) # eg. "FunctionCall" => "function_call"
+        self.class.type_name
+      end
+
+      # Cached camelcase→underscore transform of the class name.
+      # Same value on every instance of the class — compute once per class.
+      #
+      # @return [String]
+      def self.type_name
+        @type_name ||=
+          Helpers.camelcase_to_underscore(name.split('::').last).freeze
       end
 
       # Return the given message, indented
@@ -38,7 +49,7 @@ module Janeway
       # @param msg [String]
       # @return [String]
       def indented(level, msg)
-        format('%s%s', INDENT * level, msg)
+        (INDENTS[level] || (INDENT * level)) + msg
       end
 
       # @param level [Integer]
