@@ -29,9 +29,6 @@ module Janeway
     #
     # Construct accepts an optional Selector which will be applied to the "current" node
     class CurrentNode < Janeway::AST::Expression
-      # Subsequent expression that modifies the output of this expression
-      attr_accessor :next
-
       def to_s
         "@#{@next}"
       end
@@ -41,17 +38,7 @@ module Janeway
       #
       # @return [Boolean]
       def singular_query?
-        return true unless @next # there are no following selectors
-
-        selector_types = []
-        selector = @next
-        loop do
-          selector_types << selector.class
-          selector = selector.next
-          break unless selector
-        end
-        allowed = [AST::IndexSelector, AST::NameSelector]
-        selector_types.uniq.all? { allowed.include?(_1) }
+        chain_of?(AST::IndexSelector, AST::NameSelector)
       end
 
       # True if this is a bare current node operator, without a following expression

@@ -20,8 +20,10 @@ module Janeway
       # Value provided by subclass constructor.
       attr_accessor :value
 
-      # Next expression in the AST, if any
-      attr_reader :next
+      # Next expression in the AST, if any. Writable so the parser can link
+      # nodes as it constructs the chain, and so Query#dup / #pop can rewire
+      # the top-level chain.
+      attr_accessor :next
 
       def initialize(val = nil)
         # don't set the instance variable if unused, because it makes the
@@ -70,6 +72,22 @@ module Janeway
       # @return [Boolean]
       def singular_query?
         false
+      end
+
+      # True if every selector in the @next chain is one of the allowed classes.
+      # An empty chain (no @next) returns true. Extracted from the identical
+      # implementations that used to live in CurrentNode and RootNode.
+      #
+      # @param allowed_classes [Array<Class>]
+      # @return [Boolean]
+      def chain_of?(*allowed_classes)
+        selector = @next
+        while selector
+          return false unless allowed_classes.include?(selector.class)
+
+          selector = selector.next
+        end
+        true
       end
     end
   end

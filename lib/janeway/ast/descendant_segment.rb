@@ -16,9 +16,6 @@ module Janeway
     #   $..[*, *] All values, twice non-deterministic order
     #   $..[0, 1] Multiple segments
     class DescendantSegment < Janeway::AST::Selector
-      # Subsequent expression that modifies the result of this selector list.
-      attr_accessor :next
-
       def to_s
         "..#{@next&.to_s(dot_prefix: false)}"
       end
