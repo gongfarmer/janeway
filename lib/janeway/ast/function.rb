@@ -5,26 +5,28 @@ require_relative 'expression'
 module Janeway
   module AST
     # Represents a JSONPath built-in function.
+    #
+    # This is pure structure: name + parameters. The body / literal_return
+    # metadata lives in Functions::REGISTRY (looked up by name), so AST nodes
+    # don't drag closures over the parser's binding.
     class Function < Janeway::AST::Expression
       alias name value
 
-      attr_reader :parameters, :body
+      attr_reader :parameters
 
-      def initialize(name, parameters, &body)
+      def initialize(name, parameters)
         raise ArgumentError, "expect string, got #{name.inspect}" unless name.is_a?(String)
-        raise ArgumentError, "expect body to be a Proc, got #{body.class}" unless body.is_a?(Proc)
 
-        # Catch author errors in the built-in function definitions at construction time
-        # instead of surfacing as an opaque ArgumentError when the query first runs.
-        unless body.arity == parameters.size
+        spec = Functions::REGISTRY[name]
+        raise ArgumentError, "unknown function #{name.inspect}" unless spec
+        unless spec[:arity] == parameters.size
           raise ArgumentError,
-                "function #{name.inspect}: body arity #{body.arity} does not " \
+                "function #{name.inspect}: declared arity #{spec[:arity]} does not " \
                 "match parameter count #{parameters.size}"
         end
 
         super(name)
         @parameters = parameters
-        @body = body
       end
 
       def to_s
@@ -47,12 +49,7 @@ module Janeway
 
       # True if the function's return value is a literal
       def literal?
-        case name
-        when 'length', 'count', 'value' then true
-        when 'search', 'match' then false
-        else
-          raise "Unknown jsonpath function #{name}"
-        end
+        Functions::REGISTRY.fetch(name)[:literal_return]
       end
     end
   end

@@ -22,6 +22,10 @@ module Janeway
       def initialize(function)
         super
         @params = function.parameters.map { |param| TreeConstructor.ast_node_to_interpreter(param) }
+        # Build the function body from the registry. This is the point at
+        # which per-instance specialization happens — e.g. match/search
+        # compile a literal regex once, capturing it in the closure.
+        @body = Functions::REGISTRY.fetch(function.name)[:build].call(function.parameters)
       end
 
       # @param input [Array, Hash] the results of processing so far
@@ -30,7 +34,7 @@ module Janeway
       # @param _path [Array<String>] elements of normalized path to the current input
       def interpret(input, _parent, root, _path)
         params = interpret_function_parameters(@params, input, root)
-        function.body.call(*params)
+        @body.call(*params)
       end
 
       # Evaluate the expressions in the parameter list to make the parameter values

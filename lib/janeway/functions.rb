@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require_relative 'ast/function'
+require_relative 'ast/string_type'
 
 module Janeway
-  # Mixin to provide JSONPath function handlers for Parser
+  # Mixin to provide JSONPath function handlers for Parser, plus the shared
+  # I-Regexp translation helper and the built-in function registry.
   module Functions
     # Convert IRegexp format to ruby regexp equivalent, following the instructions in rfc9485.
     # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-pcre-re2-and-ruby-regexps
@@ -35,6 +37,7 @@ module Janeway
       regex_str = anchor ? format('\A(?:%s)\z', chars.join) : chars.join
       Regexp.new(regex_str)
     end
+    module_function :translate_iregex_to_ruby_regex
 
     # All jsonpath function parameters are one of these accepted types.
     # Parse the function parameter and return the result.
@@ -54,10 +57,80 @@ module Janeway
       consume
       result
     end
+
+    # Build a match/search body. When the pattern is a StringType literal we
+    # compile the regex once at parse time (see perf pass, commit fd8b92a).
+    # Otherwise fall back to per-call compilation.
+    def self.build_regex_body(parameters, anchor:)
+      literal_regexp =
+        if parameters[1].is_a?(AST::StringType)
+          begin
+            translate_iregex_to_ruby_regex(parameters[1].value, anchor: anchor)
+          rescue RegexpError
+            nil # fall back to per-call compilation, which will raise at eval time
+          end
+        end
+
+      if literal_regexp
+        ->(str, _pattern) { str.is_a?(String) && literal_regexp.match?(str) }
+      else
+        lambda do |str, pattern|
+          if str.is_a?(String) && pattern.is_a?(String)
+            translate_iregex_to_ruby_regex(pattern, anchor: anchor).match?(str)
+          else
+            false
+          end
+        end
+      end
+    end
+
+    # Metadata + body builder for every built-in JSONPath function.
+    #
+    #   arity          — number of parameters
+    #   literal_return — true when the result is a literal (see RFC 9535
+    #                    well-typedness of function extensions)
+    #   build          — proc that takes the parsed `parameters` list and
+    #                    returns the body proc (parameters allow per-instance
+    #                    optimization, e.g. literal-regex compilation)
+    REGISTRY = {
+      'count' => {
+        arity: 1,
+        literal_return: true,
+        build: ->(_) { ->(nodes) { nodes.is_a?(Array) ? nodes.size : 1 } },
+      },
+      'length' => {
+        arity: 1,
+        literal_return: true,
+        build: lambda { |_|
+          lambda { |value|
+            [Array, Hash, String].include?(value.class) ? value.size : :nothing
+          }
+        },
+      },
+      'value' => {
+        arity: 1,
+        literal_return: true,
+        build: lambda { |_|
+          lambda { |nodes|
+            nodes.is_a?(Array) && nodes.size == 1 ? nodes.first : :nothing
+          }
+        },
+      },
+      'match' => {
+        arity: 2,
+        literal_return: false,
+        build: ->(parameters) { Functions.build_regex_body(parameters, anchor: true) },
+      },
+      'search' => {
+        arity: 2,
+        literal_return: false,
+        build: ->(parameters) { Functions.build_regex_body(parameters, anchor: false) },
+      },
+    }.freeze
   end
 end
 
-# Require function definitions
+# Require function parse-method definitions
 Dir.children("#{__dir__}/functions/").each do |path|
   require_relative "functions/#{path[0..-4]}"
 end
