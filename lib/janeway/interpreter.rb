@@ -51,11 +51,16 @@ module Janeway
     # @return [Object]
     def interpret(input)
       @root.interpret(nil, nil, input, [])
-    rescue StandardError => e
-      # Error during interpretation. Convert it to a Janeway::Error and include the query in the message
-      error = err(e.message)
-      error.set_backtrace e.backtrace
-      raise error
+    rescue Janeway::Error => e
+      # Reformat known interpretation errors to include the query in the message.
+      # Real bugs (NoMethodError, TypeError, NameError, ...) are intentionally
+      # NOT caught here — they should surface with a real backtrace, not be
+      # masked as "Jsonpath query ..." messages.
+      raise if e.query # already annotated
+
+      annotated = err(e.message)
+      annotated.set_backtrace e.backtrace
+      raise annotated
     end
 
     private

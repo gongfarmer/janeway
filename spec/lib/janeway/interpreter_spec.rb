@@ -24,6 +24,20 @@ module Janeway
       end
     end
 
+    # Interpretation errors that aren't Janeway::Error (e.g. NoMethodError from
+    # a real bug) must propagate untouched so callers can see the real
+    # backtrace instead of a misleading "Jsonpath query ... - undefined method"
+    # rewrap.
+    it 'does not mask non-Janeway exceptions from interpret' do
+      query = Janeway.parse('$')
+      interpreter = described_class.new(query)
+      allow(interpreter.instance_variable_get(:@root)).to receive(:interpret)
+        .and_raise(NoMethodError, 'undefined method `foo` for nil')
+      expect {
+        interpreter.interpret({})
+      }.to raise_error(NoMethodError, /undefined method/)
+    end
+
     # Compliance test suite requires this to raise a parse error
     # JsonPath comparison project suggests not to do that
     # CTS "basic, empty segment"

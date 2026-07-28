@@ -4,6 +4,29 @@ require 'janeway/lexer'
 
 module Janeway
   describe Lexer do
+    describe 'unicode escape validation' do
+      it 'rejects @ as a hex digit (0x40 is not A-F)' do
+        expect {
+          described_class.lex(%q{$["\u@000"]})
+        }.to raise_error(Janeway::Error, /Invalid unicode escape sequence/)
+      end
+
+      it 'accepts A-F as hex digits' do
+        query = %q{$["} + "\\uABCD" + %q{"]}
+        expect { described_class.lex(query) }.not_to raise_error
+      end
+
+      it 'accepts a-f as hex digits' do
+        query = %q{$["} + "\\uabcd" + %q{"]}
+        expect { described_class.lex(query) }.not_to raise_error
+      end
+
+      it 'accepts 0-9 as hex digits' do
+        query = %q{$["} + "\\u0123" + %q{"]}
+        expect { described_class.lex(query) }.not_to raise_error
+      end
+    end
+
     it 'accepts multiple selectors within brackets, comma-separated' do
       expect(described_class.lex('$[1, 2]')).to eq([:root, :child_start, 1, :union, 2, :child_end, :eof])
     end

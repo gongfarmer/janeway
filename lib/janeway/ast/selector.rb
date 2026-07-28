@@ -26,9 +26,11 @@ module Janeway
       # Subsequent expression that modifies the result of this selector list.
       attr_accessor :next
 
-      def ==(other)
-        value == other&.value
-      end
+      # Intentionally NO #== override. The previous implementation compared
+      # only `value`, ignoring class and @next, which made two selector chains
+      # with identical heads but different tails compare equal (and matched
+      # across selector types by coincidence of value). Query#== is the
+      # correct equality entry point for query comparisons.
     end
   end
 end

@@ -62,7 +62,10 @@ module Janeway
       query = '$["abc"]'
       tokens = Lexer.lex(query)
       ast = described_class.new(tokens, query).parse
-      expect(ast.root.next).to eq(AST::NameSelector.new('abc'))
+      selector = ast.root.next
+      expect(selector).to be_a(AST::NameSelector)
+      expect(selector.value).to eq('abc')
+      expect(selector.next).to be_nil
     end
 
     it 'applies minus operator to the following zero' do

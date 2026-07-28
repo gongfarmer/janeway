@@ -12,11 +12,19 @@ module Janeway
 
       def initialize(name, parameters, &body)
         raise ArgumentError, "expect string, got #{name.inspect}" unless name.is_a?(String)
+        raise ArgumentError, "expect body to be a Proc, got #{body.class}" unless body.is_a?(Proc)
+
+        # Catch author errors in the built-in function definitions at construction time
+        # instead of surfacing as an opaque ArgumentError when the query first runs.
+        unless body.arity == parameters.size
+          raise ArgumentError,
+                "function #{name.inspect}: body arity #{body.arity} does not " \
+                "match parameter count #{parameters.size}"
+        end
 
         super(name)
         @parameters = parameters
         @body = body
-        raise "expect body to be a Proc, got #{body.class}" unless body.is_a?(Proc)
       end
 
       def to_s

@@ -341,7 +341,7 @@ module Janeway
         hex_digits << c
         case c.ord
         when 0x30..0x39 then next # '0'..'9'
-        when 0x40..0x46 then next # 'A'..'F' (range preserves original behavior; note '@' also accepted)
+        when 0x41..0x46 then next # 'A'..'F'
         when 0x61..0x66 then next # 'a'..'f'
         else
           raise err("Invalid unicode escape sequence: \\u#{hex_digits}")
