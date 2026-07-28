@@ -311,10 +311,11 @@ module Janeway
     # @param low_surrogate_hex [String] string of hex digits, eg. "DE09"
     # @return [String] UTF-8 string containing a single multi-byte unicode character, eg. "😉"
     def convert_surrogate_pair_to_codepoint(high_surrogate_hex, low_surrogate_hex)
-      [high_surrogate_hex, low_surrogate_hex].each do |hex_str|
-        raise ArgumentError, "expect 4 hex digits, got #{hex_string.inspect}" unless hex_str.size == 4
-      end
-
+      # Callers guarantee 4-char inputs (consume_four_hex_digits followed by
+      # high_surrogate?/low_surrogate? which pre-check size). The old defensive
+      # guard here referenced a non-existent `hex_string` local — dead code
+      # that would NameError if ever reached.
+      #
       # Calculate the code point from the surrogate pair values
       # algorithm from https://russellcottrell.com/greek/utilities/SurrogatePairCalculator.htm
       high = high_surrogate_hex.hex
