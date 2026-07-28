@@ -4,7 +4,7 @@ require 'janeway'
 
 module Janeway
   module Interpreters
-    describe NameSelectorDeleter do
+    describe NameSelectorDeleteIf do
       it 'deletes hash element matching name selector' do
         input = { 'a' => 1, 'b' => 2, 'c' => 3 }
         Janeway.enum_for('$.a', input).delete

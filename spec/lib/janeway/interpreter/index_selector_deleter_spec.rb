@@ -4,7 +4,7 @@ require 'janeway'
 
 module Janeway
   module Interpreters
-    describe IndexSelectorDeleter do
+    describe IndexSelectorDeleteIf do
       let(:input) { %w[a b c] }
 
       it 'deletes nothing from hash' do

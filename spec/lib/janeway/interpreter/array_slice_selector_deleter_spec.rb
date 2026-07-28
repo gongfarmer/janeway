@@ -4,7 +4,7 @@ require 'janeway'
 
 module Janeway
   module Interpreters
-    describe ArraySliceSelectorDeleter do
+    describe ArraySliceSelectorDeleteIf do
       let(:input) { ('a'..'g').to_a }
 
       it 'deletes nothing from hash' do

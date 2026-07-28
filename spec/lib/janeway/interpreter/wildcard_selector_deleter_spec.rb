@@ -4,7 +4,7 @@ require 'janeway'
 
 module Janeway
   module Interpreters
-    describe WildcardSelectorDeleter do
+    describe WildcardSelectorDeleteIf do
       it 'deletes all array elements' do
         input = %w[a b c]
         Janeway.enum_for('$.*', input).delete
