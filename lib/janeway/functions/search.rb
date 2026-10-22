@@ -25,6 +25,11 @@ module Janeway
     # the result is LogicalTrue if at least one such substring exists and is
     # LogicalFalse otherwise.
     #
+    # The pattern is validated and translated by Janeway::IRegexp (RFC 9485). A pattern that is not an
+    # I-Regexp gives LogicalFalse (RFC 9535 sections 2.4.6 and 2.4.7). A literal pattern that is over
+    # one of the limits in IRegexp (MAX_LENGTH, MAX_REPEAT, MAX_GROUP_DEPTH) raises Janeway::Error when
+    # the query is parsed. In a pattern ^ and $ are ordinary characters, as RFC 9485 has no anchors.
+    #
     # tl;dr: How is this different from the match function?
     # "match" must match the entire string, "search" matches a substring.
     def parse_function_search

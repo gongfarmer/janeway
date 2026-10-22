@@ -153,6 +153,7 @@ module Janeway
       end
 
       # i-regexp = branch *( "|" branch )
+      # RFC 9485 section 3, the top production.
       def i_regexp
         branch
         while peek == '|'
@@ -189,6 +190,8 @@ module Janeway
         false
       end
 
+      # atom = ... / ( "(" i-regexp ")" ), RFC 9485 section 3.
+      # The nesting limit is this library's own choice, which RFC 9485 section 8 permits: it bounds recursion.
       # @return [Boolean] true if the group contains a range quantifier
       def group
         open = @i
@@ -354,7 +357,7 @@ module Janeway
         end
       end
 
-      # SingleCharEsc / catEsc / complEsc
+      # SingleCharEsc / catEsc / complEsc, RFC 9485 section 3
       # @param single_char_only [Boolean] refuse catEsc and complEsc, where a CCchar is required
       def escape(single_char_only: false)
         start = @i
@@ -373,7 +376,7 @@ module Janeway
         end
       end
 
-      # catEsc = %s"\p{" charProp "}" ; complEsc = %s"\P{" charProp "}"
+      # catEsc = %s"\p{" charProp "}" ; complEsc = %s"\P{" charProp "}", RFC 9485 section 3
       def category_escape(start)
         # at most \p{Xx}, 6 characters
         m = /\A\\[pP]\{([A-Za-z]{1,2})\}/.match(@src[start, 6].join)

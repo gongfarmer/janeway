@@ -104,6 +104,8 @@ module Janeway
       end
     end
 
+    # RFC 9535 section 2.4.6: a pattern that does not conform to RFC 9485 gives LogicalFalse, so it is nil here.
+    # A pattern over a limit (RFC 9485 section 8) is treated the same way.
     # @return [Regexp, nil] nil when the pattern is not usable, see build_regex_body
     def self.compile_or_nil(pattern, anchor)
       IRegexp.compile(pattern, anchor: anchor)
@@ -112,6 +114,10 @@ module Janeway
     end
 
     # Match, and treat a match that Ruby cannot or will not complete as no match.
+    #
+    # Deliberate deviation from RFC 9535 sections 2.4.6 and 2.4.7, which say the result is LogicalTrue or
+    # LogicalFalse and say nothing about a match that cannot complete: a timeout, or a subject that is
+    # not valid UTF-8, gives false. RFC 9485 section 8 (security considerations) is why a timeout exists.
     # @param regexp [Regexp]
     # @param str [String]
     # @return [Boolean]
