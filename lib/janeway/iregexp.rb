@@ -124,7 +124,8 @@ module Janeway
 
       # @param iregex [String]
       def initialize(iregex)
-        @src = iregex
+        @original = iregex
+        @src = iregex.valid_encoding? ? iregex.chars : [] # array: indexing a multibyte String is O(n)
         @i = 0
         @out = +''
         @depth = 0
@@ -135,7 +136,12 @@ module Janeway
       # @return [String] Ruby regexp source, without anchors
       # @raise [Invalid, LimitExceeded]
       def parse
-        raise Invalid, 'pattern is not valid UTF-8' unless @src.valid_encoding? # RFC 9485 section 1
+        # RFC 9485 section 1: a pattern is a sequence of Unicode scalar values. Accept UTF-8, and US-ASCII
+        # which is a subset of it. Any other encoding is refused and not transcoded, and that includes a
+        # binary (ASCII-8BIT) string even when its bytes are all ASCII.
+        unless [Encoding::UTF_8, Encoding::US_ASCII].include?(@original.encoding) && @original.valid_encoding?
+          raise Invalid, 'pattern is not valid UTF-8'
+        end
 
         i_regexp
         raise Invalid.new("unexpected #{@src[@i].inspect}", @i) if @i < @src.length
@@ -233,18 +239,44 @@ module Janeway
       # number above MAX_REPEAT, and a range quantifier applied to a group that contains one.
       def range_quantifier(contains_range)
         start = @i
-        m = /\G\{(\d+)(?:(,)(\d*))?\}/.match(@src, @i)
-        raise Invalid.new('malformed range quantifier', start) unless m
+        counts, finish = scan_range_quantifier(start)
+        raise Invalid.new('malformed range quantifier', start) unless counts
 
-        [[m[1], m.begin(1)], [m[3], m.begin(3)]].each do |digits, offset|
-          next if digits.nil? || digits.empty? || digits.to_i <= MAX_REPEAT
+        counts.each do |digits, offset|
+          next if digits.empty? || digits.to_i <= MAX_REPEAT
 
           limit("repeat count #{digits} exceeds #{MAX_REPEAT}", offset, digits.length)
         end
         limit('range quantifier applied to a group that contains a range quantifier', start) if contains_range
         @has_range = true
-        @i = m.end(0)
-        @out << m[0]
+        @out << @src[start...finish].join
+        @i = finish
+      end
+
+      # Match \{(\d+)(?:,(\d*))?\} at start by scanning the character array, which a Regexp cannot
+      # do in O(1) per call on a multibyte string. The digit runs can be long, so no fixed-size slice.
+      # @return [Array, nil] [[[digits, offset], ...], index after the closing brace], nil if malformed
+      def scan_range_quantifier(start)
+        return nil unless @src[start] == '{'
+
+        first_start = start + 1
+        first_end = digits_end(first_start)
+        return nil if first_end == first_start # QuantExact needs at least one digit
+
+        counts = [[@src[first_start...first_end].join, first_start]]
+        pos = first_end
+        if @src[pos] == ','
+          second_start = pos + 1
+          pos = digits_end(second_start)
+          counts << [@src[second_start...pos].join, second_start]
+        end
+        @src[pos] == '}' ? [counts, pos + 1] : nil
+      end
+
+      # @return [Integer] index of the first character at or after pos that is not an ASCII digit
+      def digits_end(pos)
+        pos += 1 while @src[pos]&.match?(/\A[0-9]\z/)
+        pos
       end
 
       # charClassExpr = "[" [ "^" ] ( "-" / CCE1 ) *CCE1 [ "-" ] "]"
@@ -259,6 +291,8 @@ module Janeway
         end
         # RFC 9485 section 3: charClassExpr is not allowed to match [^]
         raise Invalid.new('empty negated character class [^]', open) if negated && peek == ']'
+        # RFC 9485 section 3: charClassExpr has at least one item, so [] is not allowed either
+        raise Invalid.new('empty character class []', open) if peek == ']'
 
         first = true
         until peek == ']'
@@ -271,7 +305,7 @@ module Janeway
         @out << ']'
       end
 
-      # CCE1 = ( CCchar [ "-" CCchar ] ) / charClassEsc
+      # CCE1 = ( CCchar [ "-" CCchar ] ) / charClassEsc, RFC 9485 section 3
       def class_item(first)
         if peek == '-'
           # a "-" is only a plain character at the start or the end of the class
@@ -288,7 +322,7 @@ module Janeway
         end
       end
 
-      # "-" CCchar, the end of a range
+      # "-" CCchar, the end of a range. RFC 9485 section 3, CCE1.
       def class_range_end
         @i += 1
         @out << '-'
@@ -353,10 +387,11 @@ module Janeway
 
       # catEsc = %s"\p{" charProp "}" ; complEsc = %s"\P{" charProp "}"
       def category_escape(start)
-        m = /\G\\[pP]\{([A-Za-z]+)\}/.match(@src, start)
+        # at most \p{Xx}, 6 characters
+        m = /\A\\[pP]\{([A-Za-z]{1,2})\}/.match(@src[start, 6].join)
         raise Invalid.new('malformed category escape', start) unless m && CATEGORY.match?(m[1])
 
-        @i = m.end(0)
+        @i = start + m[0].length
         @out << m[0]
       end
     end

@@ -98,6 +98,10 @@ module Janeway
         rejects '\\w', IRegexp::Invalid
         rejects '\\$', IRegexp::Invalid
         rejects '[^]', IRegexp::Invalid, offset: 0
+        # RFC 9485 section 3: a character class has at least one item
+        rejects '[]', IRegexp::Invalid, offset: 0
+        rejects '[]a]', IRegexp::Invalid, offset: 0
+        rejects '[]-a]', IRegexp::Invalid, offset: 0
         rejects '[a', IRegexp::Invalid, offset: 2
         rejects '[', IRegexp::Invalid
         rejects '[[]', IRegexp::Invalid
@@ -163,6 +167,34 @@ module Janeway
         rejects 'a{1001}(', IRegexp::Invalid
         rejects '(a{2}){2}(', IRegexp::Invalid
         rejects "#{'a' * 10_001}(", IRegexp::Invalid
+      end
+
+      context 'with a pattern in a string encoding other than UTF-8' do
+        rejects 'a'.encode('UTF-16LE'), IRegexp::Invalid
+        rejects "caf\xE9".dup.force_encoding('ISO-8859-1'), IRegexp::Invalid
+        # even when the bytes are all ASCII, a binary string is not known to be Unicode text
+        rejects 'a'.b, IRegexp::Invalid
+        accepts 'a'.dup.force_encoding('US-ASCII'), ['a']
+        accepts "caf\u00e9 \u{1F600}", ["caf\u00e9 \u{1F600}"]
+      end
+
+      context 'with a long multibyte pattern' do
+        def elapsed
+          start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          yield
+          Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+        end
+
+        it 'rejects an over-limit pattern in linear time' do
+          time = elapsed do
+            expect { described_class.compile("\u00e9" * 40_000) }.to raise_error(IRegexp::LimitExceeded)
+          end
+          expect(time).to be < 1.0
+        end
+
+        it 'accepts a pattern at the length limit' do
+          expect(described_class.compile("\u00e9" * 9_999)).to match("\u00e9" * 9_999)
+        end
       end
 
       it 'does not overflow the stack on deeply nested groups' do

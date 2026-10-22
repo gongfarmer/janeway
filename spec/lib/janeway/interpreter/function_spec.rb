@@ -166,6 +166,64 @@ module Janeway
           expect(described_class.interpret(input, '$[?search(@, "a")]')).to eq(['a'])
         end
 
+        it 'gives false for a document pattern in a string encoding other than UTF-8' do
+          [
+            'a'.encode('UTF-16LE'),
+            "caf\xE9".dup.force_encoding('ISO-8859-1'),
+            'a'.b,
+          ].each do |pattern|
+            input = { 'p' => pattern, 'values' => ['a'] }
+            expect(described_class.interpret(input, '$.values[?search(@, $.p)]')).to eq([])
+          end
+        end
+
+        it 'still uses a document pattern that is US-ASCII or multibyte UTF-8' do
+          values = %W[a \u00e9\u00e9]
+          input = { 'p' => 'a'.dup.force_encoding('US-ASCII'), 'q' => "\u00e9+", 'values' => values }
+          expect(described_class.interpret(input, '$.values[?match(@, $.p)]')).to eq(['a'])
+          expect(described_class.interpret(input, '$.values[?match(@, $.q)]')).to eq(["\u00e9\u00e9"])
+        end
+
+        context 'when a match times out' do
+          let(:regexp) { instance_double(Regexp) }
+
+          before do
+            allow(regexp).to receive(:match?).and_raise(IRegexp::TIMEOUT_ERROR)
+            allow(IRegexp).to receive(:compile).and_return(regexp)
+          end
+
+          it 'matches a literal pattern only once, then gives false' do
+            expect(described_class.interpret(%w[a b c d], '$[?match(@, "x")]')).to eq([])
+            expect(regexp).to have_received(:match?).once
+          end
+
+          it 'matches a document pattern only once, then gives false' do
+            input = { 'p' => 'x', 'values' => %w[a b c d] }
+            expect(described_class.interpret(input, '$.values[?search(@, $.p)]')).to eq([])
+            expect(regexp).to have_received(:match?).once
+          end
+        end
+
+        it 'compiles each distinct document pattern once, and compiles an evicted one again' do
+          patterns = Array.new(101) { |i| "x#{i}" }
+          input = { 'patterns' => patterns, 'first' => 'x0', 'last' => 'x100' }
+          allow(IRegexp).to receive(:compile).and_call_original
+          result = described_class.interpret(input, '$.patterns[?match($.last, @)]')
+          expect(result).to eq(['x100'])
+          expect(IRegexp).to have_received(:compile).exactly(101).times
+          result = described_class.interpret(input, '$.patterns[?match($.first, @)]')
+          expect(result).to eq(['x0'])
+        end
+
+        it 'recompiles a pattern after 100 others have pushed it out of the cache' do
+          patterns = ['x0'] + Array.new(100) { |i| "y#{i}" } + ['x0']
+          input = { 'patterns' => patterns }
+          allow(IRegexp).to receive(:compile).and_call_original
+          described_class.interpret(input, '$.patterns[?match("x0", @)]')
+          expect(IRegexp).to have_received(:compile).with('x0', anchor: true).twice
+          expect(IRegexp).to have_received(:compile).exactly(102).times
+        end
+
         it 'compiles a pattern from the input document once per distinct pattern' do
           input = { 'regex' => 'a+', 'values' => %w[a aa aaa b] }
           allow(IRegexp).to receive(:compile).and_call_original

@@ -84,21 +84,23 @@ module Janeway
     # A literal that exceeds a limit has already been rejected by the parser, see
     # Functions#validate_literal_pattern.
     def self.build_regex_body(parameters, anchor:)
-      if parameters[1].is_a?(AST::StringType)
-        literal_regexp = compile_or_nil(parameters[1].value, anchor)
-        return ->(str, _pattern) { !literal_regexp.nil? && str.is_a?(String) && match_safely(literal_regexp, str) }
-      end
-
+      literal = parameters[1].is_a?(AST::StringType) ? parameters[1].value : nil
       cache = {} # pattern string => Regexp, or nil when the pattern is unusable
+      cache[literal] = compile_or_nil(literal, anchor) if literal # a literal is compiled once, now
       lambda do |str, pattern|
+        pattern = literal if literal
         next false unless str.is_a?(String) && pattern.is_a?(String)
 
         unless cache.key?(pattern)
           cache.shift if cache.size >= DYNAMIC_PATTERN_CACHE_SIZE
           cache[pattern] = compile_or_nil(pattern, anchor)
         end
-        regexp = cache[pattern]
-        !regexp.nil? && match_safely(regexp, str)
+        next false if cache[pattern].nil?
+
+        result = match_safely(cache[pattern], str)
+        # After a timeout, stop matching with this pattern: the next nodes would be as slow.
+        cache[pattern] = nil if result == :timeout
+        result == true
       end
     end
 
@@ -115,12 +117,14 @@ module Janeway
     # Match, and treat a match that Ruby cannot or will not complete as no match.
     # @param regexp [Regexp]
     # @param str [String]
-    # @return [Boolean]
+    # @return [Boolean, Symbol] :timeout when the match took longer than IRegexp::MATCH_TIMEOUT, so
+    #   that the caller can stop matching with that pattern
     def self.match_safely(regexp, str)
       regexp.match?(str)
-    rescue IRegexp::TIMEOUT_ERROR, ArgumentError, Encoding::CompatibilityError
-      # TIMEOUT_ERROR: the match took longer than IRegexp::MATCH_TIMEOUT.
-      # ArgumentError, CompatibilityError: str is not valid UTF-8.
+    rescue IRegexp::TIMEOUT_ERROR
+      :timeout
+    rescue ArgumentError, Encoding::CompatibilityError
+      # str is not valid UTF-8.
       false
     end
 
