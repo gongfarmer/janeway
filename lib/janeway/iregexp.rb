@@ -37,33 +37,33 @@ module Janeway
     # Unicode general category names, from the IsCategory production of RFC 9485 section 3.
     CATEGORY = /\A(?:L[lmotu]?|M[cen]?|N[dlo]?|P[c-fios]?|Z[lps]?|S[ckmo]?|C[cfno]?)\z/
 
-    # Raised for a pattern that is not an I-Regexp.
-    class Invalid < Janeway::Error
+    # Base class for the errors IRegexp.compile raises. They describe a problem in a pattern, not in a
+    # JSONPath query, so they carry the index of the problem in the pattern and have no query or location.
+    class Error < Janeway::Error
       # @return [Integer, nil] index of the problem in the pattern, nil when there is no single place
       attr_reader :offset
 
       # @param msg [String]
       # @param offset [Integer, nil]
-      def initialize(msg, offset = nil)
+      def initialize(msg, offset: nil)
         super(msg)
         @offset = offset
       end
     end
 
-    # Raised for an I-Regexp that exceeds one of the limits above.
-    class LimitExceeded < Janeway::Error
-      # @return [Integer, nil] index of the problem in the pattern, nil when there is no single place
-      attr_reader :offset
+    # Raised for a pattern that is not an I-Regexp.
+    class Invalid < Error; end
 
+    # Raised for an I-Regexp that exceeds one of the limits above.
+    class LimitExceeded < Error
       # @return [Integer] number of pattern characters the problem covers
       attr_reader :length
 
       # @param msg [String]
       # @param offset [Integer, nil]
       # @param length [Integer]
-      def initialize(msg, offset = nil, length = 1)
-        super(msg)
-        @offset = offset
+      def initialize(msg, offset: nil, length: 1)
+        super(msg, offset: offset)
         @length = length
       end
     end
@@ -133,7 +133,7 @@ module Janeway
         raise Invalid, 'pattern is not valid UTF-8' unless IRegexp.valid_encoding?(@original) # RFC 9485 section 1
 
         i_regexp
-        raise Invalid.new("unexpected #{@src[@i].inspect}", @i) if @i < @src.length
+        raise Invalid.new("unexpected #{@src[@i].inspect}", offset: @i) if @i < @src.length
 
         limit("pattern is longer than #{MAX_LENGTH} characters", nil) if @src.length > MAX_LENGTH
         raise @limit if @limit
@@ -150,7 +150,7 @@ module Janeway
       # Grammar errors take precedence over limit errors, so a limit violation is remembered and
       # only raised once the whole pattern is known to be an I-Regexp.
       def limit(msg, offset, length = 1)
-        @limit ||= LimitExceeded.new(msg, offset, length)
+        @limit ||= LimitExceeded.new(msg, offset: offset, length: length)
       end
 
       # i-regexp = branch *( "|" branch )
@@ -198,13 +198,15 @@ module Janeway
         open = @i
         @i += 1
         @depth += 1
-        raise LimitExceeded.new("groups are nested deeper than #{MAX_GROUP_DEPTH}", open) if @depth > MAX_GROUP_DEPTH
+        if @depth > MAX_GROUP_DEPTH
+          raise LimitExceeded.new("groups are nested deeper than #{MAX_GROUP_DEPTH}", offset: open)
+        end
 
         @out << '(?:'
         outer_has_range = @has_range
         @has_range = false
         i_regexp
-        raise Invalid.new('unterminated group', @i) unless peek == ')'
+        raise Invalid.new('unterminated group', offset: @i) unless peek == ')'
 
         @i += 1
         @depth -= 1
@@ -232,7 +234,7 @@ module Janeway
       def range_quantifier(contains_range)
         start = @i
         counts, finish = scan_range_quantifier(start)
-        raise Invalid.new('malformed range quantifier', start) unless counts
+        raise Invalid.new('malformed range quantifier', offset: start) unless counts
 
         counts.each do |digits, offset|
           next if digits.empty? || digits.to_i <= MAX_REPEAT
@@ -282,13 +284,13 @@ module Janeway
           @out << '^'
         end
         # RFC 9485 section 3: charClassExpr is not allowed to match [^]
-        raise Invalid.new('empty negated character class [^]', open) if negated && peek == ']'
+        raise Invalid.new('empty negated character class [^]', offset: open) if negated && peek == ']'
         # RFC 9485 section 3: charClassExpr has at least one item, so [] is not allowed either
-        raise Invalid.new('empty character class []', open) if peek == ']'
+        raise Invalid.new('empty character class []', offset: open) if peek == ']'
 
         first = true
         until peek == ']'
-          raise Invalid.new('unterminated character class', @i) if peek.nil?
+          raise Invalid.new('unterminated character class', offset: @i) if peek.nil?
 
           class_item(first)
           first = false
@@ -301,7 +303,7 @@ module Janeway
       def class_item(first)
         if peek == '-'
           # a "-" is only a plain character at the start or the end of the class
-          raise Invalid.new("misplaced '-' in character class", @i) unless first || @src[@i + 1] == ']'
+          raise Invalid.new("misplaced '-' in character class", offset: @i) unless first || @src[@i + 1] == ']'
 
           @i += 1
           @out << '\-'
@@ -318,7 +320,7 @@ module Janeway
       def class_range_end
         @i += 1
         @out << '-'
-        raise Invalid.new('unterminated range in character class', @i) if peek.nil? || peek == ']'
+        raise Invalid.new('unterminated range in character class', offset: @i) if peek.nil? || peek == ']'
 
         cc_char
       end
@@ -336,8 +338,10 @@ module Janeway
       # this, see https://github.com/jsonpath-standard/jsonpath-compliance-test-suite (open issue).
       def normal_char(in_class:)
         char = peek
-        raise Invalid.new('unexpected end of pattern', @i) if char.nil?
-        raise Invalid.new("character #{char.inspect} must be escaped", @i) unless allowed_char?(char.ord, in_class)
+        raise Invalid.new('unexpected end of pattern', offset: @i) if char.nil?
+        unless allowed_char?(char.ord, in_class)
+          raise Invalid.new("character #{char.inspect} must be escaped", offset: @i)
+        end
 
         @i += 1
         # Regexp.escape does not escape "&", but Ruby reads "&&" in a class as set intersection
@@ -363,17 +367,19 @@ module Janeway
       def escape(single_char_only: false)
         start = @i
         nxt = @src[@i + 1]
-        raise Invalid.new('trailing backslash', start) if nxt.nil?
+        raise Invalid.new('trailing backslash', offset: start) if nxt.nil?
 
         if CATEGORY_ESCAPES.include?(nxt)
-          raise Invalid.new("\\#{nxt} is not allowed here, only a single-character escape", start) if single_char_only
+          if single_char_only
+            raise Invalid.new("\\#{nxt} is not allowed here, only a single-character escape", offset: start)
+          end
 
           category_escape(start)
         elsif SINGLE_CHAR_ESC.include?(nxt)
           @i += 2
           @out << { 'n' => '\n', 'r' => '\r', 't' => '\t' }.fetch(nxt) { "\\#{nxt}" }
         else
-          raise Invalid.new("invalid escape \\#{nxt}", start)
+          raise Invalid.new("invalid escape \\#{nxt}", offset: start)
         end
       end
 
@@ -381,7 +387,7 @@ module Janeway
       def category_escape(start)
         # at most \p{Xx}, 6 characters
         m = /\A\\[pP]\{([A-Za-z]{1,2})\}/.match(@src[start, 6].join)
-        raise Invalid.new('malformed category escape', start) unless m && CATEGORY.match?(m[1])
+        raise Invalid.new('malformed category escape', offset: start) unless m && CATEGORY.match?(m[1])
 
         @i = start + m[0].length
         @out << m[0]

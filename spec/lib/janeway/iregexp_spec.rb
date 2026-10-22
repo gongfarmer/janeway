@@ -7,6 +7,50 @@ module Janeway
   # The accepts and rejects helpers define the examples, which rubocop-rspec cannot see.
   # rubocop: disable RSpec/EmptyExampleGroup
   describe IRegexp do
+    describe 'error classes' do
+      it 'gives Invalid an offset and a message, and makes it a Janeway::Error' do
+        error = IRegexp::Invalid.new('m', offset: 3)
+        expect(error.offset).to eq(3)
+        expect(error.message).to eq('m')
+        expect(error).to be_a(Janeway::Error)
+        expect(error).to be_a(IRegexp::Error)
+        expect(error).to be_a(StandardError)
+      end
+
+      it 'defaults the Invalid offset to nil' do
+        expect(IRegexp::Invalid.new('m').offset).to be_nil
+      end
+
+      it 'gives LimitExceeded an offset and a length' do
+        error = IRegexp::LimitExceeded.new('m', offset: 2, length: 4)
+        expect(error.offset).to eq(2)
+        expect(error.length).to eq(4)
+      end
+
+      it 'defaults the LimitExceeded offset to nil and length to 1' do
+        error = IRegexp::LimitExceeded.new('m')
+        expect(error.offset).to be_nil
+        expect(error.length).to eq(1)
+      end
+
+      it 'takes the offset as a keyword only' do
+        expect { IRegexp::Invalid.new('m', 3) }.to raise_error(ArgumentError)
+        expect { IRegexp::LimitExceeded.new('m', 3) }.to raise_error(ArgumentError)
+      end
+
+      [IRegexp::Invalid, IRegexp::LimitExceeded].each do |klass|
+        it "rescues #{klass.name.split('::').last} as IRegexp::Error and as Janeway::Error" do
+          expect { raise klass, 'm' }.to raise_error(IRegexp::Error)
+          expect { raise klass, 'm' }.to raise_error(Janeway::Error)
+        end
+      end
+
+      it 'keeps Invalid and LimitExceeded unrelated to each other' do
+        expect(IRegexp::Invalid).not_to be < IRegexp::LimitExceeded
+        expect(IRegexp::LimitExceeded).not_to be < IRegexp::Invalid
+      end
+    end
+
     describe '.compile' do
       # @param pattern [String] I-Regexp
       # @param matching [Array<String>] strings that must match
