@@ -148,7 +148,9 @@ module Janeway
       end
 
       # Grammar errors take precedence over limit errors, so a limit violation is remembered and
-      # only raised once the whole pattern is known to be an I-Regexp.
+      # only raised once the whole pattern is known to be an I-Regexp. The one exception is the group
+      # nesting limit, which is raised as soon as it is hit (see #group): reading on past it is what
+      # would overflow the stack.
       def limit(msg, offset, length = 1)
         @limit ||= LimitExceeded.new(msg, offset: offset, length: length)
       end
@@ -193,6 +195,9 @@ module Janeway
 
       # atom = ... / ( "(" i-regexp ")" ), RFC 9485 section 3.
       # The nesting limit is this library's own choice, which RFC 9485 section 8 permits: it bounds recursion.
+      # Unlike the other limits it is raised at once and not remembered (see #limit), because parsing on
+      # past it is what would overflow the stack. So a too-deeply nested pattern that is also invalid is
+      # reported as LimitExceeded, not Invalid.
       # @return [Boolean] true if the group contains a range quantifier
       def group
         open = @i
