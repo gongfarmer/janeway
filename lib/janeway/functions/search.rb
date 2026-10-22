@@ -45,6 +45,7 @@ module Janeway
       # Otherwise it is an expression that takes the regexp from the input document,
       # and the iregexp will not be available until interpretation.
       parameters << parse_function_parameter
+      validate_literal_pattern(parameters.last)
       raise Error, 'Too many parameters for match() function call' unless current.type == :group_end
 
       # Body (including literal-regex fast path) is supplied by

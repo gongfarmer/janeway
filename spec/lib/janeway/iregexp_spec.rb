@@ -184,6 +184,58 @@ module Janeway
         expect(described_class.compile('a').timeout).to eq(IRegexp::MATCH_TIMEOUT)
       end
     end
+
+    describe '.query_column' do
+      # @param query [String] query with one string token
+      def token_in(query)
+        Lexer.lex(query).find { |token| token.type == :string }
+      end
+
+      def column_of(query, index)
+        described_class.query_column(token_in(query), index)
+      end
+
+      it 'maps an index in a double-quoted string' do
+        expect(column_of('$["abc"]', 2)).to eq(5)
+      end
+
+      it 'maps an index in a single-quoted string' do
+        expect(column_of("$['abc']", 2)).to eq(5)
+      end
+
+      it 'counts an escaped quote as one character' do
+        # decoded value is it's, query text is 'it\'s'
+        expect(column_of("$['it\\'s']", 3)).to eq(7)
+      end
+
+      it 'counts an escaped double quote as one character' do
+        expect(column_of('$["a\\"b"]', 2)).to eq(6)
+      end
+
+      it 'counts an escaped backslash as one character' do
+        expect(column_of('$["a\\\\b"]', 2)).to eq(6)
+      end
+
+      it 'counts a short escape as one character' do
+        expect(column_of('$["a\\tb"]', 2)).to eq(6)
+      end
+
+      it 'counts a \\uXXXX escape as one character' do
+        expect(column_of('$["a\\u00e9b"]', 2)).to eq(10)
+      end
+
+      it 'counts an escaped surrogate pair as one character' do
+        expect(column_of('$["a\\ud83d\\ude00b"]', 2)).to eq(16)
+      end
+
+      it 'counts a multibyte character as one character' do
+        expect(column_of('$["aéb"]', 2)).to eq(5)
+      end
+
+      it 'returns nil for an index past the end of the string' do
+        expect(column_of('$["ab"]', 2)).to be_nil
+      end
+    end
   end
   # rubocop: enable RSpec/EmptyExampleGroup
 end

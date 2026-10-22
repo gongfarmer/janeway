@@ -20,6 +20,39 @@ module Janeway
     end
     module_function :translate_iregex_to_ruby_regex
 
+    # Reject a literal pattern that exceeds an I-Regexp limit, at the point where the query is parsed.
+    #
+    # A literal that is not an I-Regexp is not an error: match() and search() return LogicalFalse
+    # for it, see build_regex_body. A literal over a limit is a valid I-Regexp that this library
+    # refuses to run, so the user is told, with the position in the query.
+    # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-security-considerations
+    #   RFC 9485 section 8: an implementation may limit range quantifiers in range and composability
+    # @param parameter [AST::Expression] the second parameter of match() or search(), just parsed
+    # @raise [Janeway::Error]
+    def validate_literal_pattern(parameter)
+      return unless parameter.is_a?(AST::StringType)
+
+      IRegexp.compile(parameter.value)
+    rescue IRegexp::Invalid
+      nil # RFC 9535 section 2.4.6: the function returns LogicalFalse, see build_regex_body
+    rescue IRegexp::LimitExceeded => e
+      raise Error.new("I-Regexp #{e.message}", @jsonpath, pattern_location(previous, e))
+    end
+
+    # Find where in the query the problem in a pattern is.
+    # @param token [Token] string token of the pattern
+    # @param error [IRegexp::LimitExceeded]
+    # @return [Location] position of the problem, or of the whole string when it has no single position
+    def pattern_location(token, error)
+      return token.location unless error.offset
+
+      first = IRegexp.query_column(token, error.offset)
+      last = IRegexp.query_column(token, error.offset + error.length - 1)
+      return token.location unless first && last
+
+      Location.new(first, last - first + 1)
+    end
+
     # All jsonpath function parameters are one of these accepted types.
     # Parse the function parameter and return the result.
     # @return [String, AST::CurrentNode, AST::RootNode]

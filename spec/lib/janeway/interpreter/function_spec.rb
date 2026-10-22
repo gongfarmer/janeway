@@ -123,6 +123,12 @@ module Janeway
           expect(result).to eq(%w[12 123 1234])
         end
 
+        it 'rejects a literal range quantifier with a large bound' do
+          expect {
+            described_class.interpret([], '$[?match(@, "a{20,200000}")]')
+          }.to raise_error(Janeway::Error, /repeat count 200000/)
+        end
+
         # RFC 9535 section 2.4.6: a pattern that does not conform to RFC 9485 gives LogicalFalse
         it 'selects nothing for a literal pattern that is not an I-Regexp' do
           expect(described_class.interpret(%w[a aa], '$[?match(@, "(?=a)a")]')).to eq([])
