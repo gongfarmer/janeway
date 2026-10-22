@@ -117,6 +117,25 @@ module Janeway
           expect(described_class.interpret(input, query)).to eq(expected)
         end
 
+        it 'accepts a range quantifier' do
+          input = %w[1 12 123 1234 12345]
+          result = described_class.interpret(input, '$[?match(@, "[0-9]{2,4}")]')
+          expect(result).to eq(%w[12 123 1234])
+        end
+
+        it 'rejects a range quantifier with a large bound when the query is parsed' do
+          expect {
+            described_class.interpret([], '$[?match(@, "a{20,200000}")]')
+          }.to raise_error(Janeway::Error, /range quantifier bound 200000/)
+        end
+
+        it 'rejects a range quantifier with a large bound that comes from the input document' do
+          input = { 'regex' => 'a{20,200000}', 'values' => ['aaa'] }
+          expect {
+            described_class.interpret(input, '$.values[?match(@, $.regex)]')
+          }.to raise_error(Janeway::Error, /range quantifier bound 200000/)
+        end
+
         # CTS "functions, match, escaped right square bracket"
         it 'can match a regexp with an escaped right square bracket inside a character class' do
           input = ['abc', 'a.c', "a\u2028c", 'a]c']
