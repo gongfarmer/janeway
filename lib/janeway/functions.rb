@@ -96,6 +96,9 @@ module Janeway
         # A pattern in the wrong encoding is false and never reaches the cache: Hash lookup compares
         # strings by content, so a binary 'a' would otherwise share the entry of a UTF-8 'a'.
         next false unless IRegexp.valid_encoding?(pattern)
+        # RFC 9485 section 8 lets an implementation limit patterns; the limit is this library's own
+        # choice. Checked before parsing so that a huge pattern costs almost nothing.
+        next false if pattern.length > IRegexp::MAX_LENGTH
 
         unless cache.key?(pattern)
           cache.shift if cache.size >= DYNAMIC_PATTERN_CACHE_SIZE

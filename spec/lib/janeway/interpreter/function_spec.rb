@@ -144,6 +144,31 @@ module Janeway
           expect(described_class.interpret(input, '$.values[?match(@, $.regex)]')).to eq([])
         end
 
+        describe 'a document pattern at the length limit' do
+          let(:query) { '$.values[?match(@, $.regex)]' }
+
+          it 'gives false for an over-long pattern without compiling it' do
+            input = { 'regex' => 'a' * (IRegexp::MAX_LENGTH + 1), 'values' => ['a'] }
+            allow(IRegexp).to receive(:compile).and_call_original
+            expect(described_class.interpret(input, query)).to eq([])
+            expect(IRegexp).not_to have_received(:compile)
+          end
+
+          it 'still compiles a pattern of exactly the limit' do
+            input = { 'regex' => 'a' * IRegexp::MAX_LENGTH, 'values' => ['a' * IRegexp::MAX_LENGTH, 'a'] }
+            allow(IRegexp).to receive(:compile).and_call_original
+            expect(described_class.interpret(input, query)).to eq(['a' * IRegexp::MAX_LENGTH])
+            expect(IRegexp).to have_received(:compile).once
+          end
+
+          it 'returns quickly for a huge pattern' do
+            input = { 'regex' => 'a' * 3_000_000, 'values' => ['a'] }
+            started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            expect(described_class.interpret(input, query)).to eq([])
+            expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 1
+          end
+        end
+
         it 'still uses the good patterns when another pattern in the document is bad' do
           input = { 'regexes' => ['(?=a)a', 'a+'], 'values' => ['aa'] }
           result = described_class.interpret(input, '$.regexes[?match($.values[0], @)]')
