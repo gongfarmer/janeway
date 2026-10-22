@@ -123,17 +123,48 @@ module Janeway
           expect(result).to eq(%w[12 123 1234])
         end
 
-        it 'rejects a range quantifier with a large bound when the query is parsed' do
-          expect {
-            described_class.interpret([], '$[?match(@, "a{20,200000}")]')
-          }.to raise_error(Janeway::Error, /range quantifier bound 200000/)
+        # RFC 9535 section 2.4.6: a pattern that does not conform to RFC 9485 gives LogicalFalse
+        it 'selects nothing for a literal pattern that is not an I-Regexp' do
+          expect(described_class.interpret(%w[a aa], '$[?match(@, "(?=a)a")]')).to eq([])
         end
 
-        it 'rejects a range quantifier with a large bound that comes from the input document' do
+        it 'selects nothing for a pattern from the input document that is not an I-Regexp' do
+          input = { 'regex' => '(a)\\1', 'values' => %w[aa a] }
+          expect(described_class.interpret(input, '$.values[?match(@, $.regex)]')).to eq([])
+        end
+
+        it 'selects nothing for a pattern from the input document that is over a limit' do
           input = { 'regex' => 'a{20,200000}', 'values' => ['aaa'] }
-          expect {
-            described_class.interpret(input, '$.values[?match(@, $.regex)]')
-          }.to raise_error(Janeway::Error, /range quantifier bound 200000/)
+          expect(described_class.interpret(input, '$.values[?match(@, $.regex)]')).to eq([])
+        end
+
+        it 'still uses the good patterns when another pattern in the document is bad' do
+          input = { 'regexes' => ['(?=a)a', 'a+'], 'values' => ['aa'] }
+          result = described_class.interpret(input, '$.regexes[?match($.values[0], @)]')
+          expect(result).to eq(['a+'])
+        end
+
+        # RFC 9485 section 3: ^ and $ are ordinary characters, not anchors
+        it 'treats ^ and $ in a pattern as ordinary characters' do
+          input = ['a$b', 'ab', '^s', 'sparrow']
+          expect(described_class.interpret(input, '$[?match(@, "a$b")]')).to eq(['a$b'])
+          expect(described_class.interpret(input, '$[?search(@, "^s")]')).to eq(['^s'])
+        end
+
+        it 'does not treat && in a character class as an intersection' do
+          expect(described_class.interpret(%w[a & b c], '$[?match(@, "[a&&b]")]')).to eq(%w[a & b])
+        end
+
+        it 'skips a string that is not valid UTF-8 and keeps matching the others' do
+          input = ["a\xff".b.force_encoding('UTF-8'), 'a']
+          expect(described_class.interpret(input, '$[?search(@, "a")]')).to eq(['a'])
+        end
+
+        it 'compiles a pattern from the input document once per distinct pattern' do
+          input = { 'regex' => 'a+', 'values' => %w[a aa aaa b] }
+          allow(IRegexp).to receive(:compile).and_call_original
+          described_class.interpret(input, '$.values[?match(@, $.regex)]')
+          expect(IRegexp).to have_received(:compile).with('a+', anchor: true).once
         end
 
         # CTS "functions, match, escaped right square bracket"
