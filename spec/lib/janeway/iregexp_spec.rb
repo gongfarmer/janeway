@@ -216,19 +216,13 @@ module Janeway
       end
 
       ['(a*)*', '(a*)+'].each do |pattern|
+        # Ruby warns about a redundant nested repeat, but the pattern is valid I-Regexp, so nothing may be printed.
         it "writes nothing to stderr for #{pattern}" do
-          old_stderr = $stderr
           old_verbose = $VERBOSE
-          captured = StringIO.new
-          begin
-            $stderr = captured
-            $VERBOSE = false
-            described_class.compile(pattern)
-          ensure
-            $stderr = old_stderr
-            $VERBOSE = old_verbose
-          end
-          expect(captured.string).to eq('')
+          $VERBOSE = false
+          expect { described_class.compile(pattern) }.not_to output.to_stderr
+        ensure
+          $VERBOSE = old_verbose
         end
       end
 
