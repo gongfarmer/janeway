@@ -200,9 +200,11 @@ module Janeway
       non_delimiter = OTHER_DELIMITER[delimiter]
 
       literal_chars = []
+      offsets = [] # index within the lexeme of the start of each literal char, see Token#offsets
       while lookahead != delimiter && source_uncompleted?
         # Transform escaped representation to literal chars
         next_char = lookahead
+        offsets << (next_p - lexeme_start_p)
         literal_chars <<
           if next_char == '\\'
             if lookahead(2) == delimiter
@@ -232,7 +234,7 @@ module Janeway
       # lexeme value includes delimiters and literal escape characters
       lexeme = current_lexeme
 
-      Token.new(:string, lexeme, literal, current_location)
+      Token.new(:string, lexeme, literal, current_location, offsets)
     end
 
     # Read escape char literals, and transform them into the described character

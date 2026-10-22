@@ -87,35 +87,6 @@ module Janeway
       end
     end
 
-    # Escape sequences that the lexer turns into one character, see Lexer#consume_escape_sequence.
-    SHORT_ESCAPES = 'bfnrt/\\"\''
-
-    # Find the column in the query of a character in a string literal's value.
-    #
-    # The token's value has its escape sequences decoded, so an index into the value is not an index
-    # into the query when the string contains escapes. This walks the lexeme, which is the query text.
-    # @param token [Token] string token
-    # @param index [Integer] index of a character in the token's decoded value
-    # @return [Integer, nil] column of the character in the query, nil if it cannot be found
-    def self.query_column(token, index)
-      lexeme = token.lexeme
-      pos = 1 # skip the opening quote
-      index.times { pos += escape_length(lexeme, pos) }
-      return nil if pos >= lexeme.length - 1 # at or past the closing quote
-
-      token.location.col + pos
-    end
-
-    # @return [Integer] number of characters in the lexeme taken by the character that starts at pos
-    def self.escape_length(lexeme, pos)
-      return 1 unless lexeme[pos] == '\\'
-      return 2 if SHORT_ESCAPES.include?(lexeme[pos + 1])
-
-      # \uXXXX is 6 characters. A high surrogate followed by \uXXXX is one character in 12.
-      high = lexeme[pos + 2, 4].to_s.match?(/\Ad[89ab]/i)
-      high && lexeme[pos + 6, 2] == '\\u' ? 12 : 6
-    end
-
     # Recursive-descent parser for the ABNF of RFC 9485 section 3, which builds the Ruby regexp source.
     # Each method is named for the production it implements.
     class Parser

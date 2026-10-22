@@ -184,7 +184,7 @@ module Janeway
     end
 
     def parse_string
-      AST::StringType.new(current.literal)
+      AST::StringType.new(current.literal).tap { |node| node.token = current }
     end
 
     def parse_number
