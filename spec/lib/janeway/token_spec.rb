@@ -119,6 +119,23 @@ module Janeway
         expect(column_of('$["a😀b"]', 2)).to eq(5)
       end
 
+      # Each case is a string literal as written in a query. The column of every decoded character must be
+      # a position in the query that holds either that character or the backslash that starts its escape.
+      [
+        "''", '""', %('\\n'), %('\\b\\f\\n\\r\\t'), %("\\/"), %("a\\/b"), %("\\u00E9"), %("\\u00e9"),
+        %("\\uD83D\\uDE00"), %("x\\uD83D\\uDE00y"), %("\\\\"), %("a\\"b"), %('a\\'b'),
+      ].each do |literal|
+        it "locates every character of #{literal}" do
+          query = "$[#{literal}]"
+          token = token_in(query)
+          expect(token.offsets.length).to eq(token.literal.length)
+          token.literal.each_char.with_index do |char, index|
+            col = column_of(query, index)
+            expect([char, '\\']).to include(query[col])
+          end
+        end
+      end
+
       it 'has no offset for an index past the end of the string' do
         expect(token_in('$["ab"]').offsets[2]).to be_nil
       end

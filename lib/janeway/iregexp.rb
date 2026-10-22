@@ -92,7 +92,8 @@ module Janeway
       body = "\\A(?:#{body})\\z" if anchor
       # RFC 9485 section 3: the pattern is valid I-Regexp, so a Ruby warning about it (such as a redundant
       # nested repeat operator in (a*)*) is not the caller's business. A pattern from the input document
-      # must not be able to write to stderr.
+      # must not be able to write to stderr. $VERBOSE is process-wide, so warnings from other threads are
+      # also suppressed during this one compile.
       old_verbose = $VERBOSE
       begin
         $VERBOSE = nil
