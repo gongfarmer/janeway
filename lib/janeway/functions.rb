@@ -5,21 +5,8 @@ require_relative 'ast/string_type'
 require_relative 'iregexp'
 
 module Janeway
-  # Mixin to provide JSONPath function handlers for Parser, plus the shared
-  # I-Regexp translation helper and the built-in function registry.
+  # Mixin to provide JSONPath function handlers for Parser, plus the built-in function registry.
   module Functions
-    # Convert IRegexp format to ruby regexp equivalent, following the instructions in rfc9485.
-    # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-pcre-re2-and-ruby-regexps
-    # @param iregex [String]
-    # @param anchor [Boolean] add anchors to match the string start and end
-    # @return [Regexp]
-    # @raise [IRegexp::Invalid] the pattern is not an I-Regexp
-    # @raise [IRegexp::LimitExceeded] the pattern is an I-Regexp, but exceeds a limit
-    def translate_iregex_to_ruby_regex(iregex, anchor: true)
-      IRegexp.compile(iregex, anchor: anchor)
-    end
-    module_function :translate_iregex_to_ruby_regex
-
     # Reject a literal pattern that exceeds an I-Regexp limit, at the point where the query is parsed.
     #
     # A literal that is not an I-Regexp is not an error: match() and search() return LogicalFalse
