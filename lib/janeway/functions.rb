@@ -23,31 +23,7 @@ module Janeway
     rescue IRegexp::Invalid
       nil # RFC 9535 section 2.4.6: the function returns LogicalFalse, see build_regex_body
     rescue IRegexp::LimitExceeded => e
-      raise Error.new("I-Regexp #{e.message}", @jsonpath, pattern_location(parameter.token, e))
-    end
-
-    # Find where in the query the problem in a pattern is.
-    # @param token [Token, nil] string token of the pattern
-    # @param error [IRegexp::LimitExceeded]
-    # @return [Location, nil] position of the problem, or of the whole string when it has no single
-    #   position; nil when the literal has no token to locate it by
-    def pattern_location(token, error)
-      return nil unless token
-      return token.location unless error.offset
-
-      first = query_column(token, error.offset)
-      last = query_column(token, error.offset + error.length - 1)
-      return token.location unless first && last
-
-      Location.new(first, last - first + 1)
-    end
-
-    # @param token [Token] string token
-    # @param index [Integer] index of a character in the token's decoded value
-    # @return [Integer, nil] column of that character in the query, nil if the token has no such offset
-    def query_column(token, index)
-      offset = token.offsets&.[](index)
-      offset && (token.location.col + offset)
+      raise Error.new("I-Regexp #{e.message}", @jsonpath, parameter.token&.location_of(e.offset, e.length))
     end
 
     # All jsonpath function parameters are one of these accepted types.
