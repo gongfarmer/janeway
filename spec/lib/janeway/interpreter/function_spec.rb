@@ -277,6 +277,20 @@ module Janeway
         expected = [{ 'c' => 'd' }, { 'a' => nil }]
         expect(described_class.interpret(input, query)).to eq(expected)
       end
+
+      describe 'a pattern from the document that is not UTF-8' do
+        # A binary pattern is always rejected, whatever its position: it must not share a cache entry
+        # with the UTF-8 pattern that is equal to it.
+        it 'gives false when the binary pattern comes first' do
+          input = { 'p' => ['a'.b, 'a'], 's' => 'a' }
+          expect(described_class.interpret(input, '$.p[?match($.s, @)]')).to eq(['a'])
+        end
+
+        it 'gives false when the binary pattern comes last' do
+          input = { 'p' => ['a', 'a'.b], 's' => 'a' }
+          expect(described_class.interpret(input, '$.p[?match($.s, @)]')).to eq(['a'])
+        end
+      end
     end
   end
   # rubocop: enable RSpec/ExampleLength

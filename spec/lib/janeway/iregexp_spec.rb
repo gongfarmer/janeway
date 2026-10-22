@@ -215,6 +215,23 @@ module Janeway
         expect { described_class.compile('a{1001}') }.to raise_error(Janeway::Error)
       end
 
+      ['(a*)*', '(a*)+'].each do |pattern|
+        it "writes nothing to stderr for #{pattern}" do
+          old_stderr = $stderr
+          old_verbose = $VERBOSE
+          captured = StringIO.new
+          begin
+            $stderr = captured
+            $VERBOSE = false
+            described_class.compile(pattern)
+          ensure
+            $stderr = old_stderr
+            $VERBOSE = old_verbose
+          end
+          expect(captured.string).to eq('')
+        end
+      end
+
       it 'limits how long a match may take', skip: (IRegexp::TIMEOUT_SUPPORTED ? false : 'needs Ruby 3.2') do
         expect(described_class.compile('a').timeout).to eq(IRegexp::MATCH_TIMEOUT)
       end

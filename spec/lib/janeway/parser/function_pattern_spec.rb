@@ -46,6 +46,15 @@ module Janeway
           }
         end
 
+        ['("ab{1001}")', '(("ab{1001}"))'].each do |literal|
+          it "points at the problem in the parenthesised literal #{literal}" do
+            query = %($[?#{function}(@.a, #{literal})])
+            expect { described_class.parse(query) }.to raise_error(Janeway::Error) { |error|
+              expect(query[error.location.col, error.location.length]).to eq('1001')
+            }
+          end
+        end
+
         it 'points at the problem after an escape sequence in the string' do
           query = %($[?#{function}(@.a, 'it\\'s{1001}')])
           expect { described_class.parse(query) }.to raise_error(Janeway::Error) { |error|
