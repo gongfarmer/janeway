@@ -29,9 +29,11 @@ module Janeway
     # Find where in the query the problem in a pattern is.
     # @param token [Token, nil] string token of the pattern
     # @param error [IRegexp::LimitExceeded]
-    # @return [Location] position of the problem, or of the whole string when it has no single position
+    # @return [Location, nil] position of the problem, or of the whole string when it has no single
+    #   position; nil when the literal has no token to locate it by
     def pattern_location(token, error)
-      return token.location unless token && error.offset
+      return nil unless token
+      return token.location unless error.offset
 
       first = query_column(token, error.offset)
       last = query_column(token, error.offset + error.length - 1)

@@ -87,5 +87,18 @@ module Janeway
         end
       end
     end
+
+    # The parser always attaches the string token to a literal. A literal built any other way has none,
+    # so there is no query position to point at, but the error must still be a Janeway::Error.
+    describe 'a literal pattern that has no token' do
+      it 'raises Janeway::Error without a location when the pattern is over a limit' do
+        parser = described_class.new(Lexer.lex('$.a'), '$.a')
+        node = AST::StringType.new('ab{1001}')
+        expect { parser.send(:validate_literal_pattern, node) }.to raise_error(Janeway::Error) { |error|
+          expect(error.location).to be_nil
+          expect(error.query).to eq('$.a')
+        }
+      end
+    end
   end
 end
