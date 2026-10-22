@@ -2,6 +2,7 @@
 
 require_relative 'ast/function'
 require_relative 'ast/string_type'
+require_relative 'functions/iregex_limits'
 
 module Janeway
   # Mixin to provide JSONPath function handlers for Parser, plus the shared
@@ -12,7 +13,10 @@ module Janeway
     # @param iregex [String]
     # @param anchor [Boolean] add anchors to match the string start and end
     # @return [Regexp]
+    # @raise [Janeway::Error] when the I-Regexp exceeds a limit, see IRegexLimits
     def translate_iregex_to_ruby_regex(iregex, anchor: true)
+      check_iregex_limits(iregex)
+
       # * For any unescaped dots (.) outside character classes (first
       #   alternative of charClass production), replace the dot with [^\n\r].
       chars = iregex.chars
@@ -38,6 +42,14 @@ module Janeway
       Regexp.new(regex_str)
     end
     module_function :translate_iregex_to_ruby_regex
+
+    # Reject an I-Regexp that could make the regexp engine consume excessive resources.
+    # @param iregex [String]
+    # @raise [Janeway::Error]
+    def check_iregex_limits(iregex)
+      IRegexLimits.new(iregex).check
+    end
+    module_function :check_iregex_limits
 
     # All jsonpath function parameters are one of these accepted types.
     # Parse the function parameter and return the result.
