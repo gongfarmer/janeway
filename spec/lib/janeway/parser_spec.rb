@@ -188,7 +188,7 @@ module Janeway
     it 'raises error when search() function call has too many parameters' do
       expect {
         described_class.parse('$[?search(@.a,@.b,@.c)]')
-      }.to raise_error(Error, /Too many parameters for match\(\) function call/)
+      }.to raise_error(Error, /Too many parameters for search\(\) function call/)
     end
 
     # CTS "functions, value, too many params"

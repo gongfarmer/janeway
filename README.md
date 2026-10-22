@@ -216,7 +216,7 @@ This is a jsonpath query string that uniquely points to the matched value.
 The `#delete` method deletes matched values from the input.
 ```ruby
     # delete any bird whose name starts with "s" or is "eagle"
-    Janeway.enum_for('$.birds[? search(@, "^s") || @=="eagle"]', data).delete
+    Janeway.enum_for('$.birds[? match(@, "s.*") || @=="eagle"]', data).delete
     # input bird list is now ['cormorant']
 
     # delete all dog names

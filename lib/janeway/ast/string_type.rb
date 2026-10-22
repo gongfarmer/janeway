@@ -5,6 +5,10 @@ module Janeway
     # Represents a string literal within a filter expression.
     # May be used within a comparison or a jsonpath function call.
     class StringType < Janeway::AST::Expression
+      # The string token this literal was parsed from, nil otherwise.
+      # @return [Token, nil]
+      attr_accessor :token
+
       def to_s
         if @value.include?("'")
           %("#{@value}"')

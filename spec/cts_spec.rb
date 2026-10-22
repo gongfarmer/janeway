@@ -44,6 +44,15 @@ TRUFFLERUBY_SKIP_TESTS = [
   'index selector, max exact index',
 ].freeze
 
+# Skip these tests: they expect ^ and $ to be regexp anchors, but in I-Regexp they are ordinary
+# characters (RFC 9485 section 3, NormalChar), and the author of RFC 9485 has confirmed it.
+# The test suite is expected to change, see the open issue in its repository.
+# https://github.com/jsonpath-standard/jsonpath-compliance-test-suite
+ANCHOR_TESTS_SKIP = [
+  'functions, match, explicit caret',
+  'functions, match, explicit dollar',
+].freeze
+
 # Run each test from the compliance test suite.
 # The CTS has 3 types of tests:
 # * invalid selector -- the query is invalid and should cause a parse error
@@ -61,6 +70,11 @@ describe Janeway do
 
     if RUBY_ENGINE == 'truffleruby' && TRUFFLERUBY_SKIP_TESTS.include?(name)
       warn "CTS test #{name.inspect} skipped on truffleruby"
+      next
+    end
+
+    if ANCHOR_TESTS_SKIP.include?(name)
+      warn "CTS test #{name.inspect} skipped: ^ and $ are not anchors in I-Regexp"
       next
     end
 

@@ -2,54 +2,29 @@
 
 require_relative 'ast/function'
 require_relative 'ast/string_type'
-require_relative 'functions/iregex_limits'
+require_relative 'iregexp'
 
 module Janeway
-  # Mixin to provide JSONPath function handlers for Parser, plus the shared
-  # I-Regexp translation helper and the built-in function registry.
+  # Mixin to provide JSONPath function handlers for Parser, plus the built-in function registry.
   module Functions
-    # Convert IRegexp format to ruby regexp equivalent, following the instructions in rfc9485.
-    # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-pcre-re2-and-ruby-regexps
-    # @param iregex [String]
-    # @param anchor [Boolean] add anchors to match the string start and end
-    # @return [Regexp]
-    # @raise [Janeway::Error] when the I-Regexp exceeds a limit, see IRegexLimits
-    def translate_iregex_to_ruby_regex(iregex, anchor: true)
-      check_iregex_limits(iregex)
-
-      # * For any unescaped dots (.) outside character classes (first
-      #   alternative of charClass production), replace the dot with [^\n\r].
-      chars = iregex.chars
-      in_char_class = false
-      indexes = []
-      chars.each_with_index do |char, i|
-        case char
-        when '[' then in_char_class = true
-        when ']'
-          in_char_class = false unless chars[i - 1] == '\\' # escaped ] does not close char class
-        when '.'
-          next if in_char_class || chars[i - 1] == '\\' # escaped dot
-
-          indexes << i # replace this dot
-        end
-      end
-      indexes.reverse_each do |i|
-        chars[i] = '[^\n\r]'
-      end
-
-      # * Enclose the regexp in \A(?: and )\z.
-      regex_str = anchor ? format('\A(?:%s)\z', chars.join) : chars.join
-      Regexp.new(regex_str)
-    end
-    module_function :translate_iregex_to_ruby_regex
-
-    # Reject an I-Regexp that could make the regexp engine consume excessive resources.
-    # @param iregex [String]
+    # Reject a literal pattern that exceeds an I-Regexp limit, at the point where the query is parsed.
+    #
+    # A literal that is not an I-Regexp is not an error: match() and search() return LogicalFalse
+    # for it, see build_regex_body. A literal over a limit is a valid I-Regexp that this library
+    # refuses to run, so the user is told, with the position in the query.
+    # @see https://www.rfc-editor.org/rfc/rfc9485.html#name-security-considerations
+    #   RFC 9485 section 8: an implementation may limit range quantifiers in range and composability
+    # @param parameter [AST::Expression] the second parameter of match() or search(), just parsed
     # @raise [Janeway::Error]
-    def check_iregex_limits(iregex)
-      IRegexLimits.new(iregex).check
+    def validate_literal_pattern(parameter)
+      return unless parameter.is_a?(AST::StringType)
+
+      IRegexp.compile(parameter.value)
+    rescue IRegexp::Invalid
+      nil # RFC 9535 section 2.4.6: the function returns LogicalFalse, see build_regex_body
+    rescue IRegexp::LimitExceeded => e
+      raise Error.new("I-Regexp #{e.message}", @jsonpath, parameter.token&.location_of(e.offset, e.length))
     end
-    module_function :check_iregex_limits
 
     # All jsonpath function parameters are one of these accepted types.
     # Parse the function parameter and return the result.
@@ -70,30 +45,70 @@ module Janeway
       result
     end
 
-    # Build a match/search body. When the pattern is a StringType literal we
-    # compile the regex once at parse time (see perf pass, commit fd8b92a).
-    # Otherwise fall back to per-call compilation.
+    # Largest number of distinct document-supplied patterns that one function call remembers.
+    DYNAMIC_PATTERN_CACHE_SIZE = 100
+
+    # Build a match/search body. When the pattern is a StringType literal, the parser has already
+    # validated it (Functions#validate_literal_pattern, which discards the result); the interpreter
+    # compiles it once more, with the anchoring this function needs, when it is built.
+    # Otherwise the pattern comes from the input document and is compiled when it is first used.
+    #
+    # A pattern that is not an I-Regexp, or that exceeds a limit, gives LogicalFalse.
+    # @see https://www.rfc-editor.org/rfc/rfc9535.html#name-match-function-extension
+    #   RFC 9535 section 2.4.6: "If the first argument is not a string or the second argument is
+    #   not a string conforming to [RFC9485], the result is LogicalFalse." Section 2.4.7 says the
+    #   same for search().
+    # A literal that exceeds a limit has already been rejected by the parser, see
+    # Functions#validate_literal_pattern.
     def self.build_regex_body(parameters, anchor:)
-      literal_regexp =
-        if parameters[1].is_a?(AST::StringType)
-          begin
-            translate_iregex_to_ruby_regex(parameters[1].value, anchor: anchor)
-          rescue RegexpError
-            nil # fall back to per-call compilation, which will raise at eval time
-          end
+      literal = parameters[1].is_a?(AST::StringType) ? parameters[1].value : nil
+      # The cache holds compiled regexps keyed by pattern text, so reusing it for other subjects is
+      # correct. It lives as long as the interpreter tree, which Query#interpreter_tree_for caches
+      # on an unfrozen Query.
+      cache = {} # pattern string => Regexp, or nil when the pattern is unusable
+      cache[literal] = compile_or_nil(literal, anchor) if literal # a literal is compiled once, now
+      lambda do |str, pattern|
+        pattern = literal if literal
+        next false unless str.is_a?(String) && pattern.is_a?(String)
+        # A pattern in the wrong encoding is false and never reaches the cache: Hash lookup compares
+        # strings by content, so a binary 'a' would otherwise share the entry of a UTF-8 'a'.
+        next false unless IRegexp.valid_encoding?(pattern)
+        # RFC 9485 section 8 lets an implementation limit patterns; the limit is this library's own
+        # choice. Checked before parsing so that a huge pattern costs almost nothing.
+        next false if pattern.length > IRegexp::MAX_LENGTH
+
+        unless cache.key?(pattern)
+          cache.shift if cache.size >= DYNAMIC_PATTERN_CACHE_SIZE
+          cache[pattern] = compile_or_nil(pattern, anchor)
         end
 
-      if literal_regexp
-        ->(str, _pattern) { str.is_a?(String) && literal_regexp.match?(str) }
-      else
-        lambda do |str, pattern|
-          if str.is_a?(String) && pattern.is_a?(String)
-            translate_iregex_to_ruby_regex(pattern, anchor: anchor).match?(str)
-          else
-            false
-          end
-        end
+        !cache[pattern].nil? && match_safely(cache[pattern], str)
       end
+    end
+
+    # RFC 9535 section 2.4.6: a pattern that does not conform to RFC 9485 gives LogicalFalse, so it is nil here.
+    # A pattern over a limit (RFC 9485 section 8) is treated the same way.
+    # @return [Regexp, nil] nil when the pattern is not usable, see build_regex_body
+    def self.compile_or_nil(pattern, anchor)
+      IRegexp.compile(pattern, anchor: anchor)
+    rescue IRegexp::Invalid, IRegexp::LimitExceeded
+      nil
+    end
+
+    # Match, and treat a match that Ruby cannot or will not complete as no match.
+    #
+    # Deliberate deviation from RFC 9535 sections 2.4.6 and 2.4.7, which say the result is LogicalTrue or
+    # LogicalFalse and say nothing about a match that cannot complete: a timeout, or a subject that is
+    # not valid UTF-8, gives false. RFC 9485 section 8 (security considerations) is why a timeout exists.
+    # @param regexp [Regexp]
+    # @param str [String]
+    # @return [Boolean]
+    def self.match_safely(regexp, str)
+      regexp.match?(str)
+    rescue IRegexp::TIMEOUT_ERROR, ArgumentError, Encoding::CompatibilityError
+      # TIMEOUT_ERROR: the match took longer than IRegexp::MATCH_TIMEOUT.
+      # ArgumentError, Encoding::CompatibilityError: str is not valid UTF-8.
+      false
     end
 
     # Metadata + body builder for every built-in JSONPath function.

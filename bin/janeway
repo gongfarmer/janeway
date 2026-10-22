@@ -197,8 +197,10 @@ begin
   options = parse_args(ARGV.dup)
   main(options)
 rescue Janeway::Error => e
-  warn "Error: #{e.message}\nQuery: #{e.query}\n"
-  warn "       #{' ' * e.location.col}^" if e.location # point to the character at the location index
+  # The message shows the query, and carets under it when there is a location. The label is on its own
+  # line so that the carets stay under the header's copy of the query.
+  warn 'Error:'
+  warn e.message
   exit(1)
 rescue Interrupt, Errno::EPIPE
   abort("\n")

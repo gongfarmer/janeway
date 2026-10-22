@@ -123,17 +123,144 @@ module Janeway
           expect(result).to eq(%w[12 123 1234])
         end
 
-        it 'rejects a range quantifier with a large bound when the query is parsed' do
+        it 'rejects a literal range quantifier with a large bound' do
           expect {
             described_class.interpret([], '$[?match(@, "a{20,200000}")]')
-          }.to raise_error(Janeway::Error, /range quantifier bound 200000/)
+          }.to raise_error(Janeway::Error, /repeat count 200000/)
         end
 
-        it 'rejects a range quantifier with a large bound that comes from the input document' do
+        # RFC 9535 section 2.4.6: a pattern that does not conform to RFC 9485 gives LogicalFalse
+        it 'selects nothing for a literal pattern that is not an I-Regexp' do
+          expect(described_class.interpret(%w[a aa], '$[?match(@, "(?=a)a")]')).to eq([])
+        end
+
+        it 'selects nothing for a pattern from the input document that is not an I-Regexp' do
+          input = { 'regex' => '(a)\\1', 'values' => %w[aa a] }
+          expect(described_class.interpret(input, '$.values[?match(@, $.regex)]')).to eq([])
+        end
+
+        it 'selects nothing for a pattern from the input document that is over a limit' do
           input = { 'regex' => 'a{20,200000}', 'values' => ['aaa'] }
-          expect {
-            described_class.interpret(input, '$.values[?match(@, $.regex)]')
-          }.to raise_error(Janeway::Error, /range quantifier bound 200000/)
+          expect(described_class.interpret(input, '$.values[?match(@, $.regex)]')).to eq([])
+        end
+
+        describe 'a document pattern at the length limit' do
+          let(:query) { '$.values[?match(@, $.regex)]' }
+
+          it 'gives false for an over-long pattern without compiling it' do
+            input = { 'regex' => 'a' * (IRegexp::MAX_LENGTH + 1), 'values' => ['a'] }
+            allow(IRegexp).to receive(:compile).and_call_original
+            expect(described_class.interpret(input, query)).to eq([])
+            expect(IRegexp).not_to have_received(:compile)
+          end
+
+          it 'still compiles a pattern of exactly the limit' do
+            input = { 'regex' => 'a' * IRegexp::MAX_LENGTH, 'values' => ['a' * IRegexp::MAX_LENGTH, 'a'] }
+            allow(IRegexp).to receive(:compile).and_call_original
+            expect(described_class.interpret(input, query)).to eq(['a' * IRegexp::MAX_LENGTH])
+            expect(IRegexp).to have_received(:compile).once
+          end
+
+          it 'returns quickly for a huge pattern' do
+            input = { 'regex' => 'a' * 3_000_000, 'values' => ['a'] }
+            started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            expect(described_class.interpret(input, query)).to eq([])
+            expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 1
+          end
+        end
+
+        it 'still uses the good patterns when another pattern in the document is bad' do
+          input = { 'regexes' => ['(?=a)a', 'a+'], 'values' => ['aa'] }
+          result = described_class.interpret(input, '$.regexes[?match($.values[0], @)]')
+          expect(result).to eq(['a+'])
+        end
+
+        # RFC 9485 section 3: ^ and $ are ordinary characters, not anchors
+        it 'treats ^ and $ in a pattern as ordinary characters' do
+          input = ['a$b', 'ab', '^s', 'sparrow']
+          expect(described_class.interpret(input, '$[?match(@, "a$b")]')).to eq(['a$b'])
+          expect(described_class.interpret(input, '$[?search(@, "^s")]')).to eq(['^s'])
+        end
+
+        it 'does not treat && in a character class as an intersection' do
+          expect(described_class.interpret(%w[a & b c], '$[?match(@, "[a&&b]")]')).to eq(%w[a & b])
+        end
+
+        it 'skips a string that is not valid UTF-8 and keeps matching the others' do
+          input = ["a\xff".b.force_encoding('UTF-8'), 'a']
+          expect(described_class.interpret(input, '$[?search(@, "a")]')).to eq(['a'])
+        end
+
+        it 'gives false for a document pattern in a string encoding other than UTF-8' do
+          [
+            'a'.encode('UTF-16LE'),
+            "caf\xE9".dup.force_encoding('ISO-8859-1'),
+            'a'.b,
+          ].each do |pattern|
+            input = { 'p' => pattern, 'values' => ['a'] }
+            expect(described_class.interpret(input, '$.values[?search(@, $.p)]')).to eq([])
+          end
+        end
+
+        it 'still uses a document pattern that is US-ASCII or multibyte UTF-8' do
+          values = %W[a \u00e9\u00e9]
+          input = { 'p' => 'a'.dup.force_encoding('US-ASCII'), 'q' => "\u00e9+", 'values' => values }
+          expect(described_class.interpret(input, '$.values[?match(@, $.p)]')).to eq(['a'])
+          expect(described_class.interpret(input, '$.values[?match(@, $.q)]')).to eq(["\u00e9\u00e9"])
+        end
+
+        context 'when a match times out' do
+          let(:regexp) { instance_double(Regexp) }
+
+          before do
+            allow(regexp).to receive(:match?) { |str| str == 'slow' ? raise(IRegexp::TIMEOUT_ERROR) : true }
+            allow(IRegexp).to receive(:compile).and_return(regexp)
+          end
+
+          it 'gives false for the timed-out node and still matches the next one (literal pattern)' do
+            expect(described_class.interpret(%w[slow fast], '$[?match(@, "x")]')).to eq(['fast'])
+            expect(regexp).to have_received(:match?).twice
+          end
+
+          it 'gives false for the timed-out node and still matches the next one (document pattern)' do
+            input = { 'p' => 'x', 'values' => %w[slow fast] }
+            expect(described_class.interpret(input, '$.values[?search(@, $.p)]')).to eq(['fast'])
+            expect(regexp).to have_received(:match?).twice
+          end
+
+          it 'does not let a timeout in one search change a later search of a reused query' do
+            query = Janeway.parse('$.v[?match(@, $.p)]')
+            expect(query).not_to be_frozen
+            expect(query.enum_for({ 'p' => 'x', 'v' => ['slow'] }).search).to eq([])
+            expect(query.enum_for({ 'p' => 'x', 'v' => ['fast'] }).search).to eq(['fast'])
+          end
+        end
+
+        it 'compiles each distinct document pattern once, and compiles an evicted one again' do
+          patterns = Array.new(101) { |i| "x#{i}" }
+          input = { 'patterns' => patterns, 'first' => 'x0', 'last' => 'x100' }
+          allow(IRegexp).to receive(:compile).and_call_original
+          result = described_class.interpret(input, '$.patterns[?match($.last, @)]')
+          expect(result).to eq(['x100'])
+          expect(IRegexp).to have_received(:compile).exactly(101).times
+          result = described_class.interpret(input, '$.patterns[?match($.first, @)]')
+          expect(result).to eq(['x0'])
+        end
+
+        it 'recompiles a pattern after 100 others have pushed it out of the cache' do
+          patterns = ['x0'] + Array.new(100) { |i| "y#{i}" } + ['x0']
+          input = { 'patterns' => patterns }
+          allow(IRegexp).to receive(:compile).and_call_original
+          described_class.interpret(input, '$.patterns[?match("x0", @)]')
+          expect(IRegexp).to have_received(:compile).with('x0', anchor: true).twice
+          expect(IRegexp).to have_received(:compile).exactly(102).times
+        end
+
+        it 'compiles a pattern from the input document once per distinct pattern' do
+          input = { 'regex' => 'a+', 'values' => %w[a aa aaa b] }
+          allow(IRegexp).to receive(:compile).and_call_original
+          described_class.interpret(input, '$.values[?match(@, $.regex)]')
+          expect(IRegexp).to have_received(:compile).with('a+', anchor: true).once
         end
 
         # CTS "functions, match, escaped right square bracket"
@@ -174,6 +301,20 @@ module Janeway
           }
         expected = [{ 'c' => 'd' }, { 'a' => nil }]
         expect(described_class.interpret(input, query)).to eq(expected)
+      end
+
+      describe 'a pattern from the document that is not UTF-8' do
+        # A binary pattern is always rejected, whatever its position: it must not share a cache entry
+        # with the UTF-8 pattern that is equal to it.
+        it 'gives false when the binary pattern comes first' do
+          input = { 'p' => ['a'.b, 'a'], 's' => 'a' }
+          expect(described_class.interpret(input, '$.p[?match($.s, @)]')).to eq(['a'])
+        end
+
+        it 'gives false when the binary pattern comes last' do
+          input = { 'p' => ['a', 'a'.b], 's' => 'a' }
+          expect(described_class.interpret(input, '$.p[?match($.s, @)]')).to eq(['a'])
+        end
       end
     end
   end
