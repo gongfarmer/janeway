@@ -72,8 +72,9 @@ module Janeway
     # Largest number of distinct document-supplied patterns that one function call remembers.
     DYNAMIC_PATTERN_CACHE_SIZE = 100
 
-    # Build a match/search body. When the pattern is a StringType literal we
-    # compile the regex once, when the interpreter is built.
+    # Build a match/search body. When the pattern is a StringType literal, the parser has already
+    # validated it (Functions#validate_literal_pattern, which discards the result); the interpreter
+    # compiles it once more, with the anchoring this function needs, when it is built.
     # Otherwise the pattern comes from the input document and is compiled when it is first used.
     #
     # A pattern that is not an I-Regexp, or that exceeds a limit, gives LogicalFalse.

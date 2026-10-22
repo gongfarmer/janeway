@@ -25,6 +25,19 @@ module Janeway
           expect { parse_pattern(function, '(a{2}){2}') }.to raise_error(Janeway::Error, /group that contains a range/)
         end
 
+        it 'reports too many parameters before an over-limit pattern' do
+          expect { described_class.parse(%($[?#{function}(@, "a{2000}", "x")])) }
+            .to raise_error(Janeway::Error) { |error|
+              expect(error.message).to include('Too many parameters')
+              expect(error.message).not_to include('repeat count')
+            }
+        end
+
+        it 'names the right function when there are too many parameters' do
+          expect { described_class.parse(%($[?#{function}(@.a, "x", "y")])) }
+            .to raise_error(Janeway::Error, /#{function}\(\)/)
+        end
+
         it 'rejects a pattern that is too long' do
           expect { parse_pattern(function, 'a' * 10_001) }.to raise_error(Janeway::Error, /longer than 10000/)
         end
