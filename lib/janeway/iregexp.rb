@@ -395,7 +395,7 @@ module Janeway
         raise Invalid.new('malformed category escape', offset: start) unless m && CATEGORY.match?(m[1])
 
         @i = start + m[0].length
-        @out << m[0]
+        @out << (@src[start + 1] == 'P' ? "\\p{^#{m[1]}}" : m[0])
       end
     end
   end
