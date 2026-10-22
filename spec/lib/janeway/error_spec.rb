@@ -29,6 +29,21 @@ module Janeway
       expect(message.lines.last).to eq("#{' ' * query.length}^")
     end
 
+    it 'does not raise for a negative column and points at the start of the query' do
+      message = described_class.new('oops', query, Location.new(-5, 1)).message
+      expect(message.lines.last).to eq('^')
+    end
+
+    it 'does not raise for a nil column and points at the start of the query' do
+      message = described_class.new('oops', query, Location.new(nil, 1)).message
+      expect(message.lines.last).to eq('^')
+    end
+
+    it 'underlines one character when the length is nil' do
+      message = described_class.new('oops', query, Location.new(9, nil)).message
+      expect(message.lines.last).to eq("#{' ' * 9}^")
+    end
+
     it 'keeps the pointer under the column when the query contains a newline' do
       message = described_class.new('oops', "$.a\n[?@.b]", Location.new(5, 1)).message
       expect(message.lines[-2]).to eq("$.a [?@.b]\n")

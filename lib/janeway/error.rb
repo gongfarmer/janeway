@@ -40,7 +40,7 @@ module Janeway
     # @return [String] starts with a newline
     def pointer_line(query, location)
       line = query.tr("\r\n", '  ')
-      col = [location.col, line.length].min
+      col = (location.col || 0).clamp(0, line.length)
       length = (location.length || 1).clamp(1, [line.length - col, 1].max)
       "\n#{line}\n#{' ' * col}#{'^' * length}"
     end
