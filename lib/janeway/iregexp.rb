@@ -250,19 +250,30 @@ module Janeway
 
           @i += 1
           @out << '\-'
-        elsif peek == '\\' then escape
+        elsif peek == '\\' && %w[p P].include?(@src[@i + 1])
+          # charClassEsc is not a CCchar, so it takes no range: a following "-" is rejected by the next item
+          escape
         else
-          normal_char(in_class: true)
+          cc_char
           class_range_end if peek == '-' && @src[@i + 1] != ']'
         end
       end
 
+      # "-" CCchar, the end of a range
       def class_range_end
         @i += 1
         @out << '-'
         raise Invalid.new('unterminated range in character class', @i) if peek.nil? || peek == ']'
 
-        peek == '\\' ? escape : normal_char(in_class: true)
+        cc_char
+      end
+
+      # CCchar = ( %x00-2C / %x2E-5A / %x5E-D7FF / %xE000-10FFFF ) / SingleCharEsc
+      # RFC 9485 section 3: a SingleCharEsc is a CCchar, so it can start or end a range.
+      def cc_char
+        if peek == '\\' then escape(single_char_only: true)
+        else normal_char(in_class: true)
+        end
       end
 
       # NormalChar (outside a class) and CCchar (inside a class). RFC 9485 section 3.
@@ -293,12 +304,15 @@ module Janeway
       end
 
       # SingleCharEsc / catEsc / complEsc
-      def escape
+      # @param single_char_only [Boolean] refuse catEsc and complEsc, where a CCchar is required
+      def escape(single_char_only: false)
         start = @i
         nxt = @src[@i + 1]
         raise Invalid.new('trailing backslash', start) if nxt.nil?
 
         if %w[p P].include?(nxt)
+          raise Invalid.new("\\#{nxt} is not allowed here, only a single-character escape", start) if single_char_only
+
           category_escape(start)
         elsif SINGLE_CHAR_ESC.include?(nxt)
           @i += 2

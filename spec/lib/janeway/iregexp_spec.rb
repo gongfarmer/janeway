@@ -65,6 +65,11 @@ module Janeway
         accepts '[a-c]', ['b'], ['d']
         accepts '[a-cx-z]', %w[b y], ['d']
         accepts '[^-a]', ['b'], %w[- a]
+        # RFC 9485 section 3: a SingleCharEsc is a CCchar, so it can start or end a range
+        accepts '[\\n-z]', %W[a 0 \n z], ['{']
+        accepts '[\\(-\\)]', %w[( )], ['*']
+        accepts '[\\]-\\^]', [']', '^'], ['a', '\\']
+        accepts '[\\--z]', %w[a -]
       end
 
       context 'with alternation, groups and quantifiers' do
@@ -98,6 +103,13 @@ module Janeway
         rejects '[[]', IRegexp::Invalid
         rejects '[a-]b-]', IRegexp::Invalid
         rejects '[z-a]', IRegexp::Invalid
+        # RFC 9485 section 3: charClassEsc is not a CCchar, so it cannot be a range endpoint
+        rejects '[a-\\p{L}]', IRegexp::Invalid
+        rejects '[\\p{L}-a]', IRegexp::Invalid
+        rejects '[\\p{Lu}-\\p{Ll}]', IRegexp::Invalid
+        # valid per the grammar, but an empty range, which Ruby refuses (RegexpError)
+        rejects '[a-\\n]', IRegexp::Invalid
+        rejects '[\\n-\\t]', IRegexp::Invalid
         rejects '(a', IRegexp::Invalid, offset: 2
         rejects 'a)', IRegexp::Invalid, offset: 1
         rejects '\\p{Foo}', IRegexp::Invalid, offset: 0
