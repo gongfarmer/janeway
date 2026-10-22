@@ -21,21 +21,33 @@ module Janeway
       stderr.lines.map(&:chomp).grep(/\A *\^+\z/)
     end
 
-    it 'prints the query only as the message does, with a pointer, for a lexer error' do
+    # @return [String] the characters of the header line that sit under the first run of carets
+    def text_under_carets(stderr)
+      lines = stderr.lines.map(&:chomp)
+      header = lines.find { _1.start_with?('Jsonpath query') }
+      caret_line = pointer_lines(stderr).first
+      header[caret_line.index('^'), caret_line.count('^')]
+    end
+
+    it 'prints the query once, with the carets under it, for a lexer error' do
       query = '$.a[?@.b ~~ 1]'
       _, stderr, status = run_cli(query, '{"a":[1]}')
       expect(status).to eq(1)
-      expect(stderr.scan(query).size).to eq(2) # the message header, and its pointer block
+      expect(stderr.scan(query).size).to eq(1)
+      expect(stderr.lines.first).to eq("Error:\n")
       expect(pointer_lines(stderr).size).to eq(1)
+      expect(text_under_carets(stderr)).to eq('~')
     end
 
-    it 'points at the whole repeat count of an over-limit pattern' do
+    it 'prints the query once and points at the whole repeat count of an over-limit pattern' do
       query = '$[?match(@, "ab{1001}c")]'
       _, stderr, status = run_cli(query, '["a"]')
       expect(status).to eq(1)
       expect(stderr).to include('repeat count 1001 exceeds 1000')
-      expect(stderr.scan(query).size).to eq(2) # the message header, and its pointer block
+      expect(stderr.scan(query).size).to eq(1)
+      expect(stderr.lines.first).to eq("Error:\n")
       expect(pointer_lines(stderr).map { _1.count('^') }).to eq([4])
+      expect(text_under_carets(stderr)).to eq('1001')
     end
 
     it 'prints no empty Query line for an error that has no query' do

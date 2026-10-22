@@ -20,12 +20,16 @@ module Janeway
     # @param query [String] entire query string
     # @param location [Location] location of error
     def initialize(msg, query = nil, location = nil)
+      prefix = 'Jsonpath query '
+      pointer = query && location
+      # The pointer is only right if the header's copy of the query is on one line
+      shown = pointer ? query.tr("\r\n", '  ') : query
       full = +''
-      full << "Jsonpath query #{query}" if query
+      full << "#{prefix}#{shown}" if query
       full << " (col #{location.col})" if location
       full << ' - ' unless full.empty?
       full << msg
-      full << pointer_line(query, location) if query && location
+      full << pointer_line(shown, location, prefix.length) if pointer
       super(full)
       @query = query
       @location = location
@@ -33,16 +37,15 @@ module Janeway
 
     private
 
-    # Build two lines that show the query and mark the problem with carets under it.
-    # Newlines in the query are replaced with spaces so that the carets stay under the right column.
-    # @param query [String]
+    # Build the line of carets that marks the problem, aligned under the query in the message header.
+    # @param line [String] the query as shown in the header, on one line
     # @param location [Location]
+    # @param offset [Integer] width of the text that comes before the query in the header
     # @return [String] starts with a newline
-    def pointer_line(query, location)
-      line = query.tr("\r\n", '  ')
+    def pointer_line(line, location, offset)
       col = (location.col || 0).clamp(0, line.length)
       length = (location.length || 1).clamp(1, [line.length - col, 1].max)
-      "\n#{line}\n#{' ' * col}#{'^' * length}"
+      "\n#{' ' * (offset + col)}#{'^' * length}"
     end
   end
 end
