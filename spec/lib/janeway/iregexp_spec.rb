@@ -70,6 +70,8 @@ module Janeway
         accepts '[\\(-\\)]', %w[( )], ['*']
         accepts '[\\]-\\^]', [']', '^'], ['a', '\\']
         accepts '[\\--z]', %w[a -]
+        accepts '[\\p{L}-]', %w[a -], ['1']
+        accepts '[-\\p{L}]', %w[a -], ['1']
       end
 
       context 'with alternation, groups and quantifiers' do
@@ -107,6 +109,7 @@ module Janeway
         rejects '[[]', IRegexp::Invalid
         rejects '[a-]b-]', IRegexp::Invalid
         rejects '[z-a]', IRegexp::Invalid
+        rejects '[\\n--]', IRegexp::Invalid
         # RFC 9485 section 3: charClassEsc is not a CCchar, so it cannot be a range endpoint
         rejects '[a-\\p{L}]', IRegexp::Invalid
         rejects '[\\p{L}-a]', IRegexp::Invalid

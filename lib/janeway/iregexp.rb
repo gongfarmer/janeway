@@ -122,6 +122,9 @@ module Janeway
       # Characters allowed after a backslash. RFC 9485 section 3, SingleCharEsc.
       SINGLE_CHAR_ESC = '()*+-.?[]^nrt{|}\\'
 
+      # catEsc and complEsc start with one of these after the backslash, RFC 9485 section 3
+      CATEGORY_ESCAPES = %w[p P].freeze
+
       # @param iregex [String]
       def initialize(iregex)
         @original = iregex
@@ -313,7 +316,7 @@ module Janeway
 
           @i += 1
           @out << '\-'
-        elsif peek == '\\' && %w[p P].include?(@src[@i + 1])
+        elsif peek == '\\' && CATEGORY_ESCAPES.include?(@src[@i + 1])
           # charClassEsc is not a CCchar, so it takes no range: a following "-" is rejected by the next item
           escape
         else
@@ -373,7 +376,7 @@ module Janeway
         nxt = @src[@i + 1]
         raise Invalid.new('trailing backslash', start) if nxt.nil?
 
-        if %w[p P].include?(nxt)
+        if CATEGORY_ESCAPES.include?(nxt)
           raise Invalid.new("\\#{nxt} is not allowed here, only a single-character escape", start) if single_char_only
 
           category_escape(start)

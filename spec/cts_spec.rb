@@ -47,6 +47,7 @@ TRUFFLERUBY_SKIP_TESTS = [
 # Skip these tests: they expect ^ and $ to be regexp anchors, but in I-Regexp they are ordinary
 # characters (RFC 9485 section 3, NormalChar), and the author of RFC 9485 has confirmed it.
 # The test suite is expected to change, see the open issue in its repository.
+# https://github.com/jsonpath-standard/jsonpath-compliance-test-suite
 ANCHOR_TESTS_SKIP = [
   'functions, match, explicit caret',
   'functions, match, explicit dollar',
