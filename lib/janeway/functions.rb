@@ -72,6 +72,9 @@ module Janeway
       result
     end
 
+    # Largest number of distinct document-supplied patterns that one function call remembers.
+    DYNAMIC_PATTERN_CACHE_SIZE = 100
+
     # Build a match/search body. When the pattern is a StringType literal we
     # compile the regex once, when the interpreter is built.
     # Otherwise the pattern comes from the input document and is compiled when it is first used.
@@ -85,6 +88,9 @@ module Janeway
     # Functions#validate_literal_pattern.
     def self.build_regex_body(parameters, anchor:)
       literal = parameters[1].is_a?(AST::StringType) ? parameters[1].value : nil
+      # The cache holds compiled regexps keyed by pattern text, so reusing it for other subjects is
+      # correct. It lives as long as the interpreter tree, which Query#interpreter_tree_for caches
+      # on an unfrozen Query.
       cache = {} # pattern string => Regexp, or nil when the pattern is unusable
       cache[literal] = compile_or_nil(literal, anchor) if literal # a literal is compiled once, now
       lambda do |str, pattern|
@@ -95,17 +101,10 @@ module Janeway
           cache.shift if cache.size >= DYNAMIC_PATTERN_CACHE_SIZE
           cache[pattern] = compile_or_nil(pattern, anchor)
         end
-        next false if cache[pattern].nil?
 
-        result = match_safely(cache[pattern], str)
-        # After a timeout, stop matching with this pattern: the next nodes would be as slow.
-        cache[pattern] = nil if result == :timeout
-        result == true
+        !cache[pattern].nil? && match_safely(cache[pattern], str)
       end
     end
-
-    # Largest number of distinct document-supplied patterns that one function call remembers.
-    DYNAMIC_PATTERN_CACHE_SIZE = 100
 
     # @return [Regexp, nil] nil when the pattern is not usable, see build_regex_body
     def self.compile_or_nil(pattern, anchor)
@@ -117,14 +116,12 @@ module Janeway
     # Match, and treat a match that Ruby cannot or will not complete as no match.
     # @param regexp [Regexp]
     # @param str [String]
-    # @return [Boolean, Symbol] :timeout when the match took longer than IRegexp::MATCH_TIMEOUT, so
-    #   that the caller can stop matching with that pattern
+    # @return [Boolean]
     def self.match_safely(regexp, str)
       regexp.match?(str)
-    rescue IRegexp::TIMEOUT_ERROR
-      :timeout
-    rescue ArgumentError, Encoding::CompatibilityError
-      # str is not valid UTF-8.
+    rescue IRegexp::TIMEOUT_ERROR, ArgumentError, Encoding::CompatibilityError
+      # TIMEOUT_ERROR: the match took longer than IRegexp::MATCH_TIMEOUT.
+      # ArgumentError, Encoding::CompatibilityError: str is not valid UTF-8.
       false
     end
 

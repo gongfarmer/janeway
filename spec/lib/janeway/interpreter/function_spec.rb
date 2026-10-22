@@ -188,19 +188,26 @@ module Janeway
           let(:regexp) { instance_double(Regexp) }
 
           before do
-            allow(regexp).to receive(:match?).and_raise(IRegexp::TIMEOUT_ERROR)
+            allow(regexp).to receive(:match?) { |str| str == 'slow' ? raise(IRegexp::TIMEOUT_ERROR) : true }
             allow(IRegexp).to receive(:compile).and_return(regexp)
           end
 
-          it 'matches a literal pattern only once, then gives false' do
-            expect(described_class.interpret(%w[a b c d], '$[?match(@, "x")]')).to eq([])
-            expect(regexp).to have_received(:match?).once
+          it 'gives false for the timed-out node and still matches the next one (literal pattern)' do
+            expect(described_class.interpret(%w[slow fast], '$[?match(@, "x")]')).to eq(['fast'])
+            expect(regexp).to have_received(:match?).twice
           end
 
-          it 'matches a document pattern only once, then gives false' do
-            input = { 'p' => 'x', 'values' => %w[a b c d] }
-            expect(described_class.interpret(input, '$.values[?search(@, $.p)]')).to eq([])
-            expect(regexp).to have_received(:match?).once
+          it 'gives false for the timed-out node and still matches the next one (document pattern)' do
+            input = { 'p' => 'x', 'values' => %w[slow fast] }
+            expect(described_class.interpret(input, '$.values[?search(@, $.p)]')).to eq(['fast'])
+            expect(regexp).to have_received(:match?).twice
+          end
+
+          it 'does not let a timeout in one search change a later search of a reused query' do
+            query = Janeway.parse('$.v[?match(@, $.p)]')
+            expect(query).not_to be_frozen
+            expect(query.enum_for({ 'p' => 'x', 'v' => ['slow'] }).search).to eq([])
+            expect(query.enum_for({ 'p' => 'x', 'v' => ['fast'] }).search).to eq(['fast'])
           end
         end
 
