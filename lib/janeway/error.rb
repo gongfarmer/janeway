@@ -25,9 +25,24 @@ module Janeway
       full << " (col #{location.col})" if location
       full << ' - ' unless full.empty?
       full << msg
+      full << pointer_line(query, location) if query && location
       super(full)
       @query = query
       @location = location
+    end
+
+    private
+
+    # Build two lines that show the query and mark the problem with carets under it.
+    # Newlines in the query are replaced with spaces so that the carets stay under the right column.
+    # @param query [String]
+    # @param location [Location]
+    # @return [String] starts with a newline
+    def pointer_line(query, location)
+      line = query.tr("\r\n", '  ')
+      col = [location.col, line.length].min
+      length = (location.length || 1).clamp(1, [line.length - col, 1].max)
+      "\n#{line}\n#{' ' * col}#{'^' * length}"
     end
   end
 end
