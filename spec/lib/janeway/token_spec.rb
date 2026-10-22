@@ -182,6 +182,12 @@ module Janeway
         expect(string_token('$["ab"]').column_of(-1)).to be_nil
       end
 
+      it 'is nil for an index too large for an Integer to be a native index, without raising' do
+        token = string_token('$["ab"]')
+        expect(token.column_of(2**70)).to be_nil
+        expect(token.column_of(-(2**70))).to be_nil
+      end
+
       it 'is nil for a token that is not a string' do
         expect(Lexer.lex('$.a').find { |token| token.type == :dot }.column_of(0)).to be_nil
       end
@@ -238,6 +244,12 @@ module Janeway
       it 'returns the location of the token for a range that runs off the end' do
         token = string_token('$["abc"]')
         expect(token.location_of(1, 5)).to eq(token.location)
+      end
+
+      it 'returns the location of the token for a length too large for an Integer to be a native index' do
+        token = string_token('$["ab"]')
+        expect(token.location_of(0, 2**64)).to eq(token.location)
+        expect(token.location_of(2**70, 1)).to eq(token.location)
       end
 
       it 'returns the location of the token for a token that is not a string' do

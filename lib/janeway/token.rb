@@ -34,7 +34,7 @@ module Janeway
     # @return [Integer, nil] column in the query of that character (or of the backslash that starts its
     #   escape); nil when the token has no offsets, or no character at that index
     def column_of(index)
-      return nil if @offsets.nil? || index.negative?
+      return nil if @offsets.nil? || !index.between?(0, @offsets.length - 1)
 
       offset = @offsets[index]
       offset && (@location.col + offset)
