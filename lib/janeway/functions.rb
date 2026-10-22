@@ -91,6 +91,9 @@ module Janeway
       lambda do |str, pattern|
         pattern = literal if literal
         next false unless str.is_a?(String) && pattern.is_a?(String)
+        # A pattern in the wrong encoding is false and never reaches the cache: Hash lookup compares
+        # strings by content, so a binary 'a' would otherwise share the entry of a UTF-8 'a'.
+        next false unless IRegexp.valid_encoding?(pattern)
 
         unless cache.key?(pattern)
           cache.shift if cache.size >= DYNAMIC_PATTERN_CACHE_SIZE

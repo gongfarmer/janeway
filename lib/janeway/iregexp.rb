@@ -68,6 +68,17 @@ module Janeway
       end
     end
 
+    # Can this string be an I-Regexp at all, as far as its encoding goes?
+    #
+    # RFC 9485 section 1: a pattern is a sequence of Unicode scalar values. Accept UTF-8, and US-ASCII
+    # which is a subset of it. Any other encoding is refused and not transcoded, and that includes a
+    # binary (ASCII-8BIT) string even when its bytes are all ASCII.
+    # @param string [String]
+    # @return [Boolean]
+    def self.valid_encoding?(string)
+      [Encoding::UTF_8, Encoding::US_ASCII].include?(string.encoding) && string.valid_encoding?
+    end
+
     # Validate an I-Regexp and translate it to a Ruby Regexp.
     #
     # @param iregex [String]
@@ -110,12 +121,7 @@ module Janeway
       # @return [String] Ruby regexp source, without anchors
       # @raise [Invalid, LimitExceeded]
       def parse
-        # RFC 9485 section 1: a pattern is a sequence of Unicode scalar values. Accept UTF-8, and US-ASCII
-        # which is a subset of it. Any other encoding is refused and not transcoded, and that includes a
-        # binary (ASCII-8BIT) string even when its bytes are all ASCII.
-        unless [Encoding::UTF_8, Encoding::US_ASCII].include?(@original.encoding) && @original.valid_encoding?
-          raise Invalid, 'pattern is not valid UTF-8'
-        end
+        raise Invalid, 'pattern is not valid UTF-8' unless IRegexp.valid_encoding?(@original) # RFC 9485 section 1
 
         i_regexp
         raise Invalid.new("unexpected #{@src[@i].inspect}", @i) if @i < @src.length
