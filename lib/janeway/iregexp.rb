@@ -90,11 +90,19 @@ module Janeway
       body = Parser.new(iregex).parse
       # RFC 9485 section 5.4: enclose the regexp in \A(?: and )\z.
       body = "\\A(?:#{body})\\z" if anchor
+      # RFC 9485 section 3: the pattern is valid I-Regexp, so a Ruby warning about it (such as a redundant
+      # nested repeat operator in (a*)*) is not the caller's business. A pattern from the input document
+      # must not be able to write to stderr.
+      old_verbose = $VERBOSE
       begin
+        $VERBOSE = nil
         TIMEOUT_SUPPORTED ? Regexp.new(body, timeout: MATCH_TIMEOUT) : Regexp.new(body)
       rescue RegexpError => e
-        # Ruby refuses some patterns that are valid I-Regexp, e.g. a{3,2}
+        # Deliberate deviation from RFC 9485 section 3: Ruby refuses some patterns that are valid
+        # I-Regexp, such as a{3,2}, and these are treated as not an I-Regexp.
         raise Invalid, e.message
+      ensure
+        $VERBOSE = old_verbose
       end
     end
 
