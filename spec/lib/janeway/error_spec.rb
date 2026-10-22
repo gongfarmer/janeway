@@ -94,5 +94,24 @@ module Janeway
       error = described_class.new('oops', query, Location.new(9, 1))
       expect([error.query, error.location.col]).to eq([query, 9])
     end
+
+    describe 'with a query that is not valid UTF-8' do
+      it 'does not raise when there is a location, and still has a caret line' do
+        message = nil
+        expect { message = described_class.new('m', "$\xff", Location.new(1, 1)).message }.not_to raise_error
+        expect(message).to start_with('Jsonpath query $')
+        expect(message.lines.last).to match(/\A *\^\z/)
+      end
+
+      it 'keeps the raw query in the header when there is no location' do
+        message = nil
+        expect { message = described_class.new('m', "$\xff").message }.not_to raise_error
+        expect(message.b).to eq("Jsonpath query $\xFF - m".b)
+      end
+
+      it 'raises Janeway::Error, not ArgumentError, from the parser' do
+        expect { Janeway.parse("$['a\xff' ") }.to raise_error(described_class)
+      end
+    end
   end
 end

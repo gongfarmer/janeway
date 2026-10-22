@@ -21,9 +21,15 @@ module Janeway
     # @param location [Location] location of error
     def initialize(msg, query = nil, location = nil)
       prefix = 'Jsonpath query '
-      pointer = query && location
-      # The pointer is only right if the header's copy of the query is on one line
-      shown = pointer ? query.tr("\r\n", '  ') : query
+      pointer = query.is_a?(String) && location
+      # The pointer is only right if the header's copy of the query is on one line.
+      # scrub swaps each invalid byte for one replacement character, so the columns stay valid
+      # and a query that is not valid UTF-8 cannot make building the error raise.
+      shown = query
+      if pointer
+        shown = shown.scrub unless shown.valid_encoding?
+        shown = shown.tr("\r\n", '  ')
+      end
       full = +''
       full << "#{prefix}#{shown}" if query
       full << " (col #{location.col})" if location
